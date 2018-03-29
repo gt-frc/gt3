@@ -14,6 +14,12 @@ import sys
 import matplotlib.pyplot as plt
 
 class imp_rad():
+    """
+    Attributes:
+        
+    Methods:
+        
+    """
     def __init__(self,inp,brnd):
         sys.dont_write_bytecode = True 
         self.prep_adpak_infile(inp,brnd)
@@ -120,9 +126,13 @@ class imp_rad():
                 #M = M*1E10
     
                 result = np.abs(null(M).T) #solve(M,b)
-                frac_abun[i,j] = result / np.sum(result) #solve(M,b)
-
-
+                frac_abun[i,j,:] = result / np.sum(result) #solve(M,b)
+        print
+        print frac_abun
+        print
+        print frac_abun.shape
+        print
+        print frac_abun[0,:,6]
         #CREATE INTERPOLATION FUNCTION FOR EACH CHARGE STATE
         #self.frac_abun_interp[cs] takes two arguments: 
         #    1) log10 of the T_e in kev
@@ -140,7 +150,17 @@ class imp_rad():
             brnd_frac_abun  = np.zeros(brnd.nC.shape)
             for (r,theta),nC in np.ndenumerate(brnd.nC):
                 brnd_frac_abun[r,theta] = frac_abun_interp( np.log10(brnd.Te_kev[r,theta]) , brnd.ne[r,theta] )
-            brnd_nC_cs = brnd_frac_abun * brnd.nC
+            #if i==6:
+            #    print '###########################3'
+            #    print brnd.Te_kev[-1,0]
+            #    print np.log10(brnd.Te_kev[-1,0])
+            #    print brnd.ne[-1,0]
+            #    print frac_abun_interp(np.log10(brnd.Te_kev[-1,0]), brnd.ne[-1,0])
+            #    print 
+            #    print brnd_frac_abun[-1,0]
+            #    print '###########################3'
+            #    sys.exit()
+            self.brnd_nC_cs.append( brnd_frac_abun * brnd.nC )
 
             #create the interpolation function to get radiation rate(?) as a function of electron density and temperature            
             rad_interp = interp2d(self.tei_lin,self.anei*1E6,self.alradr[i,:,:]) 
@@ -149,13 +169,13 @@ class imp_rad():
             brnd_rad_rate = np.zeros(brnd.nC.shape)
             for (r,theta),nC in np.ndenumerate(brnd.nC):
                 brnd_rad_rate[r,theta] = 10**rad_interp( np.log10(brnd.Te_kev[r,theta]) , brnd.ne[r,theta] )
-            self.brnd_rad_cs.append( brnd_rad_rate * brnd_nC_cs )
+            self.brnd_rad_cs.append( brnd_rad_rate * self.brnd_nC_cs[i] )
             self.brnd_rad = self.brnd_rad + self.brnd_rad_cs[i]
             
         radfig = plt.figure(figsize=(6,6))
         ax1 = radfig.add_subplot(1,1,1)
         ax1.axis('equal')
-        ax1.contourf(brnd.R,brnd.Z,self.brnd_rad_cs[6],500,cmap='jet')
+        ax1.contourf(brnd.R,brnd.Z,self.brnd_rad,500,cmap='jet')
 
         
         sys.exit()

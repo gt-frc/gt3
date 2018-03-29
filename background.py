@@ -120,7 +120,11 @@ class background():
         self.Te_K  = self.Te_kev * 1.159E7
         self.Te_ev = self.Te_kev * 1000
         self.Te_J  = self.Te_ev  * elementary_charge
-
+        print 'Te_kev[-1,0] = ',self.Te_kev[-1,0]
+        for i in self.Te_kev[:,0]:
+            print i
+        print
+        print
         #############################################
 
         if hasattr(p, 'er_file'):
