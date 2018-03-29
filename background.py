@@ -12,6 +12,7 @@ from helpers import PolyArea
 from scipy.interpolate import UnivariateSpline, interp1d
 from scipy.integrate import quad
 import matplotlib.pyplot as plt
+import sys
 
 class background():
     """Calculates various plasma properties using a modified Miller geometry
@@ -50,6 +51,7 @@ class background():
         f_phi
     """
     def __init__(self,parameters):
+        sys.dont_write_bytecode = True 
         self.createbackground(parameters)
 
     def createbackground(self,p):

@@ -8,4 +8,5 @@ Created on Mon Mar 26 14:15:35 2018
 
 class thermal_inst():
     def __init__(self,inp,brnd,nbi,imp,jro):
+        sys.dont_write_bytecode = True 
         pass

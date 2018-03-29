@@ -8,7 +8,9 @@ Created on Thu May 18 12:07:06 2017
 import numpy as np
 from math import sqrt,acos,degrees,sin,cos,atan2,pi
 from shapely.geometry import LineString,Point
+import sys
 
+sys.dont_write_bytecode = True 
 # PLOTTING HELPERS
 def plot_line(ax, ob):
     x, y = ob.xy

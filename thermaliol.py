@@ -26,6 +26,7 @@ m = m_t
 class thermaliol():
     '''background plasma stuff.'''
     def __init__(self,inp,brnd):
+        sys.dont_write_bytecode = True 
         self.calctiol(inp,brnd)
 
     def calctiol(self,inp,brnd):

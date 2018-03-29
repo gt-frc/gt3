@@ -72,6 +72,7 @@ class read_infile():
     """
     
     def __init__(self, infile):
+        sys.dont_write_bytecode = True 
         self.read_vars(infile)
         self.read_exp()
         if hasattr(self, 'lim_file'):

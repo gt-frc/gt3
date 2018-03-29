@@ -43,7 +43,7 @@ from matplotlib.patches import Polygon
 class neutpy():
     
     def __init__(self,infile=None,inarrs=None):
-
+        sys.dont_write_bytecode = True 
         if not os.path.exists(os.getcwd()+'/outputs'):
             os.makedirs(os.getcwd()+'/outputs')
         if not os.path.exists(os.getcwd()+'/figures'):

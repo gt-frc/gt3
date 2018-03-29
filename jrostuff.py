@@ -68,6 +68,7 @@ class jrostuff():
     """
     
     def __init__(self,inp,brnd,tiol,fiol,ntrl,nbi):
+        sys.dont_write_bytecode = True 
         self.calc_xnuc(inp,brnd)
         self.calc_src_rates(inp,brnd,nbi,tiol,fiol)
         self.calc_rad_part_flx(inp,brnd,tiol)

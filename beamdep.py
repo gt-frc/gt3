@@ -74,6 +74,7 @@ class beamdep():
     """
     
     def __init__(self,inp,brnd):
+        sys.dont_write_bytecode = True 
         self.prep_nbi_infile(inp,brnd)
         #call nbeams. Note to those familiar with the old nbeams, I modified
         #the code to take the input file as a commandline argument.

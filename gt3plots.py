@@ -13,6 +13,7 @@ rc('font',**{'family':'serif','serif':['Palatino']})
 rc('text', usetex=True)
 
 class gt3plots():
+    sys.dont_write_bytecode = True 
     #if ITER model
     #if myshot.param.d3d_iter==1:
     #    fig = plt.figure(figsize=(8,8))

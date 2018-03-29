@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 
 class imp_rad():
     def __init__(self,inp,brnd):
+        sys.dont_write_bytecode = True 
         self.prep_adpak_infile(inp,brnd)
         call([inp.adpak_loc+'adpak', os.getcwd()+'/toadpak'])
         self.read_adpak_outfile(inp,brnd)

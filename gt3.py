@@ -47,6 +47,7 @@ class gt3():
         adpack:
                             
     """
+    
     def __init__(self, shotlabel=None):
         sys.dont_write_bytecode = True 
         #Create shotlabel as an attribute of plasma class

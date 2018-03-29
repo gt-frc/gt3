@@ -50,6 +50,7 @@ class neutprep():
         
     """
     def __init__(self,brnd,param):
+        sys.dont_write_bytecode = True 
         self.skipsolhalo = 1
         self.solhalomesh(brnd,param)
         self.plasmamesh(brnd,param)
