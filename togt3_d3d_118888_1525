@@ -67,7 +67,7 @@ s_k_lo = 0.0
 tri_up = 0.35
 tri_lo = 0.0
 thetapts_approx = 30
-rpts = 201
+rpts = 60
 
 #XMILLER PARAMETERS
 xmil = 1

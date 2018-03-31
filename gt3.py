@@ -107,62 +107,63 @@ if __name__ == "__main__":
     myshot = gt3('togt3_d3d_118888_1525')
     myshot.brndandimp()
     
-    fig1 = plt.figure(figsize=(8,12))
+    fig1 = plt.figure(figsize=(6,8))
     ax1 = fig1.add_subplot(1,1,1)
     ax1.axis('equal')
     ax1.contour(myshot.brnd.R,myshot.brnd.Z,myshot.brnd.r,25)
     ax1.plot(myshot.brnd.R[-1,:],myshot.brnd.Z[-1,:])
     ax1.plot(myshot.input.lim_vertex[:,0],myshot.input.lim_vertex[:,1])
     
-    fig2 = plt.figure(figsize=(12,16))
+    fontsize=12
+    fig2 = plt.figure(figsize=(7,10))
     ax1 = fig2.add_subplot(4,3,1)
-    ax1.set_title(r'$n_i$', fontsize=18)
+    ax1.set_title(r'$n_i$', fontsize=fontsize)
     ax1.plot(myshot.brnd.rho[:,0],myshot.brnd.ni[:,0],lw=2,color='black')
     
     ax2 = fig2.add_subplot(4,3,2)
-    ax2.set_title(r'$n_e$', fontsize=18)
+    ax2.set_title(r'$n_e$', fontsize=fontsize)
     ax2.plot(myshot.brnd.rho[:,0],myshot.brnd.ne[:,0],lw=2,color='black')
     
     ax3 = fig2.add_subplot(4,3,3)
-    ax3.set_title(r'$T_i$', fontsize=18)
+    ax3.set_title(r'$T_i$', fontsize=fontsize)
     ax3.plot(myshot.brnd.rho[:,0],myshot.brnd.Ti_kev[:,0],lw=2,color='black')
     
     ax4 = fig2.add_subplot(4,3,4)
-    ax4.set_title(r'$T_e$', fontsize=18)
+    ax4.set_title(r'$T_e$', fontsize=fontsize)
     ax4.plot(myshot.brnd.rho[:,0],myshot.brnd.Te_kev[:,0],lw=2,color='black')
     
     ax5 = fig2.add_subplot(4,3,5)
-    ax5.set_title(r'$j_r$', fontsize=18)
+    ax5.set_title(r'$j_r$', fontsize=fontsize)
     ax5.plot(myshot.brnd.rho[:,0],myshot.brnd.j_r[:,0],lw=2,color='black')
     
     ax6 = fig2.add_subplot(4,3,6)
-    ax6.set_title(r'$E_r$', fontsize=18)
+    ax6.set_title(r'$E_r$', fontsize=fontsize)
     ax6.plot(myshot.brnd.rho[:,0],myshot.brnd.E_r[:,0],lw=2,color='black')
     
     ax7 = fig2.add_subplot(4,3,7)
-    ax7.set_title(r'$fracz$', fontsize=18)
+    ax7.set_title(r'$fracz$', fontsize=fontsize)
     ax7.plot(myshot.brnd.rho[:,0],myshot.brnd.fracz[:,0],lw=2,color='black')
     
     ax8 = fig2.add_subplot(4,3,8)
-    ax8.set_title(r'$v_{\theta,C}$', fontsize=18)
+    ax8.set_title(r'$v_{\theta,C}$', fontsize=fontsize)
     ax8.plot(myshot.brnd.rho[:,0],myshot.brnd.vpolC[:,0],lw=2,color='black')
     
     ax9 = fig2.add_subplot(4,3,9)
-    ax9.set_title(r'$v_{\phi,C}$', fontsize=18)
+    ax9.set_title(r'$v_{\phi,C}$', fontsize=fontsize)
     ax9.plot(myshot.brnd.rho[:,0],myshot.brnd.vtorC[:,0],lw=2,color='black')
     
     ax10 = fig2.add_subplot(4,3,10)
-    ax10.set_title(r'$F_{orb}$', fontsize=18)
+    ax10.set_title(r'$F_{orb}$', fontsize=fontsize)
     ax10.plot(myshot.brnd.rho[:,0],myshot.tiol.F_orb,lw=2,color='black')    
     plt.tight_layout()
         
     ax11 = fig2.add_subplot(4,3,11)
-    ax11.set_title(r'$M_{orb}$', fontsize=18)
+    ax11.set_title(r'$M_{orb}$', fontsize=fontsize)
     ax11.plot(myshot.brnd.rho[:,0],myshot.tiol.M_orb,lw=2,color='black')    
     plt.tight_layout()
         
     ax12 = fig2.add_subplot(4,3,12)
-    ax12.set_title(r'$E_{orb}$', fontsize=18)
+    ax12.set_title(r'$E_{orb}$', fontsize=fontsize)
     ax12.plot(myshot.brnd.rho[:,0],myshot.tiol.E_orb,lw=2,color='black')    
     plt.tight_layout()
     #for i,v in enumerate(zip(myshot.brnd.ni[:,0],myshot.brnd.rho[-1])):

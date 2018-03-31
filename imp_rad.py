@@ -7,7 +7,7 @@ Created on Sat Mar 24 13:25:51 2018
 """
 from subprocess import call
 import numpy as np
-from scipy.interpolate import interp2d, interp1d
+from scipy.interpolate import interp2d, interp1d, UnivariateSpline
 import os
 import re
 import sys
@@ -35,13 +35,12 @@ class imp_rad():
         
         #TODO: Extend this to do elements other than carbon
         self.inucz = 6
-        self.nte = 21
+        self.nte = 25
         self.nne = 2
         self.nmin = -3
         self.nmax = 2
         self.tei = np.logspace(self.nmin,self.nmax,self.nte) #actual temperatures
         self.tei_lin = np.linspace(self.nmin,self.nmax,self.nte)
-        print self.tei
         self.anei = np.array([1.0E13, 1.0E+15])
         f = open('./toadpak','w')
         f.write(' &inp')
@@ -127,55 +126,76 @@ class imp_rad():
     
                 result = np.abs(null(M).T) #solve(M,b)
                 frac_abun[i,j,:] = result / np.sum(result) #solve(M,b)
-        print
-        print frac_abun
-        print
-        print frac_abun.shape
-        print
-        print frac_abun[0,:,6]
-        #CREATE INTERPOLATION FUNCTION FOR EACH CHARGE STATE
-        #self.frac_abun_interp[cs] takes two arguments: 
-        #    1) log10 of the T_e in kev
-        #    2) n_e in m^-3
+
+        #CALCULATE IMPURITY DENSITIES BY CHARGE STATE
+
+
+
+        
         self.brnd_nC_cs     = []
         self.brnd_rad_cs    = []
-        self.brnd_rad = np.zeros(brnd.nC.shape)
-        for i in np.arange(self.inucz+1):
-            #create the interpolation function to get fractional abundances of each charge state as a function
-            # of electron density and electron temperature
-            #calculate those fractional abundances for all points in the plasma
-            #calculate impurity densities by charge state
-            frac_abun_interp = interp2d(self.tei_lin,self.anei*1E6,frac_abun[:,:,i]) 
+        emiss_tot = np.zeros(self.tei.shape)
+        #loop over charge states
+        for cs in np.arange(self.inucz+1):
+            #create the interpolation function to get fractional abundances of each 
+            #charge state as a function of electron density and electron temperature
+            frac_abun_interp = interp2d(self.tei_lin,self.anei*1E6,frac_abun[:,:,cs]) 
             
+            #for each charge state, get the fractional abundance for the charge state
+            # under consideration at each point in the plasma
             brnd_frac_abun  = np.zeros(brnd.nC.shape)
             for (r,theta),nC in np.ndenumerate(brnd.nC):
                 brnd_frac_abun[r,theta] = frac_abun_interp( np.log10(brnd.Te_kev[r,theta]) , brnd.ne[r,theta] )
-            #if i==6:
-            #    print '###########################3'
-            #    print brnd.Te_kev[-1,0]
-            #    print np.log10(brnd.Te_kev[-1,0])
-            #    print brnd.ne[-1,0]
-            #    print frac_abun_interp(np.log10(brnd.Te_kev[-1,0]), brnd.ne[-1,0])
-            #    print 
-            #    print brnd_frac_abun[-1,0]
-            #    print '###########################3'
-            #    sys.exit()
+            
+            #multiply the fractional abundance by the overal impurity density to get the
+            #density of this charge state
             self.brnd_nC_cs.append( brnd_frac_abun * brnd.nC )
 
-            #create the interpolation function to get radiation rate(?) as a function of electron density and temperature            
-            rad_interp = interp2d(self.tei_lin,self.anei*1E6,self.alradr[i,:,:]) 
-            
-            #get those radiation rates for all points in the plasma
-            brnd_rad_rate = np.zeros(brnd.nC.shape)
-            for (r,theta),nC in np.ndenumerate(brnd.nC):
-                brnd_rad_rate[r,theta] = 10**rad_interp( np.log10(brnd.Te_kev[r,theta]) , brnd.ne[r,theta] )
-            self.brnd_rad_cs.append( brnd_rad_rate * self.brnd_nC_cs[i] )
-            self.brnd_rad = self.brnd_rad + self.brnd_rad_cs[i]
-            
-        radfig = plt.figure(figsize=(6,6))
-        ax1 = radfig.add_subplot(1,1,1)
-        ax1.axis('equal')
-        ax1.contourf(brnd.R,brnd.Z,self.brnd_rad,500,cmap='jet')
-
+            #create the emissivity function over the entire range of temperatures
+            emiss_cs_interp = interp2d(self.tei_lin,self.anei*1E6,self.alradr[cs,:,:])
+            for i,T in enumerate(self.tei_lin):
+                emiss_tot[i] = emiss_tot[i] + \
+                                    10**emiss_cs_interp(T,self.anei[0]*1E6) * \
+                                    frac_abun_interp(T,self.anei[0]*1E6)
+                                    #note that the density doesn't actuall matter here.
         
-        sys.exit()
+        #spline fit the logarithm of the emissivity. We'll spline fit the actual values next
+        emiss_tot_interp = UnivariateSpline(self.tei,np.log10(emiss_tot)+100.0,s=0)
+        
+        #the above function gives the right values, but we also need the derivatives
+        #we will now do a spline fit of the values themselves, rather than their base-10 logarithm
+        new_T = np.logspace(-3,2,10000)
+        new_Em = 10**(emiss_tot_interp(new_T)-100.0)
+        emiss_tot_interp2 = UnivariateSpline(new_T,new_Em,s=0)
+        #emiss_tot_interp = UnivariateSpline(self.tei,np.log10(emiss_tot)+100.0,s=0)
+
+        self.brnd_emissivity = emiss_tot_interp2(brnd.Te_kev)
+        self.brnd_dEmiss_dT  = emiss_tot_interp2.derivative()(brnd.Te_kev)  
+     
+        #self.brnd_emiss = np.zeros(brnd.nC.shape)
+        #self.brnd_demiss_dT = np.zeros(brnd.nC.shape)
+        #for (r,theta),nC in np.ndenumerate(brnd.nC):
+        #    self.brnd_emiss[r,theta] = emiss_tot_interp
+        
+        #emiss_fig = plt.figure(figsize=(6,6))
+        #ax1 = emiss_fig.add_subplot(1,1,1)
+        #ax1.loglog(np.logspace(-3,2,1000),10**(emiss_tot_interp(np.logspace(-3,2,1000))-100.0))
+        
+        #ax1.semilogy(np.linspace(1.0E-3,1.0E2,10000),10**(emiss_tot_interp(np.linspace(1.0E-3,1.0E2,10000))-100.0),lw=1)
+
+        #ax1.set_xlim(2,10)
+        #ax1.set_ylim(0,1E-34)
+        #ax1.plot(np.linspace(1.0E-3,1.0E2,10000),10**(emiss_tot_interp(np.linspace(1.0E-3,1.0E2,10000))-100.0),lw=1)
+
+        #emiss_deriv_fig = plt.figure(figsize=(6,6))
+        #ax1 = emiss_deriv_fig.add_subplot(1,1,1)
+        #ax1.loglog(np.logspace(-3,2,1000),10**(emiss_tot_interp.derivative()(np.logspace(-3,2,1000))-100.0))
+
+
+
+        #radfig = plt.figure(figsize=(6,6))
+        #ax1 = radfig.add_subplot(1,1,1)
+        #ax1.axis('equal')
+        #cax =ax1.contourf(brnd.R,brnd.Z,self.brnd_dEmiss_dT,900,cmap='jet')
+        #radfig.colorbar(cax)
+        #cax =ax1.contourf(brnd.R,brnd.Z,brnd.nC,500,cmap='jet')
