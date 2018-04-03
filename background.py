@@ -53,6 +53,7 @@ class background():
     def __init__(self,parameters):
         sys.dont_write_bytecode = True 
         self.createbackground(parameters)
+        self.calc_sigv_fus(parameters)
 
     def createbackground(self,p):
         """Create background plasma using the miller model.
@@ -500,3 +501,74 @@ class background():
         
         kappa = kappa + kappa_tilda
         return kappa
+    
+    #Fusion Reactivity calculation  
+    def calc_sigv_fus(self,p,mode='dd'):   
+        def sigv(Ti,mode): #function takes T in kev
+            if mode=='dt':
+                B_G = 34.3827    
+                m_rc2 = 1124656
+                
+                C1 = 1.17302E-9
+                C2 = 1.51361E-2
+                C3 = 7.51886E-2
+                C4 = 4.60643E-3
+                C5 = 1.35000E-2
+                C6 = -1.06750E-4
+                C7 = 1.36600E-5
+            
+                theta = Ti/(1.0-(Ti*(C2+Ti*(C4+Ti*C6)))/(1.0+Ti*(C3+Ti*(C5+Ti*C7))))
+                xi = (B_G**2.0/(4.0*theta))**(1.0/3.0)
+                sigv = C1 * theta * np.sqrt(xi/(m_rc2 * Ti**3.0)) * np.exp(-3.0*xi)
+                sigv = sigv/1.0E6 #convert from cm^3/s to m^3/s
+                
+            elif mode=='dd':
+                
+                B_G = 31.3970 
+                m_rc2 = 937814
+                
+                #first for the D(d,p)T reaction
+                C1_1 = 5.65718E-12
+                C2_1 = 3.41267E-3
+                C3_1 = 1.99167E-3
+                C4_1 = 0.0
+                C5_1 = 1.05060E-5
+                C6_1 = 0.0
+                C7_1 = 0.0
+            
+                theta_1 = Ti/(1.0-(Ti*(C2_1+Ti*(C4_1+Ti*C6_1)))/(1.0+Ti*(C3_1+Ti*(C5_1+Ti*C7_1))))
+                xi_1 = (B_G**2.0/(4.0*theta_1))**(1.0/3.0)
+                sigv_1 = C1_1 * theta_1 * np.sqrt(xi_1/(m_rc2 * Ti**3.0)) * np.exp(-3.0*xi_1)
+                
+                #then for the D(d,n)He3 reaction
+                
+                C1_2 = 5.43360E-12
+                C2_2 = 5.85778E-3
+                C3_2 = 7.68222E-3
+                C4_2 = 0.0
+                C5_2 = -2.96400E-6
+                C6_2 = 0.0
+                C7_2 = 0.0
+            
+                theta_2 = Ti/(1.0-(Ti*(C2_2+Ti*(C4_2+Ti*C6_2)))/(1.0+Ti*(C3_2+Ti*(C5_2+Ti*C7_2))))
+                xi_2 = (B_G**2.0/(4.0*theta_2))**(1.0/3.0)
+                sigv_2 = C1_2 * theta_2 * np.sqrt(xi_2/(m_rc2 * Ti**3.0)) * np.exp(-3.0*xi_2)                
+                
+                sigv = (0.5*sigv_1 + 0.5*sigv_2) / 1.0E6 #convert from cm^3/s to m^3/s                
+            return sigv
+        
+        #create logspace over the relevant temperature range
+        #(bosch hale technically only valid over 0.2 - 100 kev)
+        Ti_temp = np.logspace(-1,2,1000)
+        #get the temporary sigv_fus values at each T
+        sigv_fus_temp = sigv(Ti_temp,mode='dd')
+        #spline fit the results
+        sigv_fus_interp = UnivariateSpline(Ti_temp,sigv_fus_temp,s=0) #converted to kelvin
+        #get the sigv_fus values at every point in the plasma
+        #self.sigv_fus = sigv_fus_interp(self.Ti_kev)
+        self.sigv_fus = sigv_fus_interp(5.0)
+        #get the temperature derivative of sigv at every point in the plasma
+        #self.dsigv_fus_dT = sigv_fus_interp.derivative()(self.Ti_kev)
+        self.dsigv_fus_dT = sigv_fus_interp.derivative()(5.0)
+
+        

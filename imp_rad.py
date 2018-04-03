@@ -128,10 +128,6 @@ class imp_rad():
                 frac_abun[i,j,:] = result / np.sum(result) #solve(M,b)
 
         #CALCULATE IMPURITY DENSITIES BY CHARGE STATE
-
-
-
-        
         self.brnd_nC_cs     = []
         self.brnd_rad_cs    = []
         emiss_tot = np.zeros(self.tei.shape)
@@ -164,22 +160,20 @@ class imp_rad():
         
         #the above function gives the right values, but we also need the derivatives
         #we will now do a spline fit of the values themselves, rather than their base-10 logarithm
-        new_T = np.logspace(-3,2,10000)
-        new_Em = 10**(emiss_tot_interp(new_T)-100.0)
-        emiss_tot_interp2 = UnivariateSpline(new_T,new_Em,s=0)
-        #emiss_tot_interp = UnivariateSpline(self.tei,np.log10(emiss_tot)+100.0,s=0)
+        new_T_kev = np.logspace(-3,2,10000)
+        new_T_J = new_T_kev * 1.0E3 * 1.6021E-19
+        new_Em = 10.0**(emiss_tot_interp(new_T_kev)-100.0)
+        self.emiss_tot_interp2 = UnivariateSpline(new_T_J,new_Em,s=0)
 
-        self.brnd_emissivity = emiss_tot_interp2(brnd.Te_kev)
-        self.brnd_dEmiss_dT  = emiss_tot_interp2.derivative()(brnd.Te_kev)  
-     
-        #self.brnd_emiss = np.zeros(brnd.nC.shape)
-        #self.brnd_demiss_dT = np.zeros(brnd.nC.shape)
-        #for (r,theta),nC in np.ndenumerate(brnd.nC):
-        #    self.brnd_emiss[r,theta] = emiss_tot_interp
+        self.brnd_emissivity = self.emiss_tot_interp2(brnd.Te_J)
+        self.brnd_dEmiss_dT  = self.emiss_tot_interp2.derivative()(brnd.Te_J)
+        
+        print 'self.brnd_dEmiss_dT(5kev) = ',self.emiss_tot_interp2.derivative()(5000.0*1.6021E-19)
+        
         
         #emiss_fig = plt.figure(figsize=(6,6))
         #ax1 = emiss_fig.add_subplot(1,1,1)
-        #ax1.loglog(np.logspace(-3,2,1000),10**(emiss_tot_interp(np.logspace(-3,2,1000))-100.0))
+        #ax1.loglog(new_T_kev,self.emiss_tot_interp2.derivative()(new_T_J))
         
         #ax1.semilogy(np.linspace(1.0E-3,1.0E2,10000),10**(emiss_tot_interp(np.linspace(1.0E-3,1.0E2,10000))-100.0),lw=1)
 
@@ -190,12 +184,3 @@ class imp_rad():
         #emiss_deriv_fig = plt.figure(figsize=(6,6))
         #ax1 = emiss_deriv_fig.add_subplot(1,1,1)
         #ax1.loglog(np.logspace(-3,2,1000),10**(emiss_tot_interp.derivative()(np.logspace(-3,2,1000))-100.0))
-
-
-
-        #radfig = plt.figure(figsize=(6,6))
-        #ax1 = radfig.add_subplot(1,1,1)
-        #ax1.axis('equal')
-        #cax =ax1.contourf(brnd.R,brnd.Z,self.brnd_dEmiss_dT,900,cmap='jet')
-        #radfig.colorbar(cax)
-        #cax =ax1.contourf(brnd.R,brnd.Z,brnd.nC,500,cmap='jet')

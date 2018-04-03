@@ -27,7 +27,7 @@ class gt3():
         plotstuff
 
     Attributes:
-        input (obj):    Contains as attributes those quantities that are 
+        inp (obj):    Contains as attributes those quantities that are 
                         specified in input files
         brnd (obj):     Contains as attributes those quantities related
                         to the background plasma (i.e. ni, Te, j_r, etc.)
@@ -45,7 +45,7 @@ class gt3():
         Neutpy:         
         nbeams:
         adpack:
-                            
+                            6
     """
     
     def __init__(self, shotlabel=None):
@@ -54,49 +54,57 @@ class gt3():
         self.shotlabel = shotlabel
 
     def brndonly(self):
-        self.input = read_infile(self.shotlabel)
-        self.brnd  = background(self.input)
+        self.inp = read_infile(self.shotlabel)
+        self.brnd  = background(self.inp)
         
     def brndandiol(self):
-        self.input = read_infile(self.shotlabel)
-        self.brnd  = background(self.input)
-        self.tiol  = thermaliol(self.input,self.brnd)
-        self.fiol  = fastiol(self.input,self.brnd)
+        self.inp = read_infile(self.shotlabel)
+        self.brnd  = background(self.inp)
+        self.tiol  = thermaliol(self.inp,self.brnd)
+        self.fiol  = fastiol(self.inp,self.brnd)
         
     def brndandimp(self):
-        self.input = read_infile(self.shotlabel)
-        self.brnd  = background(self.input)
-        self.imp   = imp_rad(self.input,self.brnd)
+        self.inp = read_infile(self.shotlabel)
+        self.brnd  = background(self.inp)
+        self.imp   = imp_rad(self.inp,self.brnd)
         
     def brndandntrls(self):
-        self.input = read_infile(self.shotlabel)
-        self.brnd  = background(self.input)
-        self.ntrl  = neutprep(self.brnd,self.input)
+        self.inp = read_infile(self.shotlabel)
+        self.brnd  = background(self.inp)
+        self.ntrl  = neutprep(self.brnd,self.inp)
         
     def brndandnbi(self):
-        self.input = read_infile(self.shotlabel)
-        self.brnd  = background(self.input)
-        self.nbi   = beamdep(self.input,self.brnd)
+        self.inp = read_infile(self.shotlabel)
+        self.brnd  = background(self.inp)
+        self.nbi   = beamdep(self.inp,self.brnd)
 
     def noneutrals(self):
-        self.input = read_infile(self.shotlabel)
-        self.brnd  = background(self.input)
-        self.tiol  = thermaliol(self.input,self.brnd)
-        self.fiol  = fastiol(self.input,self.brnd)
-        #self.ntrl  = neutprep(self.brnd,self.input)
+        self.inp = read_infile(self.shotlabel)
+        self.brnd  = background(self.inp)
+        self.tiol  = thermaliol(self.inp,self.brnd)
+        self.fiol  = fastiol(self.inp,self.brnd)
+        #self.ntrl  = neutprep(self.brnd,self.inp)
         self.ntrl = 0
-        self.nbi   = beamdep(self.input,self.brnd)
-        self.jro   = jrostuff(self.input,self.brnd,self.tiol,self.fiol,self.ntrl,self.nbi)
+        self.nbi   = beamdep(self.inp,self.brnd)
+        self.jro   = jrostuff(self.inp,self.brnd,self.tiol,self.fiol,self.ntrl,self.nbi)
+        
+    def therm_instab(self):
+        self.inp = read_infile(self.shotlabel)
+        self.brnd  = background(self.inp)
+        self.nbi   = beamdep(self.inp,self.brnd)        
+        self.imp   = imp_rad(self.inp,self.brnd)
+        #self.jro   = jrostuff(self.inp,self.brnd,self.tiol,self.fiol,self.ntrl,self.nbi)
+        self.ti    = thermal_inst(self.inp,self.brnd,self.nbi,self.imp)
 
     def allthethings(self):
-        self.input = read_infile(self.shotlabel)
-        self.brnd  = background(self.input)
-        self.imp   = imp_rad(self.input,self.brnd)
-        self.tiol  = thermaliol(self.input,self.brnd)
-        self.fiol  = fastiol(self.input,self.brnd)
-        self.ntrl  = neutprep(self.brnd,self.input)
-        self.nbi   = beamdep(self.input,self.brnd)
-        self.jro   = jrostuff(self.input,self.brnd,self.tiol,self.fiol,self.ntrl,self.nbi)
+        self.inp = read_infile(self.shotlabel)
+        self.brnd  = background(self.inp)
+        self.imp   = imp_rad(self.inp,self.brnd)
+        self.tiol  = thermaliol(self.inp,self.brnd)
+        self.fiol  = fastiol(self.inp,self.brnd)
+        self.ntrl  = neutprep(self.brnd,self.inp)
+        self.nbi   = beamdep(self.inp,self.brnd)
+        self.jro   = jrostuff(self.inp,self.brnd,self.tiol,self.fiol,self.ntrl,self.nbi)
         self.ti    = thermal_inst(self.inp,self.brnd,self.nbi,self.imp,self.jro)
 
     def plotstuff(self):
@@ -105,14 +113,14 @@ class gt3():
 
 if __name__ == "__main__":
     myshot = gt3('togt3_d3d_118888_1525')
-    myshot.brndandimp()
+    myshot.therm_instab()
     
     fig1 = plt.figure(figsize=(6,8))
     ax1 = fig1.add_subplot(1,1,1)
     ax1.axis('equal')
     ax1.contour(myshot.brnd.R,myshot.brnd.Z,myshot.brnd.r,25)
     ax1.plot(myshot.brnd.R[-1,:],myshot.brnd.Z[-1,:])
-    ax1.plot(myshot.input.lim_vertex[:,0],myshot.input.lim_vertex[:,1])
+    ax1.plot(myshot.inp.lim_vertex[:,0],myshot.inp.lim_vertex[:,1])
     
     fontsize=12
     fig2 = plt.figure(figsize=(7,10))
