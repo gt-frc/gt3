@@ -168,9 +168,6 @@ class imp_rad():
         self.brnd_emissivity = self.emiss_tot_interp2(brnd.Te_J)
         self.brnd_dEmiss_dT  = self.emiss_tot_interp2.derivative()(brnd.Te_J)
         
-        print 'self.brnd_dEmiss_dT(5kev) = ',self.emiss_tot_interp2.derivative()(5000.0*1.6021E-19)
-        
-        
         #emiss_fig = plt.figure(figsize=(6,6))
         #ax1 = emiss_fig.add_subplot(1,1,1)
         #ax1.loglog(new_T_kev,self.emiss_tot_interp2.derivative()(new_T_J))

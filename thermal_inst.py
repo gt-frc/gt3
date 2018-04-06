@@ -20,7 +20,7 @@ class thermal_inst():
         self.therm_collapse(inp,brnd,nbi,imp)
         pass
     
-    def J0_weight(X, brnd=brnd, inp=inp):
+    def J0_weight(X, brnd, inp):
         r = brnd.r[:,0]
         a = inp.a
         numerator = np.sum(r*X[:,0]*jv(0,5.5*r/a)*a/(len(r)-1.0))
@@ -50,13 +50,15 @@ class thermal_inst():
 
         #Equation 14
         numerator1 = therm_cond(inp,brnd) * (5.5/inp.a)**2 #+ J0_weight(-dHdT(inp,brnd,nbi,imp))
-        denominator1 = J0_weight(0.25 * U_alpha * brnd.dsigv_fus_dT + brnd.fracz*(-imp.brnd_dEmiss_dT))
-        self.n_therm_collapse1 = np.sqrt(numerator2 / denominator2)
+        denominator1 = J0_weight(0.25 * U_alpha * brnd.dsigv_fus_dT + brnd.fracz*(-imp.brnd_dEmiss_dT), brnd, inp)
+        self.n_therm_collapse1 = np.sqrt(numerator1 / denominator1)
 
         print 'n_collapse = ',self.n_therm_collapse1
 
     def therm_collapse_eq44(self,inp,brnd,nbi,imp):
         def chi():
+            pass
+        pass
         
 
         

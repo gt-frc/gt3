@@ -34,6 +34,7 @@ from scipy.linalg import solve
 #from itertools import izip
 import sys
 import os
+import time
 
 import matplotlib
 from matplotlib.collections import PatchCollection
@@ -63,7 +64,6 @@ class neutpy():
         elif infile<>None and inarrs<>None:
             print 'You\'ve specified both an input file and passed arrays directly.'
             print 'Please remove one of the inputs and try again.'
-            #read input file
             sys.exit()
         
         print 'CALCULATING CELL QUANTITIES'
@@ -841,14 +841,14 @@ class neutpy():
 
     def calc_tcoefs (self):
         def f(phi, xi, x_comp,y_comp, reg, mfp):
-            return (2.0/(pi*-1*x_comp[-1])) * sin(phi) * Ki3( li(phi,xi,x_comp,y_comp,reg) / mfp)
-        
-        def Ki3(x):
-            return integrate.quad(lambda theta: (sin(theta))**2 * exp(-x/sin(theta)) ,0,pi/2)[0]
+            return (2.0/(pi*-1*x_comp[-1])) * sin(phi) * self.Ki3_fit( li(phi,xi,x_comp,y_comp,reg) / mfp)
             
-        def li(phi,xi,x_comp,y_comp,reg):   
+        def li(phi,xi,x_comp,y_comp,reg):
+            #TODO: These next two lines comprise ~50% of the runtime. Need to 
+            #do some other way.
             y_coords = np.roll(np.flipud(np.cumsum(y_comp)),-1)
             x_coords = np.roll(np.flipud(np.cumsum(x_comp) - xi),-1)
+
             vert_phis = np.arctan2(y_coords,x_coords)
             vert_phis[0] = 0
             vert_phis[-1] = pi
@@ -872,6 +872,7 @@ class neutpy():
                 #set two equations equal and solve for x, then solve for y
                 x_int = ((y2-y1)/(x2-x1)*x1 - y1 ) / ((y2-y1)/(x2-x1) - tan(phi))
                 y_int = tan(phi) * x_int
+            
             return sqrt(x_int**2 + y_int**2)
         
         def phi_limits(xi,x_comp,y_comp,reg,mfp):
@@ -891,16 +892,28 @@ class neutpy():
         self.T_to        = np.zeros((self.nCells,4,4))
         self.T_via       = np.zeros((self.nCells,4,4))
         
+        #create bickley-naylor fit (much faster than evaluating Ki3 over and over)
+        def Ki3(x):
+            return integrate.quad(lambda theta: (sin(theta))**2 * exp(-x/sin(theta)) ,0,pi/2)[0]
+        Ki3_x = np.linspace(0,50,200)
+        Ki3_v = np.zeros(Ki3_x.shape)
+        for i,x in enumerate(Ki3_x):
+            Ki3_v[i] = Ki3(x)
+        self.Ki3_fit = interp1d(Ki3_x,Ki3_v)
+        
+
         trans_coef_file = open(os.getcwd()+'/outputs/T_coef.txt','w')
         trans_coef_file.write(('{:^6s}'*3+'{:^12s}'*4+'\n').format("from","to","via","T_slow","T_thermal","mfp_s","mfp_t"))
         outof = np.sum(self.nSides[:self.nCells]**2)
+        self.timetrack = 0.0
         for (i,j,k),val in np.ndenumerate(self.T_coef_s):
             progress = self.nSides[i]**2 * i #+ self.nSides[i]*j + k    
-        
+
             L_sides     = np.roll(self.lsides [i,:self.nSides[i]],-(j+1)) #begins with length of the current "from" side
             adj_cells   = np.roll(self.adjCell[i,:self.nSides[i]],-j)
             angles      = np.roll(self.angles [i,:self.nSides[i]],-(j))*2*pi/360 #converted to radians
             angles[1:] = 2*pi-(pi-angles[1:])
+
             if k < adj_cells.size and j < adj_cells.size:
                 self.T_from[i,j,k] = int(adj_cells[0])
                 self.T_to[i,j,k] = int(adj_cells[k-j])
@@ -921,8 +934,8 @@ class neutpy():
                     if self.int_method=='midpoint':
                         kwargs_s = {"x_comp":x_comp,"y_comp":y_comp,"reg":reg,"mfp":self.face_mfp_s[i,j]} #not sure if this is j or k
                         kwargs_t = {"x_comp":x_comp,"y_comp":y_comp,"reg":reg,"mfp":self.face_mfp_t[i,j]}
-                        nx = 20
-                        ny = 20
+                        nx = 10
+                        ny = 10
                         self.T_coef_t[i,j,k] = self.midpoint2D(f, phi_limits, xi_limits, nx, ny, **kwargs_t)
                         self.T_coef_s[i,j,k] = self.midpoint2D(f, phi_limits, xi_limits, nx, ny, **kwargs_s)
                     elif self.int_method=='quad':
@@ -932,7 +945,7 @@ class neutpy():
         
             self.print_progress(progress, outof)
         trans_coef_file.close()
-        
+
         #create t_coef_sum arrays for use later
         self.tcoef_sum_s = np.zeros((self.nCells,4))
         self.tcoef_sum_t = np.zeros((self.nCells,4))
@@ -982,27 +995,10 @@ class neutpy():
                     if fromcell_type==0: #if fromcell is normal cell
                         #determine row and column of matrix
 
-                        try:
-                            #print
-                            #print 'fromcell = ',fromcell
-                            #print 'tocell = ',tocell
-                            #print 'curcell = ',curcell
-                            #print 
-                            #print 'where1',np.where((flux_pos[:,1]== curcell) & ((flux_pos[:,2]== tocell)))
-                            #print 'where2',np.where((flux_pos[:,1]==fromcell) & ((flux_pos[:,2]==curcell)))
-                            #print
-                            M_row_s = np.where((flux_pos[:,1]== curcell) & ((flux_pos[:,2]== tocell)))[0][0]
-                            M_col_s = np.where((flux_pos[:,1]==fromcell) & ((flux_pos[:,2]==curcell)))[0][0]
-                            M_row_t = M_row_s + num_fluxes
-                            M_col_t = M_col_s + num_fluxes
-                        except:
-                            print
-                            print
-                            for i,v in enumerate(flux_pos):
-                                print i,v
-                            print
-                            print
-                            sys.exit()
+                        M_row_s = np.where((flux_pos[:,1]== curcell) & ((flux_pos[:,2]== tocell)))[0][0]
+                        M_col_s = np.where((flux_pos[:,1]==fromcell) & ((flux_pos[:,2]==curcell)))[0][0]
+                        M_row_t = M_row_s + num_fluxes
+                        M_col_t = M_col_s + num_fluxes
                         
                         if fromcell==tocell:
                             uncoll_ss = 0
@@ -1350,8 +1346,7 @@ class read_infile():
                             exec("self.%s = %s(result.group(1))"%(v,v0d[v][0]))
 
         self.nCells_tot  = self.nCells + self.nPlasmReg + self.nWallSegm
-        print 'self.cell1_theta0 = ',self.cell1_theta0
-        sys.exit()
+
         #now we can do the same thing for the 1d and 2d arrays
         v1d = {}
         v1d["iType"]     = [self.nCells_tot,"int",r1di]

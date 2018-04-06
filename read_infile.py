@@ -144,6 +144,10 @@ class read_infile():
         self.invars["delma"]            = ["float",r0df]
         self.invars["xnuati"]           = ["float",r0df]
         self.invars["xnuioni"]          = ["float",r0df]
+        
+        #NEUTRALS CALCULATION
+        self.invars["neut_outfile"]     = ["str",r0ds]        
+        self.invars["ntrl_rho_start"]   = ["str",r0ds]        
 
         #NEUTRAL BEAM CALCULATION
         self.invars["nbeams_loc"]       = ["str",r0ds]        

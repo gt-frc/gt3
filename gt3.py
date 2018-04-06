@@ -71,7 +71,7 @@ class gt3():
     def brndandntrls(self):
         self.inp = read_infile(self.shotlabel)
         self.brnd  = background(self.inp)
-        self.ntrl  = neutprep(self.brnd,self.inp)
+        self.ntrl  = neutprep(self.inp,self.brnd)
         
     def brndandnbi(self):
         self.inp = read_infile(self.shotlabel)
@@ -83,7 +83,7 @@ class gt3():
         self.brnd  = background(self.inp)
         self.tiol  = thermaliol(self.inp,self.brnd)
         self.fiol  = fastiol(self.inp,self.brnd)
-        #self.ntrl  = neutprep(self.brnd,self.inp)
+        #self.ntrl  = neutprep(self.inp,self.brnd)
         self.ntrl = 0
         self.nbi   = beamdep(self.inp,self.brnd)
         self.jro   = jrostuff(self.inp,self.brnd,self.tiol,self.fiol,self.ntrl,self.nbi)
@@ -102,7 +102,7 @@ class gt3():
         self.imp   = imp_rad(self.inp,self.brnd)
         self.tiol  = thermaliol(self.inp,self.brnd)
         self.fiol  = fastiol(self.inp,self.brnd)
-        self.ntrl  = neutprep(self.brnd,self.inp)
+        self.ntrl  = neutprep(self.inp,self.brnd)
         self.nbi   = beamdep(self.inp,self.brnd)
         self.jro   = jrostuff(self.inp,self.brnd,self.tiol,self.fiol,self.ntrl,self.nbi)
         self.ti    = thermal_inst(self.inp,self.brnd,self.nbi,self.imp,self.jro)
@@ -113,7 +113,7 @@ class gt3():
 
 if __name__ == "__main__":
     myshot = gt3('togt3_d3d_118888_1525')
-    myshot.therm_instab()
+    myshot.brndandntrls()
     
     fig1 = plt.figure(figsize=(6,8))
     ax1 = fig1.add_subplot(1,1,1)
@@ -174,8 +174,6 @@ if __name__ == "__main__":
     ax12.set_title(r'$E_{orb}$', fontsize=fontsize)
     ax12.plot(myshot.brnd.rho[:,0],myshot.tiol.E_orb,lw=2,color='black')    
     plt.tight_layout()
-    #for i,v in enumerate(zip(myshot.brnd.ni[:,0],myshot.brnd.rho[-1])):
-    #    print i,v
     #plt.plot(myshot.brnd.rho[-1,:],myshot.brnd.rho[-1,:],lw=2,color='black')
     
     #ax1.plot(myshot.ntrl.sol_lim_pts[:,0],myshot.ntrl.sol_lim_pts[:,1],'o',color='red')
