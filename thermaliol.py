@@ -114,19 +114,19 @@ class thermaliol():
         ## F_orb calculation
         integrand = gammaincc(3/2,eps_min)
         self.F_orb_1D = np.sum(integrand,axis=1)*(2./(numcos-1.))/(2.*gamma(3./2.))
-        self.F_orb = np.repeat(F_orb_1D.reshape(-1,1),inp.thetapts,axis=1)
+        self.F_orb = np.repeat(self.F_orb_1D.reshape(-1,1),inp.thetapts,axis=1)
         self.F_orb_C = np.zeros(self.F_orb.shape) #TODO:
 
         ## M_orb calculation
         integrand = zeta_matrix*gammaincc(2.,eps_min)
         self.M_orb_1D = np.sum(integrand,axis=1)*(2./(numcos-1.))/(2.*gamma(2.))
-        self.M_orb = np.repeat(M_orb_1D.reshape(-1,1),inp.thetapts,axis=1)
+        self.M_orb = np.repeat(self.M_orb_1D.reshape(-1,1),inp.thetapts,axis=1)
         self.M_orb_C = np.zeros(self.F_orb.shape) #TODO:
 
         ## E_orb calculation
         integrand = gammaincc(5/2,eps_min)
         self.E_orb_1D = np.sum(integrand,axis=1)*(2./(numcos-1.))/(5./2.*gamma(2.))
-        self.E_orb = np.repeat(E_orb_1D.reshape(-1,1),inp.thetapts,axis=1)
+        self.E_orb = np.repeat(self.E_orb_1D.reshape(-1,1),inp.thetapts,axis=1)
         self.E_orb_C = np.zeros(self.F_orb.shape) #TODO:
         
         #Temporary fix for nan values that mess things up downstream
