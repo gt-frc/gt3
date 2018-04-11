@@ -114,10 +114,11 @@ class beamdep():
         f.write("zion = 1.0 6.0\n")
         
         rho_nbi = np.linspace(0,1,51)
-        ni_nbi = interp1d(inp.ni_rho[:,0],inp.ni_rho[:,1])(rho_nbi)
-        ne_nbi = interp1d(inp.ne_rho[:,0],inp.ne_rho[:,1])(rho_nbi)
-        Ti_nbi = interp1d(inp.Ti_rho[:,0],inp.Ti_rho[:,1])(rho_nbi)
-        Te_nbi = interp1d(inp.Te_rho[:,0],inp.Te_rho[:,1])(rho_nbi)
+        
+        ni_nbi = interp1d(brnd.rho[:,0],brnd.ni[:,0])(rho_nbi)
+        ne_nbi = interp1d(brnd.rho[:,0],brnd.ne[:,0])(rho_nbi)
+        Ti_nbi = interp1d(brnd.rho[:,0],brnd.Ti_kev[:,0])(rho_nbi)
+        Te_nbi = interp1d(brnd.rho[:,0],brnd.Te_kev[:,0])(rho_nbi)
         
         for i,v in enumerate(rho_nbi):
             f.write('ni20('+str(i+1)+',1) = '+str(ni_nbi[i]*1E-20)+'\n')
@@ -301,10 +302,14 @@ class beamdep():
             result = re.match(r'.*dA *((?:(?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)? +)|(?:NaN +))+) *',data).group(1)
             array = np.reshape(np.asarray(result.split(),dtype=float),(-1,9))
             self.jnbtot     = interp1d(array[:,0],array[:,1])(brnd.rho)
-            self.pNBe_dvol       = interp1d(array[:,0],array[:,2] * array[:,7])(brnd.rho)
-            self.pNBi_dvol       = interp1d(array[:,0],array[:,3] * array[:,7])(brnd.rho)
+            self.pNBe       = interp1d(array[:,0],array[:,2])(brnd.rho) # in MW/m^3
+            self.pNBi       = interp1d(array[:,0],array[:,3])(brnd.rho) # in MW/m^3
+            self.pNB_tot    = self.pNBe + self.pNBi
+            self.pNBe_dvol  = interp1d(array[:,0],array[:,2] * array[:,7])(brnd.rho) #in MW
+            self.pNBi_dvol  = interp1d(array[:,0],array[:,3] * array[:,7])(brnd.rho) #in MW
             self.nbfast     = interp1d(array[:,0],array[:,4])(brnd.rho)
             self.pressb     = interp1d(array[:,0],array[:,5])(brnd.rho)
             self.pfusb      = interp1d(array[:,0],array[:,6])(brnd.rho)
             self.dvol       = interp1d(array[:,0],array[:,7])(brnd.rho)
             self.dA         = interp1d(array[:,0],array[:,8])(brnd.rho)
+            

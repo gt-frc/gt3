@@ -50,10 +50,10 @@ class background():
         B_tot
         f_phi
     """
-    def __init__(self,parameters):
+    def __init__(self,inp):
         sys.dont_write_bytecode = True 
-        self.createbackground(parameters)
-        self.calc_sigv_fus(parameters)
+        self.createbackground(inp)
+        self.xsec(inp)
 
     def createbackground(self,p):
         """Create background plasma using the miller model.
@@ -68,24 +68,25 @@ class background():
         self.theta, self.r = np.meshgrid(theta1d,r1d)
         self.rho = self.r/self.r[-1,0]
 
+        ped_loc = 1.0
         ##########################################################################################
         ## CREATE DENSITY, TEMPERATURE, PRESSURE, AND CURRENT DENSITY ARRAYS
         ##########################################################################################
         if hasattr(p, 'ni_file'):
             self.ni = interp1d(p.ni_rho[:,0],p.ni_rho[:,1])(self.rho)
         else:
-            self.ni = np.where(self.r<0.9*p.a,
+            self.ni = np.where(self.r<ped_loc*p.a,
                                (p.ni0-p.ni9)*(1-self.rho**2)**p.nu_ni + p.ni9,
-                               (p.ni_sep-p.ni9)/(0.1*p.a)*(self.r-0.9*p.a)+p.ni9)
+                               (p.ni_sep-p.ni9)/(0.1*p.a)*(self.r-ped_loc*p.a)+p.ni9)
 
         #############################################
 
         if hasattr(p, 'ne_file'):
             self.ne = interp1d(p.ne_rho[:,0],p.ne_rho[:,1])(self.rho)
         else:
-            self.ne = np.where(self.r<0.9*p.a,
+            self.ne = np.where(self.r<ped_loc*p.a,
                                (p.ne0-p.ne9)*(1-self.rho**2)**p.nu_ne + p.ne9,
-                               (p.ne_sep-p.ne9)/(0.1*p.a)*(self.r-0.9*p.a)+p.ne9)
+                               (p.ne_sep-p.ne9)/(0.1*p.a)*(self.r-ped_loc*p.a)+p.ne9)
     
         #############################################
 
@@ -96,28 +97,27 @@ class background():
             self.fracz = np.zeros(self.rho.shape) + 0.025     
             
         self.nC = self.ne * self.fracz   
-
+        self.z_eff = (self.ni*1.0**2 + self.nC*6.0**2) / (self.ni*1.0 + self.nC*6.0)
         #############################################
 
         if hasattr(p, 'Ti_file'):
             self.Ti_kev = interp1d(p.Ti_rho[:,0],p.Ti_rho[:,1])(self.rho)
         else:
-            self.Ti_kev = np.where(self.r<0.9*p.a,
+            self.Ti_kev = np.where(self.r<ped_loc*p.a,
                              (p.Ti0-p.Ti9)*(1-self.rho**2)**p.nu_Ti + p.Ti9,
-                             (p.Ti_sep-p.Ti9)/(0.1*p.a)*(self.r-0.9*p.a)+p.Ti9)
+                             (p.Ti_sep-p.Ti9)/(0.1*p.a)*(self.r-ped_loc*p.a)+p.Ti9)
         self.Ti_K  = self.Ti_kev * 1.159E7
         self.Ti_ev = self.Ti_kev * 1000
         self.Ti_J  = self.Ti_ev  * elementary_charge
-
 
         #############################################
 
         if hasattr(p, 'Te_file'):
             self.Te_kev = interp1d(p.Te_rho[:,0],p.Te_rho[:,1])(self.rho)
         else:            
-            self.Te_kev = np.where(self.r<0.9*p.a,
+            self.Te_kev = np.where(self.r<ped_loc*p.a,
                              (p.Te0-p.Te9)*(1-self.rho**2)**p.nu_Te + p.Te9,
-                             (p.Te_sep-p.Te9)/(0.1*p.a)*(self.r-0.9*p.a)+p.Te9) 
+                             (p.Te_sep-p.Te9)/(0.1*p.a)*(self.r-ped_loc*p.a)+p.Te9) 
         self.Te_K  = self.Te_kev * 1.159E7
         self.Te_ev = self.Te_kev * 1000
         self.Te_J  = self.Te_ev  * elementary_charge
@@ -292,11 +292,11 @@ class background():
         j_r_ave = np.roll((self.j_r + np.roll(self.j_r,-1, axis=0))/2,1,axis=0)
         j_r_ave[0,:]=0
         diff_I = diff_area * j_r_ave
-        I = np.cumsum(diff_I, axis=0)
-        self.IP = I[-1,0]  
+        self.I = np.cumsum(diff_I, axis=0)
+        self.IP = self.I[-1,0]  
         
         #Calculate B_p_bar
-        B_p_bar = mu_0 * I / self.L_r
+        B_p_bar = mu_0 * self.I / self.L_r
         B_p_bar[0,:]=0
         
         #Calculate li
@@ -501,74 +501,87 @@ class background():
         
         kappa = kappa + kappa_tilda
         return kappa
-    
-    #Fusion Reactivity calculation  
-    def calc_sigv_fus(self,p,mode='dd'):   
-        def sigv(Ti,mode): #function takes T in kev
-            if mode=='dt':
-                B_G = 34.3827    
-                m_rc2 = 1124656
+    def xsec(self,inp):
+        #Fusion Reactivity calculation  
+        def calc_sigv_fus(mode='dd'):   
+            def sigv(Ti,mode): #function takes T in kev
+                if mode=='dt':
+                    B_G = 34.3827    
+                    m_rc2 = 1124656
+                    
+                    C1 = 1.17302E-9
+                    C2 = 1.51361E-2
+                    C3 = 7.51886E-2
+                    C4 = 4.60643E-3
+                    C5 = 1.35000E-2
+                    C6 = -1.06750E-4
+                    C7 = 1.36600E-5
                 
-                C1 = 1.17302E-9
-                C2 = 1.51361E-2
-                C3 = 7.51886E-2
-                C4 = 4.60643E-3
-                C5 = 1.35000E-2
-                C6 = -1.06750E-4
-                C7 = 1.36600E-5
+                    theta = Ti/(1.0-(Ti*(C2+Ti*(C4+Ti*C6)))/(1.0+Ti*(C3+Ti*(C5+Ti*C7))))
+                    xi = (B_G**2.0/(4.0*theta))**(1.0/3.0)
+                    sigv = C1 * theta * np.sqrt(xi/(m_rc2 * Ti**3.0)) * np.exp(-3.0*xi)
+                    sigv = sigv/1.0E6 #convert from cm^3/s to m^3/s
+                    
+                elif mode=='dd':
+                    
+                    B_G = 31.3970 
+                    m_rc2 = 937814
+                    
+                    #first for the D(d,p)T reaction
+                    C1_1 = 5.65718E-12
+                    C2_1 = 3.41267E-3
+                    C3_1 = 1.99167E-3
+                    C4_1 = 0.0
+                    C5_1 = 1.05060E-5
+                    C6_1 = 0.0
+                    C7_1 = 0.0
+                
+                    theta_1 = Ti/(1.0-(Ti*(C2_1+Ti*(C4_1+Ti*C6_1)))/(1.0+Ti*(C3_1+Ti*(C5_1+Ti*C7_1))))
+                    xi_1 = (B_G**2.0/(4.0*theta_1))**(1.0/3.0)
+                    sigv_1 = C1_1 * theta_1 * np.sqrt(xi_1/(m_rc2 * Ti**3.0)) * np.exp(-3.0*xi_1)
+                    
+                    #then for the D(d,n)He3 reaction
+                    
+                    C1_2 = 5.43360E-12
+                    C2_2 = 5.85778E-3
+                    C3_2 = 7.68222E-3
+                    C4_2 = 0.0
+                    C5_2 = -2.96400E-6
+                    C6_2 = 0.0
+                    C7_2 = 0.0
+                
+                    theta_2 = Ti/(1.0-(Ti*(C2_2+Ti*(C4_2+Ti*C6_2)))/(1.0+Ti*(C3_2+Ti*(C5_2+Ti*C7_2))))
+                    xi_2 = (B_G**2.0/(4.0*theta_2))**(1.0/3.0)
+                    sigv_2 = C1_2 * theta_2 * np.sqrt(xi_2/(m_rc2 * Ti**3.0)) * np.exp(-3.0*xi_2)                
+                    
+                    sigv = (0.5*sigv_1 + 0.5*sigv_2) / 1.0E6 #convert from cm^3/s to m^3/s                
+                return sigv
             
-                theta = Ti/(1.0-(Ti*(C2+Ti*(C4+Ti*C6)))/(1.0+Ti*(C3+Ti*(C5+Ti*C7))))
-                xi = (B_G**2.0/(4.0*theta))**(1.0/3.0)
-                sigv = C1 * theta * np.sqrt(xi/(m_rc2 * Ti**3.0)) * np.exp(-3.0*xi)
-                sigv = sigv/1.0E6 #convert from cm^3/s to m^3/s
-                
-            elif mode=='dd':
-                
-                B_G = 31.3970 
-                m_rc2 = 937814
-                
-                #first for the D(d,p)T reaction
-                C1_1 = 5.65718E-12
-                C2_1 = 3.41267E-3
-                C3_1 = 1.99167E-3
-                C4_1 = 0.0
-                C5_1 = 1.05060E-5
-                C6_1 = 0.0
-                C7_1 = 0.0
-            
-                theta_1 = Ti/(1.0-(Ti*(C2_1+Ti*(C4_1+Ti*C6_1)))/(1.0+Ti*(C3_1+Ti*(C5_1+Ti*C7_1))))
-                xi_1 = (B_G**2.0/(4.0*theta_1))**(1.0/3.0)
-                sigv_1 = C1_1 * theta_1 * np.sqrt(xi_1/(m_rc2 * Ti**3.0)) * np.exp(-3.0*xi_1)
-                
-                #then for the D(d,n)He3 reaction
-                
-                C1_2 = 5.43360E-12
-                C2_2 = 5.85778E-3
-                C3_2 = 7.68222E-3
-                C4_2 = 0.0
-                C5_2 = -2.96400E-6
-                C6_2 = 0.0
-                C7_2 = 0.0
-            
-                theta_2 = Ti/(1.0-(Ti*(C2_2+Ti*(C4_2+Ti*C6_2)))/(1.0+Ti*(C3_2+Ti*(C5_2+Ti*C7_2))))
-                xi_2 = (B_G**2.0/(4.0*theta_2))**(1.0/3.0)
-                sigv_2 = C1_2 * theta_2 * np.sqrt(xi_2/(m_rc2 * Ti**3.0)) * np.exp(-3.0*xi_2)                
-                
-                sigv = (0.5*sigv_1 + 0.5*sigv_2) / 1.0E6 #convert from cm^3/s to m^3/s                
-            return sigv
+            #create logspace over the relevant temperature range
+            #(bosch hale technically only valid over 0.2 - 100 kev)
+            Ti_range            = np.logspace(-1,2,1000) #values in kev
+            sigv_fus_range      = sigv(Ti_range,mode='dd') #in m^3/s
+            sigv_fus_interp     = UnivariateSpline(Ti_range*1.0E3*1.6021E-19,sigv_fus_range,s=0) #converted to Joules
+            self.sigv_fus       = sigv_fus_interp(self.Ti_J)
+            self.dsigv_fus_dT   = sigv_fus_interp.derivative()(self.Ti_J)
+            self.dsigv_fus_dT_eq9   = sigv_fus_interp.derivative()(5.0E2*1.6021E-19)
         
-        #create logspace over the relevant temperature range
-        #(bosch hale technically only valid over 0.2 - 100 kev)
-        Ti_temp = np.logspace(-1,2,1000)
-        #get the temporary sigv_fus values at each T
-        sigv_fus_temp = sigv(Ti_temp,mode='dd')
-        #spline fit the results
-        sigv_fus_interp = UnivariateSpline(Ti_temp,sigv_fus_temp,s=0) #converted to kelvin
-        #get the sigv_fus values at every point in the plasma
-        #self.sigv_fus = sigv_fus_interp(self.Ti_kev)
-        self.sigv_fus = sigv_fus_interp(5.0)
-        #get the temperature derivative of sigv at every point in the plasma
-        #self.dsigv_fus_dT = sigv_fus_interp.derivative()(self.Ti_kev)
-        self.dsigv_fus_dT = sigv_fus_interp.derivative()(5.0)
+        def calc_sigv_ion():
+            #TODO: configure so it can use any of the cross section libraries
+            #currently using the Stacey-Thomas cross sections
+            T_exps_fit          = np.array([-1,0,1,2,3,4,5])
+            sigv_exps_fit       = np.array([-2.8523E+01,-1.7745E+01,-1.3620E+01,
+                                            -1.3097E+01,-1.3301E+01,-1.3301E+01,-1.3301E+01])
+            interp1             = UnivariateSpline(T_exps_fit,sigv_exps_fit,s=0)
+            
+            T_exps_range        = np.linspace(-1,5,1000)
+            sigv_vals_range     = 10.0**interp1(T_exps_range) #in m^3/s
+            
+            T_vals_range        = np.logspace(-1,5,1000)*1.6021E-19 #in joules
+            interp2             = UnivariateSpline(T_vals_range,sigv_vals_range,s=0)
+            
+            self.sigv_ion       = interp2(self.Ti_J)
+            self.dsigv_ion_dT   = interp2.derivative()(self.Ti_J)
 
-        
+        calc_sigv_fus()
+        calc_sigv_ion()

@@ -54,7 +54,7 @@ class imp_rad():
         f.write('\n' + '  ncxb = 0')
         f.write('\n' + '  ncxopt = 1')
         f.write('\n' + '  ivunit = 2')
-        f.write('\n' + '  anneut = 1.0e11')
+        f.write('\n' + '  anneut = 1.0e18')
         f.write('\n' + '  vneut = 0.001')
         f.write('\n' + '  imode = 1')
         f.write('\n' + '  nte = ' + str(self.nte))
@@ -160,18 +160,25 @@ class imp_rad():
         
         #the above function gives the right values, but we also need the derivatives
         #we will now do a spline fit of the values themselves, rather than their base-10 logarithm
-        new_T_kev = np.logspace(-3,2,10000)
-        new_T_J = new_T_kev * 1.0E3 * 1.6021E-19
-        new_Em = 10.0**(emiss_tot_interp(new_T_kev)-100.0)
-        self.emiss_tot_interp2 = UnivariateSpline(new_T_J,new_Em,s=0)
-
-        self.brnd_emissivity = self.emiss_tot_interp2(brnd.Te_J)
-        self.brnd_dEmiss_dT  = self.emiss_tot_interp2.derivative()(brnd.Te_J)
+        new_T_kev               = np.logspace(-3,2,10000)
+        new_Em                  = 10.0**(emiss_tot_interp(new_T_kev)-100.0)
         
+        new_T_J                 = new_T_kev * 1.0E3 * 1.6021E-19
+        self.emiss_tot_interp2  = UnivariateSpline(new_T_J,new_Em,s=0)
+        
+        self.brnd_emissivity    = self.emiss_tot_interp2(brnd.Te_J)
+        self.brnd_dEmiss_dT     = self.emiss_tot_interp2.derivative()(brnd.Te_J)
+        self.brnd_dEmiss_dT_eq9     = self.emiss_tot_interp2.derivative()(5.0E2*1.6021E-19)
+        self.brnd_dEmiss_dT_eq22     = self.emiss_tot_interp2.derivative()(21.0*1.6021E-19)
+
         #emiss_fig = plt.figure(figsize=(6,6))
         #ax1 = emiss_fig.add_subplot(1,1,1)
+        #ax1.set_xlim(4.5,5.5)
+        #ax1.set_yscale('symlog')
+        #ax1.set_xscale('log')
+        #ax1.set_ylim(-1E-33,1E-33)
         #ax1.loglog(new_T_kev,self.emiss_tot_interp2.derivative()(new_T_J))
-        
+    
         #ax1.semilogy(np.linspace(1.0E-3,1.0E2,10000),10**(emiss_tot_interp(np.linspace(1.0E-3,1.0E2,10000))-100.0),lw=1)
 
         #ax1.set_xlim(2,10)

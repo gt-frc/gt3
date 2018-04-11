@@ -221,6 +221,8 @@ class neutpy():
             svione (float): 
             
         """
+        #TODO: svione isn't actually a function of ne. Not sure why Mandrekas wrote it this way.
+        #      We can simplify this function signficantly.
         if isinstance(ne, float):
             ne = np.array([ne])    
         if isinstance(Te, float):

@@ -884,7 +884,7 @@ class neutprep():
         self.izn_rate = interpolate.griddata(self.midpts, 
                                        self.iznrate_raw,
                                        np.column_stack((brnd.R.flatten(),brnd.Z.flatten()))
-                                       ).reshape(brnd.rho.shape)        
+                                       ).reshape(brnd.rho.shape)     
         #DOING A FLUX SURFACE AVERAGE OF THE NEUTRALS DATA.
         #FTR, I DON'T ACTUALLY THINK THIS IS A GOOD WAY TO HANDLE THIS. - MH
         nn_1D_col = np.sum(self.nn * (brnd.L_seg*brnd.R),axis=1) / (brnd.L_r[:,0]*brnd.R0[:,0])
