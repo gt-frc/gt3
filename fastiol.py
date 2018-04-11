@@ -5,6 +5,8 @@ Created on Thu Mar 22 13:00:15 2018
 
 @author: max
 """
+import sys
+import numpy as np
 
 class fastiol():
     def __init__(self,inp,brnd):
