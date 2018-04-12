@@ -4,7 +4,7 @@ Created on Sat Aug  5 19:48:34 2017
 
 @author: max
 """
-
+from __future__ import division
 import numpy as np
 from math import pi, sqrt
 import matplotlib.pyplot as plt
@@ -37,45 +37,33 @@ class thermaliol():
 
         polpts = len(brnd.r[-1])
         radpts = len(brnd.r.T[-1])
-        thetas = brnd.theta[-1]
-        thetanums = np.arange(polpts)
-        rs = brnd.r.T[-1]
         
         #THE FOLLOWING ARRAYS ARE 4-DIMENSIONAL ARRAYS
         #[ LAUNCH THETA POSITION , LAUNCH ANGLE COSINE,  LAUNCH r  , EXIT THETA POSITION  ]
-
+        #NOTE TO FUTURE DEVELOPERS: IF YOU TRY TO LOOP OVER THE PLASMA POINTS, LAUNCH ANGLES, AND
+        #EXIT LOCATIONS IN PYTHON THE WAY YOU WOULD IN C OR FORTRAN, IT'S GOING TO TAKE FOREVER. 
+        #ALTHOUGH THESE ARRAYS TAKE MORE MEMORY THAT I'D LIKE, IT'S CURRENTLY NECESSARY TO DO IT THIS WAY.
+        #MAYBE SOMETHING TO IMPROVE ON IN THE FUTURE.
+        
         #Launch point values
         r0          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.r)[-1]
-        theta0      = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.theta)[-1]
-        R0          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.R)[-1]
-        Z0          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.Z)[-1]
-        ni0         = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.ni)[-1]
-        ne0         = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.ne)[-1]
-        Ti0         = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.Ti_kev)[-1]
-        Te0         = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.Te_kev)[-1]
-        Bp0         = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.B_p)[-1]
-        Bt0         = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.B_phi)[-1]
         B0          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.B_tot)[-1]
         f0          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.f_phi)[-1]
         Psi0        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.Psi)[-1]
-        Psi_norm0   = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.Psi_norm) [-1] 
         phi0        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.E_pot)[-1]*1.0E3 #now in volts
         xi0         = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.linspace(-1,1,num=numcos)[:,None,None],np.ones(brnd.R.shape))[1]
 
         #Destination Point Values
-        theta1      = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.theta[-1][:,None,None,None])[-1]
         R1          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.R[-1][:,None,None,None])[-1]
         f1          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.f_phi[-1][:,None,None,None])[-1]
         B1          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.B_tot[-1][:,None,None,None])[-1]
         Psi1        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.Psi[-1][:,None,None,None])[-1]
         phi1        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.E_pot[-1][:,None,None,None])[-1]*1.0E3 #now in volts
         
-        
-        
-        a = (np.abs(R0/R1)*f0/f1*xi0)**2 - 1 + (1 - xi0**2)*np.abs(B1/B0)
-        b = 2*e*(Psi0-Psi1)/(R1*m*f1) * (np.abs(R0/R1)*f0/f1*xi0)
+        a = (np.abs(B1/B0)*f0/f1)**2 - 1 + (1 - xi0**2)*np.abs(B1/B0)
+        b = 2*e*(Psi0-Psi1)/(R1*m*f1) * np.abs(B1/B0)*f0/f1*xi0
         c = (e*(Psi0-Psi1)/(R1*m*f1))**2 - 2*e*(phi0-phi1)/m
-        
+
         v_sep_1 = (-b + np.sqrt(b**2 - 4*a*c))/(2*a)
         v_sep_2 = (-b - np.sqrt(b**2 - 4*a*c))/(2*a)
         

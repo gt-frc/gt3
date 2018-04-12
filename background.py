@@ -289,12 +289,12 @@ class background():
         vol = np.cumsum(self.diff_vol,axis=0)
         
         #Calculate each differential I and sum to get cumulative I
-        j_r_ave = np.roll((self.j_r + np.roll(self.j_r,-1, axis=0))/2,1,axis=0)
+        j_r_ave = np.roll((self.j_r + np.roll(self.j_r,-1, axis=0))/2.0,1,axis=0)
         j_r_ave[0,:]=0
         diff_I = diff_area * j_r_ave
         self.I = np.cumsum(diff_I, axis=0)
         self.IP = self.I[-1,0]  
-        
+
         #Calculate B_p_bar
         B_p_bar = mu_0 * self.I / self.L_r
         B_p_bar[0,:]=0

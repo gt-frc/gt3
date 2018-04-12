@@ -209,7 +209,8 @@ if __name__ == "__main__":
     try:
         ax10 = fig2.add_subplot(rows,cols,num)
         ax10.set_title(r'$F_{orb}$', fontsize=fontsize)
-        ax10.plot(myshot.brnd.rho[:,0],myshot.tiol.F_orb,lw=2,color='black')    
+        #ax10.set_xlim(0.8,1.0)
+        ax10.plot(myshot.brnd.rho[:,0],myshot.tiol.F_orb_1D,lw=2,color='black')    
         num +=1
     except:
         pass
@@ -217,7 +218,8 @@ if __name__ == "__main__":
     try:
         ax11 = fig2.add_subplot(rows,cols,num)
         ax11.set_title(r'$M_{orb}$', fontsize=fontsize)
-        ax11.plot(myshot.brnd.rho[:,0],myshot.tiol.M_orb,lw=2,color='black')    
+        #ax11.set_xlim(0.8,1.0)
+        ax11.plot(myshot.brnd.rho[:,0],myshot.tiol.M_orb_1D,lw=2,color='black')    
         num +=1
     except:
         pass
@@ -225,7 +227,8 @@ if __name__ == "__main__":
     try:
         ax12 = fig2.add_subplot(rows,cols,num)
         ax12.set_title(r'$E_{orb}$', fontsize=fontsize)
-        ax12.plot(myshot.brnd.rho[:,0],myshot.tiol.E_orb,lw=2,color='black')    
+        #ax12.set_xlim(0.8,1.0)
+        ax12.plot(myshot.brnd.rho[:,0],myshot.tiol.E_orb_1D,lw=2,color='black')    
         num +=1
     except:
         pass
