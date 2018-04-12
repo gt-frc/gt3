@@ -63,8 +63,6 @@ class jrostuff():
         chi3        
         chi4        
         chi5        
-        
-        
     """
     
     def __init__(self,inp,brnd,tiol,fiol,ntrl,nbi):

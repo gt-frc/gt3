@@ -70,8 +70,8 @@ s_k_up = 0.0
 s_k_lo = 0.0
 tri_up = 0.35
 tri_lo = 0.0
-thetapts_approx = 30
-rpts = 60
+thetapts_approx = 80
+rpts = 100
 
 #XMILLER PARAMETERS
 xmil = 1
