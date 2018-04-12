@@ -120,12 +120,15 @@ class thermaliol():
         #Temporary fix for nan values that mess things up downstream
         #TODO: FIX THIS
         self.F_orb = np.nan_to_num(self.F_orb)
+        self.F_orb_1D = np.nan_to_num(self.F_orb_1D)
         self.F_orb_C = np.nan_to_num(self.F_orb_C)
         self.M_orb = np.nan_to_num(self.M_orb)
+        self.M_orb_1D = np.nan_to_num(self.M_orb_1D)
         self.M_orb_C = np.nan_to_num(self.M_orb_C)
         self.E_orb = np.nan_to_num(self.E_orb)
+        self.E_orb_1D = np.nan_to_num(self.E_orb_1D)
         self.E_orb_C = np.nan_to_num(self.E_orb_C)
-        
+
         iolplot=0
         if iolplot==1:
             fig = plt.figure(figsize=(12,8))
