@@ -91,8 +91,6 @@ class read_infile():
         r2df = "r'%s\( *(\d*)\) *= *((?:[+\-]?\d*\.?\d*(?:[eE]?[+\-]?\d+)?,?)*) *'%(v)"
 
         self.invars = {}
-        self.invars["d3d_iter"]         = ["int",r0di]
-        self.invars["d3d_input"]        = ["int",r0di]
         self.invars["a"]                = ["float",r0df]
         self.invars["B_phi_0"]          = ["float",r0df]
         self.invars["R0_a"]             = ["float",r0df]
@@ -133,6 +131,10 @@ class read_infile():
         self.invars["xtheta2"]          = ["float",r0df]
         self.invars["xtheta3"]          = ["float",r0df]
         self.invars["xtheta4"]          = ["float",r0df]
+        self.invars["numcos"]           = ["int",r0di]
+        self.invars["edge_rho"]         = ["float",r0df]
+        self.invars["rpts_edge"]        = ["int",r0di]
+        self.invars["rpts_core"]        = ["int",r0di]
      
         #NEW FROM CONSTS
         self.invars["eq1"]              = ["float",r0df]

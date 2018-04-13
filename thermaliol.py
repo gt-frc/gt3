@@ -23,15 +23,18 @@ m_t = 5.006e-27
 
 m = m_t
 class thermaliol():
-    '''background plasma stuff.'''
+    """
+    """
     def __init__(self,inp,brnd):
         sys.dont_write_bytecode = True 
         self.calctiol(inp,brnd)
 
     def calctiol(self,inp,brnd):
-        '''Calculate thermal Ion Orbit Loss.'''
-        numcos = 22
-        angles = np.linspace(-1,1,numcos+1)
+        """
+        Calculate thermal Ion Orbit Loss (IOL).
+        """
+        
+        angles = np.linspace(-1,1,inp.numcos+1)
         coslist = ((angles + np.roll(angles,-1))/2)[:-1]
         
         Tprofile = brnd.Ti_kev.T[0]
@@ -47,20 +50,20 @@ class thermaliol():
         #ALTHOUGH THESE ARRAYS TAKE MORE MEMORY THAT I'D LIKE, IT'S CURRENTLY NECESSARY TO DO IT THIS WAY.
         #MAYBE SOMETHING TO IMPROVE ON IN THE FUTURE.
         
-        #Launch point values
-        r0          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.r)[-1]
-        B0          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.B_tot)[-1]
-        f0          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.f_phi)[-1]
-        Psi0        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.Psi)[-1]
-        phi0        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],brnd.E_pot)[-1]*1E3 #now in volts
+        #CREATE ARRAYS FOR LAUNCH POINTS IN THE PLASMA
+        r0          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],brnd.r)[-1]
+        B0          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],brnd.B_tot)[-1]
+        f0          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],brnd.f_phi)[-1]
+        Psi0        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],brnd.Psi)[-1]
+        phi0        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],brnd.E_pot)[-1]*1E3 #now in volts
         xi0         = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],coslist[:,None,None],np.ones(brnd.R.shape))[1]
 
-        #Destination Point Values
-        R1          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.R[-1][:,None,None,None])[-1]
-        f1          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.f_phi[-1][:,None,None,None])[-1]
-        B1          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.B_tot[-1][:,None,None,None])[-1]
-        Psi1        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.Psi[-1][:,None,None,None])[-1]
-        phi1        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.E_pot[-1][:,None,None,None])[-1]*1E3 #now in volts
+        #CREATE ARRAYS FOR DESTINATION POINTS ALONG THE SEPERATRIX
+        R1          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.R[-1][:,None,None,None])[-1]
+        f1          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.f_phi[-1][:,None,None,None])[-1]
+        B1          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.B_tot[-1][:,None,None,None])[-1]
+        Psi1        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.Psi[-1][:,None,None,None])[-1]
+        phi1        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.E_pot[-1][:,None,None,None])[-1]*1E3 #now in volts
         
         a = (np.abs(B1/B0)*f0/f1)**2 - 1 + (1 - xi0**2)*np.abs(B1/B0)
         b = 2*e*(Psi0-Psi1)/(R1*m*f1) * np.abs(B1/B0)*f0/f1*xi0
@@ -105,21 +108,21 @@ class thermaliol():
         ## F_orb calculation
         #note: the use of gammaincc renders the denominator in Dr. Stacey's equations obsolete.
         integrand = gammaincc(3/2,eps_min)
-        self.F_orb_1D = np.sum(integrand,axis=1)*(2/(numcos))/2
+        self.F_orb_1D = np.sum(integrand,axis=1)*(2/(inp.numcos))/2
         self.F_orb_1D = np.nan_to_num(self.F_orb_1D)
         self.F_orb = np.repeat(self.F_orb_1D.reshape(-1,1),inp.thetapts,axis=1)
         self.F_orb_C = np.zeros(self.F_orb.shape) #TODO:
 
         ## M_orb calculation
         integrand = zeta_matrix*gammaincc(2,eps_min)
-        self.M_orb_1D = np.sum(integrand,axis=1)*(2/(numcos))/2
+        self.M_orb_1D = np.sum(integrand,axis=1)*(2/(inp.numcos))/2
         self.M_orb_1D = np.nan_to_num(self.M_orb_1D)
         self.M_orb = np.repeat(self.M_orb_1D.reshape(-1,1),inp.thetapts,axis=1)
         self.M_orb_C = np.zeros(self.F_orb.shape) #TODO:
 
         ## E_orb calculation
         integrand = gammaincc(5/2,eps_min)
-        self.E_orb_1D = np.sum(integrand,axis=1)*(2/(numcos))/2
+        self.E_orb_1D = np.sum(integrand,axis=1)*(2/(inp.numcos))/2
         self.E_orb_1D = np.nan_to_num(self.E_orb_1D)
         self.E_orb = np.repeat(self.E_orb_1D.reshape(-1,1),inp.thetapts,axis=1)
         self.E_orb_C = np.zeros(self.F_orb.shape)

@@ -63,7 +63,15 @@ class background():
         Args:
         """
         ## CREATE r AND theta MATRICES
-        r1d = np.linspace(0,p.a,p.rpts)
+        try:
+            r1d = np.concatenate((np.linspace(0, p.edge_rho*p.a, p.rpts_core, endpoint=False),
+                                 np.linspace(p.edge_rho*p.a, p.a, p.rpts_edge)),axis=0)
+        except AttributeError:
+            try:
+                r1d = np.linspace(0,p.a,p.rpts)
+            except AttributeError:
+                raise AttributeError("You haven't specified the number of radial points.")
+
         theta1d = np.linspace(0,2*pi,p.thetapts)
         self.theta, self.r = np.meshgrid(theta1d,r1d)
         self.rho = self.r/self.r[-1,0]
@@ -72,37 +80,37 @@ class background():
         ##########################################################################################
         ## CREATE DENSITY, TEMPERATURE, PRESSURE, AND CURRENT DENSITY ARRAYS
         ##########################################################################################
-        if hasattr(p, 'ni_file'):
+        try:
             self.ni = interp1d(p.ni_rho[:,0],p.ni_rho[:,1])(self.rho)
-        else:
+        except AttributeError:
             self.ni = np.where(self.r<ped_loc*p.a,
                                (p.ni0-p.ni9)*(1-self.rho**2)**p.nu_ni + p.ni9,
                                (p.ni_sep-p.ni9)/(0.1*p.a)*(self.r-ped_loc*p.a)+p.ni9)
 
         #############################################
 
-        if hasattr(p, 'ne_file'):
+        try:
             self.ne = interp1d(p.ne_rho[:,0],p.ne_rho[:,1])(self.rho)
-        else:
+        except AttributeError:
             self.ne = np.where(self.r<ped_loc*p.a,
                                (p.ne0-p.ne9)*(1-self.rho**2)**p.nu_ne + p.ne9,
                                (p.ne_sep-p.ne9)/(0.1*p.a)*(self.r-ped_loc*p.a)+p.ne9)
     
         #############################################
 
-        if hasattr(p, 'fracz_file'):
+        try:
             #TODO: verify that this is how fracz is defined
             self.fracz = interp1d(p.fracz_rho[:,0],p.fracz_rho[:,1])(self.rho)
-        else:
+        except AttributeError:
             self.fracz = np.zeros(self.rho.shape) + 0.025     
             
         self.nC = self.ne * self.fracz   
         self.z_eff = (self.ni*1.0**2 + self.nC*6.0**2) / (self.ni*1.0 + self.nC*6.0)
         #############################################
 
-        if hasattr(p, 'Ti_file'):
+        try:
             self.Ti_kev = interp1d(p.Ti_rho[:,0],p.Ti_rho[:,1])(self.rho)
-        else:
+        except AttributeError:
             self.Ti_kev = np.where(self.r<ped_loc*p.a,
                              (p.Ti0-p.Ti9)*(1-self.rho**2)**p.nu_Ti + p.Ti9,
                              (p.Ti_sep-p.Ti9)/(0.1*p.a)*(self.r-ped_loc*p.a)+p.Ti9)
@@ -112,9 +120,9 @@ class background():
 
         #############################################
 
-        if hasattr(p, 'Te_file'):
+        try:
             self.Te_kev = interp1d(p.Te_rho[:,0],p.Te_rho[:,1])(self.rho)
-        else:            
+        except AttributeError:
             self.Te_kev = np.where(self.r<ped_loc*p.a,
                              (p.Te0-p.Te9)*(1-self.rho**2)**p.nu_Te + p.Te9,
                              (p.Te_sep-p.Te9)/(0.1*p.a)*(self.r-ped_loc*p.a)+p.Te9) 
@@ -124,98 +132,98 @@ class background():
         
         #############################################
 
-        if hasattr(p, 'er_file'):
+        try:
             E_r_fit = UnivariateSpline(p.er_rho[:,0], p.er_rho[:,1])
             self.E_r = E_r_fit(self.rho)
             
             self.E_pot = np.zeros(self.r.shape)
             for (i,j),rval in np.ndenumerate(self.r):
                 self.E_pot[i,j] = E_r_fit.integral(rval/p.a, 1.0)
-        else:
-            print 'You need E_r data'
+        except AttributeError:
+            raise AttributeError("You need E_r data")
             sys.exit()
 
         #############################################
 
-        if hasattr(p, 'jr_file'):
-            pass
-        else:
-            self.j_r = p.j0*(1-(self.r/p.a)**2)**p.nu_j   
+        try:
+            self.j_r = p.j0*(1-(self.r/p.a)**2)**p.nu_j  
+        except AttributeError:
+            raise AttributeError("You haven't specified a current distribution.")  
 
         #############################################
 
-        if hasattr(p, 'fz1_file'):
+        try:
             self.fz1 = interp1d(p.fz1_rho[:,0],p.fz1_rho[:,1])(self.rho)
-        else:
+        except AttributeError:
             self.fz1 = 0.025*self.ne
 
         #############################################
 
-        if hasattr(p, 'fracz_file'):
+        try:
             self.fracz = interp1d(p.fracz_rho[:,0],p.fracz_rho[:,1])(self.rho)
-        else:
+        except AttributeError:
             self.fracz = np.zeros(self.rho)+0.025
 
         #############################################
 
-        if hasattr(p, 'exlti_file'):
+        try:
             self.exlti = interp1d(p.exlti_rho[:,0],p.exlti_rho[:,1])(self.rho)
-        else:
+        except AttributeError:
             self.exlti = 0.0
 
         #############################################
 
-        if hasattr(p, 'exlte_file'):
+        try:
             self.exlte = interp1d(p.exlte_rho[:,0],p.exlte_rho[:,1])(self.rho)
-        else:
+        except AttributeError:
             self.exlte = 0.0
 
         #############################################
 
-        if hasattr(p, 'exlni_file'):
+        try:
             self.exlni = interp1d(p.exlni_rho[:,0],p.exlni_rho[:,1])(self.rho)
-        else:
+        except AttributeError:
             self.exlni = 0.0
 
         #############################################
 
-        if hasattr(p, 'vpolC_file'):
+        try:
             self.vpolC = interp1d(p.vpolC_rho[:,0],p.vpolC_rho[:,1])(self.rho)
-        else:
+        except AttributeError:
             self.vpolC = 0.0
 
         #############################################
 
-        if hasattr(p, 'vtorC_file'):
+        try:
             self.vtorC = interp1d(p.vtorC_rho[:,0],p.vtorC_rho[:,1])(self.rho)
-        else:
+        except AttributeError:
             self.vtorC = 0.0
 
         #############################################
 
-        if hasattr(p, 'vpolD_file'):
+        try:
             self.vpolD = interp1d(p.vpolD_rho[:,0],p.vpolD_rho[:,1])(self.rho)
-        else:
+        except AttributeError:
             self.vpolD = 0.0
 
         #############################################
 
-        if hasattr(p, 'vtorD_file'):
+        try:
             self.vtorD = interp1d(p.vtorD_rho[:,0],p.vtorD_rho[:,1])(self.rho)
-        else:
+        except AttributeError:
             self.vtorD = 0.0
         #############################################
 
-        if hasattr(p, 'q_file'):
+        try:
             self.q = interp1d(p.q_rho[:,0],p.q_rho[:,1])(self.rho)
-        else:
+        except AttributeError:
             self.q = np.zeros(self.rho.shape) #will calculated later with the other miller stuff
 
         #############################################
 
-        if hasattr(p, 'zbar2_file'):
+        try:
             self.zbar2 = interp1d(p.zbar2_rho[:,0],p.zbar2_rho[:,1])(self.rho)
-        else:
+        except AttributeError:
             self.zbar2 = np.zeros(self.rho.shape) + 0.025
 
 
@@ -279,7 +287,7 @@ class background():
         #CALCULATE CROSS-SECTIONAL AREA CORRESPONDING TO EACH r AND ASSOCIATED
         #DIFFERENTIAL AREAS
         area = np.zeros(self.r.shape)
-        for i in range(0,p.rpts):
+        for i in range(0,len(self.r)):
             area[i,:] = PolyArea(self.R[i,:],self.Z[i,:])
     
         diff_area = area - np.roll(area,1,axis=0)
@@ -316,7 +324,7 @@ class background():
         self.dR0dr[-1,:] = -2.0*p.a*f[-1,:]/p.R0_a
         self.R0[-1,:] = p.R0_a
         
-        for i in range(p.rpts-2,-1,-1):
+        for i in range(len(self.r)-2,-1,-1):
             self.R0[i,:] = self.dR0dr[i+1,:] * (self.r[i,:]-self.r[i+1,:]) + R0[i+1,:]
             self.dR0dr[i,:] = -2.0*self.r[i,:]*f[i,:]/R0[i,:]
         
