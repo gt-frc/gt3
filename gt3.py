@@ -18,7 +18,10 @@ from dens_lim import dens_lim
 from marfe import marfe
 import matplotlib.pyplot as plt
 #from gt3plots import gt3plots
+import numpy as np
+import scipy.interpolate as interpolate
 import sys
+from math import pi
 
 class gt3():
     """GT3 calculates various tokamak-related quantities
@@ -121,6 +124,7 @@ if __name__ == "__main__":
     #myshot = gt3('togt3_dens_lim_test')
     #myshot.therm_instab()
     #myshot.brndandiol()
+    #myshot.brndonly()
     myshot.brndandntrls()
     fig1 = plt.figure(figsize=(6,8))
     ax1 = fig1.add_subplot(1,1,1)

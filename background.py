@@ -62,7 +62,7 @@ class background():
             
         Args:
         """
-        ## CREATE r AND theta MATRICES
+        ## CREATE MAIN r AND theta MATRICES
         try:
             r1d = np.concatenate((np.linspace(0, p.edge_rho*p.a, p.rpts_core, endpoint=False),
                                  np.linspace(p.edge_rho*p.a, p.a, p.rpts_edge)),axis=0)
@@ -71,6 +71,17 @@ class background():
                 r1d = np.linspace(0,p.a,p.rpts)
             except AttributeError:
                 raise AttributeError("You haven't specified the number of radial points.")
+
+        ## CREATE r AND theta MATRICES FOR NEUTRALS CALCULATION
+        #try:
+        #    r1d_ntrl = np.concatenate((np.linspace(0, p.ntrl_rho_start*p.a, p.rpts_core, endpoint=False),
+        #                         np.linspace(p.ntrl_rho_start*p.a, p.a, p.ntrl_rpts)),axis=0)
+        #except AttributeError:
+        #    try:
+        #        r1d_ntrl = np.linspace(0,p.a,p.rpts)
+        #    except AttributeError:
+        #        raise AttributeError("You haven't specified the number of radial points for the neutrals \
+        #                             calculation or a global number of radial points.")
 
         theta1d = np.linspace(0,2*pi,p.thetapts)
         self.theta, self.r = np.meshgrid(theta1d,r1d)

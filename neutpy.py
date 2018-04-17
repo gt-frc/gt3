@@ -1260,21 +1260,15 @@ class neutpy():
                             nn_count +=1
                 self.cell_nn[i] = nn_sum / nn_count
         
-        
-        print
-        print 'cell neutral densities'
-        for i,v in enumerate(self.cell_nn):
-            print i+1,v
-        print
         print 'Checking particle balance...'
         relerr = abs(np.sum(self.flux_out_tot)+np.sum(self.cell_izn_rate)-np.sum(self.flux_in_tot))/ \
                     ((np.sum(self.flux_out_tot)+np.sum(self.cell_izn_rate)+np.sum(self.flux_in_tot))/2)
-        if relerr<0.001:
-            print 'Particle balance passes. {}% relative error.'.format(relerr)
+        if relerr<0.001: #this is arbitrary. It's just here to alert if there's a problem in the particle balance.
+            print 'Particle balance passes. {5.3f}% relative error.'.format(relerr*100)
         else:
-            print 'Particle balance failed. {}% relative error.'.format(relerr)
-            for i,(v1,v2) in enumerate(zip(self.flux_in_tot,self.flux_out_tot)):
-                print i,np.sum(v1),np.sum(v2)+self.cell_izn_rate[i]
+            print 'Particle balance failed. {}% relative error.'.format(relerr*100)
+            #for i,(v1,v2) in enumerate(zip(self.flux_in_tot,self.flux_out_tot)):
+            #    print i,np.sum(v1),np.sum(v2)+self.cell_izn_rate[i]
                 
     def write_outputs (self): 
         #WRITE FACE QUANTITIES

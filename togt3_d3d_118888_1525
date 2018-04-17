@@ -10,7 +10,7 @@ s_k_lo = 0.0
 tri_up = 0.35
 tri_lo = 0.0
 thetapts_approx = 30
-rpts = 60
+rpts = 50
 #edge_rho = 0.8
 #rpts_edge = 50
 #rpts_core = 10
@@ -109,6 +109,8 @@ adpak_loc = /home/max/Nextcloud/Max/max_phd/Codes/adpak/
 
 #NEUTRALS CALCULATION
 ntrl_rho_start = 0.8
+ntrl_rpts = 5
+ntrl_thetapts = 33
 neut_outfile = gt3_118888_1525_neut.dat
 
 #ION ORBIT LOSS CALCULATION

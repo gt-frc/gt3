@@ -135,6 +135,7 @@ class read_infile():
         self.invars["edge_rho"]         = ["float",r0df]
         self.invars["rpts_edge"]        = ["int",r0di]
         self.invars["rpts_core"]        = ["int",r0di]
+
      
         #NEW FROM CONSTS
         self.invars["eq1"]              = ["float",r0df]
@@ -149,8 +150,10 @@ class read_infile():
         
         #NEUTRALS CALCULATION
         self.invars["neut_outfile"]     = ["str",r0ds]        
-        self.invars["ntrl_rho_start"]   = ["str",r0ds]        
-
+        self.invars["ntrl_rho_start"]   = ["float",r0df]        
+        self.invars["ntrl_rpts"]        = ["int",r0di]
+        self.invars["ntrl_thetapts"]    = ["int",r0di]
+        
         #NEUTRAL BEAM CALCULATION
         self.invars["nbeams_loc"]       = ["str",r0ds]        
         self.invars["adpak_loc"]        = ["str",r0ds]        

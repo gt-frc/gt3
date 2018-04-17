@@ -4,6 +4,7 @@ Created on Sat Aug  5 16:54:44 2017
 
 @author: max
 """
+from __future__ import division
 import numpy as np
 from helpers import getangle, getpoint, cut, isinline, getangle3ptsdeg,makeline
 from scipy import interpolate
@@ -111,42 +112,71 @@ class neutprep():
         self.iznrate_raw    = neutdata[:,7]
 
     def plasmamesh(self,inp,brnd):
-        radmesh_start = 0.8
-        # GET POINTS FOR TRIANGULATION
-        self.plasma_pts = np.column_stack((
-                                            brnd.R[(brnd.rho>=0.8) & (brnd.theta<2*pi)].flatten(),
-                                            brnd.Z[(brnd.rho>=0.8) & (brnd.theta<2*pi)].flatten()
-                                            ))
-    
-        self.plasma_segs = np.zeros((0,2))
-        for i in range( (brnd.rho[:,0] >= radmesh_start).sum() ):
-            new_segs = np.column_stack((
-                                        np.arange(inp.thetapts-1),
-                                        np.roll(np.arange(inp.thetapts-1),-1)
-                                        )) + (inp.thetapts-1) * i
-            self.plasma_segs = np.vstack((self.plasma_segs,new_segs))
+        #IF PARAMETERS ARE SPECIFIED IN INPUT, CREATE NEW R, Z, ni, etc. ARRAYS
+        #FOR NEUTRALS CALCULATION
+        
+        r_interp       = interpolate.interp2d(brnd.rho,brnd.theta,brnd.r,kind='linear')
+        rho_interp     = interpolate.interp2d(brnd.rho,brnd.theta,brnd.rho,kind='linear')
+        theta_interp   = interpolate.interp2d(brnd.rho,brnd.theta,brnd.theta,kind='linear')
+        R_interp       = interpolate.interp2d(brnd.rho,brnd.theta,brnd.R,kind='linear')
+        Z_interp       = interpolate.interp2d(brnd.rho,brnd.theta,brnd.Z,kind='linear')
+        ni_interp      = interpolate.interp2d(brnd.rho,brnd.theta,brnd.ni,kind='linear')
+        ne_interp      = interpolate.interp2d(brnd.rho,brnd.theta,brnd.ne,kind='linear')
+        Ti_kev_interp  = interpolate.interp2d(brnd.rho,brnd.theta,brnd.Ti_kev,kind='linear')
+        Te_kev_interp  = interpolate.interp2d(brnd.rho,brnd.theta,brnd.Te_kev,kind='linear')
+        
+        r      = r_interp(np.linspace(inp.ntrl_rho_start,1,inp.ntrl_rpts),
+                                    np.linspace(0,2*pi,inp.ntrl_thetapts)).T
+        rho    = rho_interp(np.linspace(inp.ntrl_rho_start,1,inp.ntrl_rpts),
+                                    np.linspace(0,2*pi,inp.ntrl_thetapts)).T
+        theta  = theta_interp(np.linspace(inp.ntrl_rho_start,1,inp.ntrl_rpts),
+                                    np.linspace(0,2*pi,inp.ntrl_thetapts)).T
+        R      = R_interp(np.linspace(inp.ntrl_rho_start,1,inp.ntrl_rpts),
+                                    np.linspace(0,2*pi,inp.ntrl_thetapts)).T
+        Z      = Z_interp(np.linspace(inp.ntrl_rho_start,1,inp.ntrl_rpts),
+                                    np.linspace(0,2*pi,inp.ntrl_thetapts)).T
+        ni     = ni_interp(np.linspace(inp.ntrl_rho_start,1,inp.ntrl_rpts),
+                                    np.linspace(0,2*pi,inp.ntrl_thetapts)).T
+        ne     = ne_interp(np.linspace(inp.ntrl_rho_start,1,inp.ntrl_rpts),
+                                    np.linspace(0,2*pi,inp.ntrl_thetapts)).T
+        Ti_kev = Ti_kev_interp(np.linspace(inp.ntrl_rho_start,1,inp.ntrl_rpts),
+                                    np.linspace(0,2*pi,inp.ntrl_thetapts)).T
+        Te_kev = Te_kev_interp(np.linspace(inp.ntrl_rho_start,1,inp.ntrl_rpts),
+                                    np.linspace(0,2*pi,inp.ntrl_thetapts)).T
 
+        # GET POINTS FOR TRIANGULATION
+        self.plasma_pts = np.column_stack((R[:,:-1].flatten(),Z[:,:-1].flatten()))
+        
+        self.plasma_segs = np.zeros((0,2))
+        #for i in range( (ntrl_rho[:,0] >= radmesh_start).sum() ):
+        for i,v in enumerate(rho[:,0]):
+            new_segs = np.column_stack((
+                                        np.arange(inp.ntrl_thetapts-1),
+                                        np.roll(np.arange(inp.ntrl_thetapts-1),-1)
+                                        )) + (inp.ntrl_thetapts-1) * i
+            self.plasma_segs = np.vstack((self.plasma_segs,new_segs))
+        
         #calculate location of the x-point in plasma_pts, in case it's necessary
-        self.xpt_loc = len(self.plasma_pts) - (inp.thetapts-1)/4
+        self.xpt_loc = len(self.plasma_pts) - (inp.ntrl_thetapts-1)/4
 
         #shapely LinearRing used later to identify which sides of 
         #which cells border on core plasma region
-        self.core_line = LineString(self.plasma_pts[:inp.thetapts-1])
-        self.core_ring = LinearRing(self.plasma_pts[:inp.thetapts-1])
+        self.core_line = LineString(self.plasma_pts[:inp.ntrl_thetapts-1])
+        self.core_ring = LinearRing(self.plasma_pts[:inp.ntrl_thetapts-1])
         
         #shapely LinearRing of seperatrix. Used later.
-        self.sep_line = LineString(self.plasma_pts[len(self.plasma_pts)-inp.thetapts+1:])
-        self.sep_ring = LinearRing(self.plasma_pts[len(self.plasma_pts)-inp.thetapts+1:])
+        self.sep_line = LineString(self.plasma_pts[len(self.plasma_pts)-inp.ntrl_thetapts+1:])
+        self.sep_ring = LinearRing(self.plasma_pts[len(self.plasma_pts)-inp.ntrl_thetapts+1:])
 
         #parameters get combined with other parameters later for one 
         #big interpolation over the plasma chamber
         self.plasma_param = np.column_stack((
-                                            brnd.R.flatten(),
-                                            brnd.Z.flatten(),
-                                            brnd.ni.flatten(),
-                                            brnd.ne.flatten(),
-                                            brnd.Ti_kev.flatten(),
-                                            brnd.Te_kev.flatten()
+                                            R.flatten(),
+                                            Z.flatten(),
+                                            ni.flatten(),
+                                            ne.flatten(),
+                                            Ti_kev.flatten(),
+                                            Te_kev.flatten()
                                             ))
         
         #also create the lim_pts array. This might get moved somewhere else
@@ -194,7 +224,7 @@ class neutprep():
         # AROUND THE SEPERATRIX COUNTER-CLOCKWISE
     
         sepx, sepy = self.sep_line.coords.xy
-        xpt_pos = len(sepx) - (inp.thetapts-1)/4
+        xpt_pos = int(len(sepx) - (inp.ntrl_thetapts-1)/4)
         self.sep_pts = np.roll(np.column_stack((sepx,sepy)),-xpt_pos,axis=0)
 
         #make new sep_line with x-point repeated for use in the bdry condition
