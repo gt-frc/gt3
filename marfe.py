@@ -34,8 +34,7 @@ class marfe():
         sigv_el         = 0
         dsigv_cxel_dT   = 0
         
-        
-        t1 = f_cond * Q_perp * (nu * L_T**-2 + (C2-1)*L_n**-1)
+        t1 = f_cond * Q_perp * (nu * L_T**-1 + (C2-1)*L_n**-1)
         t2 = fz*((nu + 1 - C2)*Lz/T - dLzdT)
         t3 = f0  * (E_ion * sigv_ion / T * (nu - T / sigv_ion * dsigv_ion_dT))
         t4 = f0c * (3/2*(sigv_cx + sigv_el) * (nu-1-T*dsigv_cxel_dT/(sigv_cx + sigv_el)))

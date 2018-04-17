@@ -103,7 +103,7 @@ class thermaliol():
         for indx,column in enumerate(zeta_matrix.T):
             zeta_matrix[:,indx] = coslist[indx]
         
-        eps_min = m * v_sep_min**2 / (2*T_matrix*1E3*1.6021E-19)
+        eps_min = m * v_sep_min**2 / (2*T_matrix*1E3*e)
         
         ## F_orb calculation
         #note: the use of gammaincc renders the denominator in Dr. Stacey's equations obsolete.

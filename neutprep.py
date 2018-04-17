@@ -103,8 +103,12 @@ class neutprep():
     def read_outfile(self,inp,brnd):
         neutdata = np.loadtxt(self.neutfile_loc,skiprows=1)
         self.midpts = np.column_stack((neutdata[:,0],neutdata[:,1]))
-        self.nn_raw = neutdata[:,2]
-        self.iznrate_raw = neutdata[:,3]
+        self.nn_s_raw       = neutdata[:,2]
+        self.nn_t_raw       = neutdata[:,3]
+        self.nn_raw         = neutdata[:,4]
+        self.iznrate_s_raw  = neutdata[:,5]
+        self.iznrate_t_raw  = neutdata[:,6]
+        self.iznrate_raw    = neutdata[:,7]
 
     def plasmamesh(self,inp,brnd):
         radmesh_start = 0.8
@@ -855,20 +859,30 @@ class neutprep():
         
         self.neutpy_inst = neutpy(inarrs=toneutpy)
         plot = neutpyplot(self.neutpy_inst)
-        self.nn_raw = self.neutpy_inst.cell_nn
-        self.iznrate_raw = self.neutpy_inst.cell_izn_rate
+        self.nn_s_raw = self.neutpy_inst.cell_nn_s
+        self.nn_t_raw = self.neutpy_inst.cell_nn_t
+        self.nn_raw = self.nn_s_raw + self.nn_t_raw
+        
+        self.iznrate_s_raw = self.neutpy_inst.cell_izn_rate_s
+        self.iznrate_t_raw = self.neutpy_inst.cell_izn_rate_t
+        self.iznrate_raw = self.iznrate_s_raw + self.iznrate_t_raw
         
         #create output file
         #the file contains R,Z coordinates and then the values of several calculated parameters
         #at each of those points.
         
         f = open(self.neutfile_loc,'w')
-        f.write(('{:^15s}'*4).format('R','Z','n_n','izn_rate'))
+        f.write(('{:^18s}'*8).format('R','Z','n_n_slow','n_n_thermal','n_n_total','izn_rate_slow','izn_rate_thermal','izn_rate_total'))
         for i,pt in enumerate(self.midpts):
-            f.write(('\n'+'{:>15.5f}'*2+'{:>15.5E}'*2).format(self.midpts[i,0],
+            f.write(('\n'+'{:>18.5f}'*2+'{:>18.5E}'*6).format(
+                                        self.midpts[i,0],
                                         self.midpts[i,1],
-                                        self.neutpy_inst.cell_nn[i],
-                                        self.neutpy_inst.cell_izn_rate[i]))
+                                        self.nn_s_raw[i],
+                                        self.nn_t_raw[i],
+                                        self.nn_raw[i],
+                                        self.iznrate_s_raw[i],
+                                        self.iznrate_t_raw[i],
+                                        self.iznrate_raw[i]))
         f.close()
         
 
@@ -877,21 +891,46 @@ class neutprep():
         """
         
         """
+        self.nn_s = interpolate.griddata(self.midpts, 
+                                       self.nn_s_raw,
+                                       np.column_stack((brnd.R.flatten(),brnd.Z.flatten()))
+                                       ).reshape(brnd.rho.shape)
+        self.nn_t = interpolate.griddata(self.midpts, 
+                                       self.nn_t_raw,
+                                       np.column_stack((brnd.R.flatten(),brnd.Z.flatten()))
+                                       ).reshape(brnd.rho.shape)
         self.nn = interpolate.griddata(self.midpts, 
                                        self.nn_raw,
                                        np.column_stack((brnd.R.flatten(),brnd.Z.flatten()))
                                        ).reshape(brnd.rho.shape)
+        self.izn_rate_s = interpolate.griddata(self.midpts, 
+                                       self.iznrate_s_raw,
+                                       np.column_stack((brnd.R.flatten(),brnd.Z.flatten()))
+                                       ).reshape(brnd.rho.shape)     
+        self.izn_rate_t = interpolate.griddata(self.midpts, 
+                                       self.iznrate_t_raw,
+                                       np.column_stack((brnd.R.flatten(),brnd.Z.flatten()))
+                                       ).reshape(brnd.rho.shape) 
         self.izn_rate = interpolate.griddata(self.midpts, 
                                        self.iznrate_raw,
                                        np.column_stack((brnd.R.flatten(),brnd.Z.flatten()))
-                                       ).reshape(brnd.rho.shape)     
+                                       ).reshape(brnd.rho.shape) 
+
         #DOING A FLUX SURFACE AVERAGE OF THE NEUTRALS DATA.
         #FTR, I DON'T ACTUALLY THINK THIS IS A GOOD WAY TO HANDLE THIS. - MH
-        nn_1D_col = np.sum(self.nn * (brnd.L_seg*brnd.R),axis=1) / (brnd.L_r[:,0]*brnd.R0[:,0])
-        self.nn_1D = np.repeat(nn_1D_col.reshape(-1,1),inp.thetapts,axis=1)
+        nn_s_1D_col  = np.sum(self.nn_s * (brnd.L_seg*brnd.R),axis=1) / (brnd.L_r[:,0]*brnd.R0[:,0])
+        nn_t_1D_col  = np.sum(self.nn_t * (brnd.L_seg*brnd.R),axis=1) / (brnd.L_r[:,0]*brnd.R0[:,0])
+        nn_1D_col    = np.sum(self.nn   * (brnd.L_seg*brnd.R),axis=1) / (brnd.L_r[:,0]*brnd.R0[:,0])
+        self.nn_s_1D = np.repeat(nn_s_1D_col.reshape(-1,1),inp.thetapts,axis=1)
+        self.nn_t_1D = np.repeat(nn_t_1D_col.reshape(-1,1),inp.thetapts,axis=1)
+        self.nn_1D   = np.repeat(nn_1D_col.reshape(-1,1),inp.thetapts,axis=1)
 
-        izn_rate_1D_col = np.sum(self.izn_rate * (brnd.L_seg*brnd.R),axis=1) / (brnd.L_r[:,0]*brnd.R0[:,0])
-        self.izn_rate_1D = np.repeat(izn_rate_1D_col.reshape(-1,1),inp.thetapts,axis=1)
+        izn_rate_s_1D_col  = np.sum(self.izn_rate_s * (brnd.L_seg*brnd.R),axis=1) / (brnd.L_r[:,0]*brnd.R0[:,0])
+        izn_rate_t_1D_col  = np.sum(self.izn_rate_t * (brnd.L_seg*brnd.R),axis=1) / (brnd.L_r[:,0]*brnd.R0[:,0])
+        izn_rate_1D_col    = np.sum(self.izn_rate   * (brnd.L_seg*brnd.R),axis=1) / (brnd.L_r[:,0]*brnd.R0[:,0])
+        self.izn_rate_s_1D = np.repeat(izn_rate_s_1D_col.reshape(-1,1),inp.thetapts,axis=1)
+        self.izn_rate_t_1D = np.repeat(izn_rate_t_1D_col.reshape(-1,1),inp.thetapts,axis=1)
+        self.izn_rate_1D   = np.repeat(izn_rate_1D_col.reshape(-1,1),inp.thetapts,axis=1)
         
         #nn_plot = plt.figure(figsize=(6,4))
         #ax1 = nn_plot.add_subplot(1,1,1)

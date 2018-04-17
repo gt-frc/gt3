@@ -120,8 +120,8 @@ if __name__ == "__main__":
     myshot = gt3('togt3_d3d_118888_1525')
     #myshot = gt3('togt3_dens_lim_test')
     #myshot.therm_instab()
-    myshot.brndandiol()
-    
+    #myshot.brndandiol()
+    myshot.brndandntrls()
     fig1 = plt.figure(figsize=(6,8))
     ax1 = fig1.add_subplot(1,1,1)
     ax1.axis('equal')

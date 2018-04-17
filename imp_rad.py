@@ -171,13 +171,16 @@ class imp_rad():
         self.brnd_dEmiss_dT_eq9     = self.emiss_tot_interp2.derivative()(5.0E2*1.6021E-19)
         self.brnd_dEmiss_dT_eq22     = self.emiss_tot_interp2.derivative()(21.0*1.6021E-19)
 
-        #emiss_fig = plt.figure(figsize=(6,6))
-        #ax1 = emiss_fig.add_subplot(1,1,1)
+        emiss_fig = plt.figure(figsize=(6,4))
+        ax1 = emiss_fig.add_subplot(1,1,1)
         #ax1.set_xlim(4.5,5.5)
         #ax1.set_yscale('symlog')
         #ax1.set_xscale('log')
         #ax1.set_ylim(-1E-33,1E-33)
         #ax1.loglog(new_T_kev,self.emiss_tot_interp2.derivative()(new_T_J))
+        ax1.set_xlabel(r'Electron Temperature ($keV$)')
+        ax1.set_ylabel(r'Carbon Radiation Emissivity ($W*m^3$)')
+        ax1.loglog(new_T_kev,self.emiss_tot_interp2(new_T_J))
     
         #ax1.semilogy(np.linspace(1.0E-3,1.0E2,10000),10**(emiss_tot_interp(np.linspace(1.0E-3,1.0E2,10000))-100.0),lw=1)
 

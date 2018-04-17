@@ -1336,7 +1336,6 @@ class read_infile():
         for v in v0d:
             exec('self.%s = 0' %(v))
 
-
         #populate 0d variables. Need to do this first to calculate the sizes of the other arrays
         with open(os.getcwd() + '/' + infile, 'r') as toneut:
             for count, line in enumerate(toneut):
@@ -1522,4 +1521,3 @@ if __name__ == "__main__":
     #neut = neutpy('toneut_converted_mod')
     neut = neutpy('neutpy_in_generated2')
     plot = neutpyplot(neut)
-    #plot = neutpyplot()
