@@ -30,32 +30,32 @@ class marfe():
         f0              = ntrl.nn / brnd.ni
         f0c             = ntrl.nn_s / brnd.ni
         E_ion           = 15.0 * 1.6021E-19 #13.59844 * 1.6021E-19
-        sigv_ion        = 5.0E-14 #brnd.sigv_ion
+        sv_ion        = 5.0E-14 #brnd.sv_ion
         T               = brnd.Ti_J
-        dsigv_ion_dT    = brnd.dsigv_ion_dT
-        sigv_cx         = 5.0E-14 #brnd.svcx
-        sigv_el         = 5.0E-14 #brnd.svel
-        dsigv_cxel_dT   = brnd.dsvel_dT + brnd.dsvcx_dT
+        dsv_ion_dT    = brnd.dsv_ion_dT
+        sv_cx         = 5.0E-14 #brnd.svcx
+        sv_el         = 5.0E-14 #brnd.svel
+        dsv_cxel_dT   = brnd.dsvel_dT + brnd.dsvcx_dT
         
         #t1 = f_cond * Q_perp * (nu * L_T**-1 + (C2-1)*L_n**-1)
         #t2 = fz*((nu + 1 - C2)*Lz/T - dLzdT)
-        #t3 = f0  * (E_ion * sigv_ion / T * (nu - T / sigv_ion * dsigv_ion_dT))
-        #t4 = f0c * (3/2*(sigv_cx + sigv_el) * (nu-1-T*dsigv_cxel_dT/(sigv_cx + sigv_el)))
+        #t3 = f0  * (E_ion * sv_ion / T * (nu - T / sv_ion * dsv_ion_dT))
+        #t4 = f0c * (3/2*(sv_cx + sv_el) * (nu-1-T*dsv_cxel_dT/(sv_cx + sv_el)))
         #n_marfe = t1 / (T*(t2 + t3 + t4))
 
         #print 'f0c'
         #print f0c
         #print 
-        #print 'sigv_cx'
-        #print sigv_cx
+        #print 'sv_cx'
+        #print sv_cx
         #print
-        #print 'sigv_el'
-        #print sigv_el
+        #print 'sv_el'
+        #print sv_el
 
         t1 = chi_r * (nu * L_T**-2 - (1 - C2) * L_T**-1 * L_n**-1)
         t2 = fz*((nu + 1 - C2)*Lz/T - dLzdT)
-        t3 = f0  * (E_ion * sigv_ion / T * (nu - T / sigv_ion * dsigv_ion_dT))
-        t4 = f0c * (3/2*(sigv_cx + sigv_el) * (nu-1-T*dsigv_cxel_dT/(sigv_cx + sigv_el)))
+        t3 = f0  * (E_ion * sv_ion / T * (nu - T / sv_ion * dsv_ion_dT))
+        t4 = f0c * (3/2*(sv_cx + sv_el) * (nu-1-T*dsv_cxel_dT/(sv_cx + sv_el)))
         n_marfe = t1 / (T*(t2 + t3 + t4))
 
         n_marfe = np.where(brnd.rho<0.8,np.nan,n_marfe)

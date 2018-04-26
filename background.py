@@ -587,9 +587,9 @@ class background():
             Ti_range            = np.logspace(-1,2,1000) #values in kev
             sigv_fus_range      = sigv(Ti_range,mode='dd') #in m^3/s
             sigv_fus_interp     = UnivariateSpline(Ti_range*1.0E3*1.6021E-19,sigv_fus_range,s=0) #converted to Joules
-            self.sigv_fus       = sigv_fus_interp(self.Ti_J)
-            self.dsigv_fus_dT   = sigv_fus_interp.derivative()(self.Ti_J)
-            self.dsigv_fus_dT_eq9   = sigv_fus_interp.derivative()(5.0E2*1.6021E-19)
+            self.sv_fus       = sigv_fus_interp(self.Ti_J)
+            self.dsv_fus_dT   = sigv_fus_interp.derivative()(self.Ti_J)
+            self.dsv_fus_dT_eq9   = sigv_fus_interp.derivative()(5.0E2*1.6021E-19)
         
         def calc_sigv_ion():
             #TODO: configure so it can use any of the cross section libraries
@@ -605,8 +605,8 @@ class background():
             T_vals_range        = np.logspace(-1,5,1000)*1.6021E-19 #in joules
             interp2             = UnivariateSpline(T_vals_range,sigv_vals_range,s=0)
             
-            self.sigv_ion       = interp2(self.Ti_J)
-            self.dsigv_ion_dT   = interp2.derivative()(self.Ti_J)
+            self.sv_ion       = interp2(self.Ti_J)
+            self.dsv_ion_dT   = interp2.derivative()(self.Ti_J)
 
         def calc_svel():
         

@@ -647,26 +647,26 @@ class neutpy():
             
         #cross sections that DON'T depend on neutral energy
         if self.xsec_ione=='janev':
-            self.cell_sigv_ion = self.calc_svione_janev(self.cell_Te)
+            self.cell_sv_ion = self.calc_svione_janev(self.cell_Te)
         elif self.xsec_ione=='stacey_thomas':
-            self.cell_sigv_ion = self.calc_svione_st(self.cell_ne,self.cell_Te)
+            self.cell_sv_ion = self.calc_svione_st(self.cell_ne,self.cell_Te)
             
-        self.cell_sigv_rec   = self.calc_svrec_st(self.cell_ne,self.cell_Te)
+        self.cell_sv_rec   = self.calc_svrec_st(self.cell_ne,self.cell_Te)
         
         if self.xsec_cx=='janev':
-            self.cell_sigv_cx_s = self.calc_svcxi_janev(self.cell_Ti, self.cell_Tn_s,2,2)
-            self.cell_sigv_cx_t = self.calc_svcxi_janev(self.cell_Ti, self.cell_Tn_t,2,2)
-            self.cell_sigv_el_s = 0*self.calc_svel(self.cell_Ti, self.cell_Tn_s)
-            self.cell_sigv_el_t = 0*self.calc_svel(self.cell_Ti, self.cell_Tn_t)
+            self.cell_sv_cx_s = self.calc_svcxi_janev(self.cell_Ti, self.cell_Tn_s,2,2)
+            self.cell_sv_cx_t = self.calc_svcxi_janev(self.cell_Ti, self.cell_Tn_t,2,2)
+            self.cell_sv_el_s = 0*self.calc_svel(self.cell_Ti, self.cell_Tn_s)
+            self.cell_sv_el_t = 0*self.calc_svel(self.cell_Ti, self.cell_Tn_t)
         
         elif self.xsec_cx=='stacey_thomas':
-            self.cell_sigv_cx_s = self.calc_svcxi_st(self.cell_Ti, self.cell_Tn_s)
-            self.cell_sigv_cx_t = self.calc_svcxi_st(self.cell_Ti, self.cell_Tn_t)
-            self.cell_sigv_el_s = self.calc_svel(self.cell_Ti, self.cell_Tn_s)
-            self.cell_sigv_el_t = self.calc_svel(self.cell_Ti, self.cell_Tn_t)  
+            self.cell_sv_cx_s = self.calc_svcxi_st(self.cell_Ti, self.cell_Tn_s)
+            self.cell_sv_cx_t = self.calc_svcxi_st(self.cell_Ti, self.cell_Tn_t)
+            self.cell_sv_el_s = self.calc_svel(self.cell_Ti, self.cell_Tn_s)
+            self.cell_sv_el_t = self.calc_svel(self.cell_Ti, self.cell_Tn_t)  
         
-        self.cell_sigv_eln_s = self.calc_sveln(self.cell_Tn_s) 
-        self.cell_sigv_eln_t = self.calc_sveln(self.cell_Tn_t)
+        self.cell_sv_eln_s = self.calc_sveln(self.cell_Tn_s) 
+        self.cell_sv_eln_t = self.calc_sveln(self.cell_Tn_t)
             
         #calculate "cell mfp" for cold and thermal energy group using "cell" cross sections 
         #calculated above. This is used for the calculation of excape probabilities.
@@ -677,14 +677,14 @@ class neutpy():
         self.cell_vn_t = np.sqrt(2 * self.cell_Tn_t * 1E3 * 1.6022E-19 / (m_p*self.aneut))
         for i,v in enumerate(self.cell_vn_t):
             self.cell_mfp_s[i] = self.cell_vn_s[i] / \
-                            (self.cell_ne[i]*self.cell_sigv_ion[i] + self.cell_ni[i]*self.cell_sigv_cx_s[i] + self.cell_ni[i]*self.cell_sigv_el_s[i])
+                            (self.cell_ne[i]*self.cell_sv_ion[i] + self.cell_ni[i]*self.cell_sv_cx_s[i] + self.cell_ni[i]*self.cell_sv_el_s[i])
             self.cell_mfp_t[i] = self.cell_vn_t[i] / \
-                            (self.cell_ne[i]*self.cell_sigv_ion[i] + self.cell_ni[i]*self.cell_sigv_cx_t[i] + self.cell_ni[i]*self.cell_sigv_el_t[i])
+                            (self.cell_ne[i]*self.cell_sv_ion[i] + self.cell_ni[i]*self.cell_sv_cx_t[i] + self.cell_ni[i]*self.cell_sv_el_t[i])
         
-        self.c_i_s = (self.cell_sigv_cx_s + self.cell_sigv_el_s) / \
-                        (self.cell_ne/self.cell_ni*self.cell_sigv_ion + self.cell_sigv_cx_s + self.cell_sigv_el_s)
-        self.c_i_t = (self.cell_sigv_cx_t + self.cell_sigv_el_t) / \
-                        (self.cell_ne/self.cell_ni*self.cell_sigv_ion + self.cell_sigv_cx_t + self.cell_sigv_el_t)
+        self.c_i_s = (self.cell_sv_cx_s + self.cell_sv_el_s) / \
+                        (self.cell_ne/self.cell_ni*self.cell_sv_ion + self.cell_sv_cx_s + self.cell_sv_el_s)
+        self.c_i_t = (self.cell_sv_cx_t + self.cell_sv_el_t) / \
+                        (self.cell_ne/self.cell_ni*self.cell_sv_ion + self.cell_sv_cx_t + self.cell_sv_el_t)
         
         self.X_i_s = 4.0*self.cell_area / (self.cell_mfp_s * self.cell_perim)
         self.X_i_t = 4.0*self.cell_area / (self.cell_mfp_t * self.cell_perim)
@@ -727,14 +727,14 @@ class neutpy():
         self.face_arrays["face_reem_n_s"]        = ["float"]
         self.face_arrays["face_reem_n_t"]        = ["float"]
         
-        self.face_arrays["face_sigv_cx_s"]       = ["float"]
-        self.face_arrays["face_sigv_el_s"]       = ["float"]
-        self.face_arrays["face_sigv_eln_s"]      = ["float"]
-        self.face_arrays["face_sigv_ion_s"]      = ["float"]
-        self.face_arrays["face_sigv_cx_t"]       = ["float"]
-        self.face_arrays["face_sigv_el_t"]       = ["float"]
-        self.face_arrays["face_sigv_eln_t"]      = ["float"]
-        self.face_arrays["face_sigv_ion_t"]      = ["float"]
+        self.face_arrays["face_sv_cx_s"]       = ["float"]
+        self.face_arrays["face_sv_el_s"]       = ["float"]
+        self.face_arrays["face_sv_eln_s"]      = ["float"]
+        self.face_arrays["face_sv_ion_s"]      = ["float"]
+        self.face_arrays["face_sv_cx_t"]       = ["float"]
+        self.face_arrays["face_sv_el_t"]       = ["float"]
+        self.face_arrays["face_sv_eln_t"]      = ["float"]
+        self.face_arrays["face_sv_ion_t"]      = ["float"]
         self.face_arrays["c_ik_s"]               = ["float"]
         self.face_arrays["c_ik_t"]               = ["float"]
         self.face_arrays["face_mfp_s"]           = ["float"]
@@ -810,36 +810,36 @@ class neutpy():
         
                 #IONIZATION CROSS SECTIONS
                 if self.xsec_ione=='janev':
-                    self.face_sigv_ion_s[i,j] = self.calc_svione_janev(self.cell_Te[i])
-                    self.face_sigv_ion_t[i,j] = self.calc_svione_janev(self.cell_Te[i])
+                    self.face_sv_ion_s[i,j] = self.calc_svione_janev(self.cell_Te[i])
+                    self.face_sv_ion_t[i,j] = self.calc_svione_janev(self.cell_Te[i])
                 elif self.xsec_ione=='stacey_thomas':
-                    self.face_sigv_ion_s[i,j] = self.calc_svione_st(self.cell_ne[i],self.cell_Te[i])
-                    self.face_sigv_ion_t[i,j] = self.calc_svione_st(self.cell_ne[i],self.cell_Te[i])
+                    self.face_sv_ion_s[i,j] = self.calc_svione_st(self.cell_ne[i],self.cell_Te[i])
+                    self.face_sv_ion_t[i,j] = self.calc_svione_st(self.cell_ne[i],self.cell_Te[i])
         
                 #CHARGE EXCHANGE AND ELASTIC SCATTERING CROSS SECTIONS        
                 if self.xsec_cx=='janev':
-                    self.face_sigv_cx_s[i,j]  = self.calc_svcxi_janev(self.cell_Ti[i],self.face_Tn_intocell_s[i,j],2,2)
-                    self.face_sigv_cx_t[i,j]  = self.calc_svcxi_janev(self.cell_Ti[i],self.face_Tn_intocell_t[i,j],2,2)
-                    self.face_sigv_el_s[i,j]  = 0
-                    self.face_sigv_el_t[i,j]  = 0
+                    self.face_sv_cx_s[i,j]  = self.calc_svcxi_janev(self.cell_Ti[i],self.face_Tn_intocell_s[i,j],2,2)
+                    self.face_sv_cx_t[i,j]  = self.calc_svcxi_janev(self.cell_Ti[i],self.face_Tn_intocell_t[i,j],2,2)
+                    self.face_sv_el_s[i,j]  = 0
+                    self.face_sv_el_t[i,j]  = 0
                 elif self.xsec_cx=='stacey_thomas':
-                    self.face_sigv_cx_s[i,j]  = self.calc_svcxi_st(self.cell_Ti[i],self.face_Tn_intocell_s[i,j])
-                    self.face_sigv_cx_t[i,j]  = self.calc_svcxi_st(self.cell_Ti[i],self.face_Tn_intocell_t[i,j])
-                    self.face_sigv_el_s[i,j]  = self.calc_svel(self.cell_Ti[i],self.face_Tn_intocell_s[i,j])            
-                    self.face_sigv_el_t[i,j]  = self.calc_svel(self.cell_Ti[i],self.face_Tn_intocell_t[i,j])     
-                    self.face_sigv_eln_s[i,j] = self.calc_sveln(self.face_Tn_intocell_s[i,j])
-                    self.face_sigv_eln_t[i,j] = self.calc_sveln(self.face_Tn_intocell_t[i,j])
+                    self.face_sv_cx_s[i,j]  = self.calc_svcxi_st(self.cell_Ti[i],self.face_Tn_intocell_s[i,j])
+                    self.face_sv_cx_t[i,j]  = self.calc_svcxi_st(self.cell_Ti[i],self.face_Tn_intocell_t[i,j])
+                    self.face_sv_el_s[i,j]  = self.calc_svel(self.cell_Ti[i],self.face_Tn_intocell_s[i,j])            
+                    self.face_sv_el_t[i,j]  = self.calc_svel(self.cell_Ti[i],self.face_Tn_intocell_t[i,j])     
+                    self.face_sv_eln_s[i,j] = self.calc_sveln(self.face_Tn_intocell_s[i,j])
+                    self.face_sv_eln_t[i,j] = self.calc_sveln(self.face_Tn_intocell_t[i,j])
                           
                 #calculate charge exchange and elastic scattering fraction for each face
                 #this is used for once-colided neutrals that retain some "memory of the
                 #cell (and therefore temperature) that they came from            
-                self.c_ik_s[i,j] = (self.face_sigv_cx_s[i,j] + self.face_sigv_el_s[i,j] ) / \
-                                (self.face_cell_ne[i,j]/self.face_cell_ni[i,j]*self.face_sigv_ion_s[i,j] + self.face_sigv_cx_s[i,j] + self.face_sigv_el_s[i,j])
-                self.c_ik_t[i,j] = (self.face_sigv_cx_t[i,j] + self.face_sigv_el_t[i,j] ) / \
-                                (self.face_cell_ne[i,j]/self.face_cell_ni[i,j]*self.face_sigv_ion_t[i,j] + self.face_sigv_cx_t[i,j] + self.face_sigv_el_t[i,j])
+                self.c_ik_s[i,j] = (self.face_sv_cx_s[i,j] + self.face_sv_el_s[i,j] ) / \
+                                (self.face_cell_ne[i,j]/self.face_cell_ni[i,j]*self.face_sv_ion_s[i,j] + self.face_sv_cx_s[i,j] + self.face_sv_el_s[i,j])
+                self.c_ik_t[i,j] = (self.face_sv_cx_t[i,j] + self.face_sv_el_t[i,j] ) / \
+                                (self.face_cell_ne[i,j]/self.face_cell_ni[i,j]*self.face_sv_ion_t[i,j] + self.face_sv_cx_t[i,j] + self.face_sv_el_t[i,j])
                 
-                self.face_mfp_s[i,j] = self.face_vns[i,j] / (self.cell_ne[i]*self.cell_sigv_ion[i] + self.cell_ni[i]*self.face_sigv_cx_s[i,j] + self.cell_ni[i]*self.face_sigv_el_s[i,j])
-                self.face_mfp_t[i,j] = self.face_vnt[i,j] / (self.cell_ne[i]*self.cell_sigv_ion[i] + self.cell_ni[i]*self.face_sigv_cx_t[i,j] + self.cell_ni[i]*self.face_sigv_el_t[i,j])
+                self.face_mfp_s[i,j] = self.face_vns[i,j] / (self.cell_ne[i]*self.cell_sv_ion[i] + self.cell_ni[i]*self.face_sv_cx_s[i,j] + self.cell_ni[i]*self.face_sv_el_s[i,j])
+                self.face_mfp_t[i,j] = self.face_vnt[i,j] / (self.cell_ne[i]*self.cell_sv_ion[i] + self.cell_ni[i]*self.face_sv_cx_t[i,j] + self.cell_ni[i]*self.face_sv_el_t[i,j])
 
     def calc_tcoefs (self):
         def f(phi, xi, x_comp,y_comp, reg, mfp):
@@ -1169,7 +1169,7 @@ class neutpy():
         
             if group==1:
                 #ADD CONTRIBUTION FROM VOLUMETRIC SOURCE (I.E. RECOMBINATION)
-                source[i] = source[i] + 0 #cell_area[cell_io]*cell_ni[cell_io]*cell_sigv_rec[cell_io]*P_i_t[cell_io]*0.25 #assumed that all neutrals from recombination are thermal        
+                source[i] = source[i] + 0 #cell_area[cell_io]*cell_ni[cell_io]*cell_sv_rec[cell_io]*P_i_t[cell_io]*0.25 #assumed that all neutrals from recombination are thermal        
 
         #CREATE FINAL MATRIX
         M_matrix = np.identity(M_size) - M_matrix
@@ -1236,15 +1236,15 @@ class neutpy():
                                           
             #add contribution to ionization rate from volumetric recombination within the cell
             self.cell_izn_rate_s[i] = self.cell_izn_rate_s[i] + 0 #all recombination neutrals are assumed to be thermal
-            self.cell_izn_rate_t[i] = self.cell_izn_rate_t[i] + 0*(1-self.P_0i_t[i])*self.cell_area[i]*self.cell_ni[i]*self.cell_sigv_rec[i]* \
+            self.cell_izn_rate_t[i] = self.cell_izn_rate_t[i] + 0*(1-self.P_0i_t[i])*self.cell_area[i]*self.cell_ni[i]*self.cell_sv_rec[i]* \
                                             (1 - self.c_i_t[i] + self.c_i_t[i]*(1-self.c_i_t[i])*(1-self.P_0i_t[i])/(1-self.c_i_t[i]*(self.P_0i_t[i])))
         
         self.cell_izn_rate = self.cell_izn_rate_s + self.cell_izn_rate_t
         
         #calculate neutral densities from ionization rates
-        self.cell_nn_s = self.cell_izn_rate_s / (self.cell_ni*self.cell_sigv_ion*self.cell_area)
-        self.cell_nn_t = self.cell_izn_rate_t / (self.cell_ni*self.cell_sigv_ion*self.cell_area)
-        self.cell_nn = self.cell_izn_rate / (self.cell_ni*self.cell_sigv_ion*self.cell_area)
+        self.cell_nn_s = self.cell_izn_rate_s / (self.cell_ni*self.cell_sv_ion*self.cell_area)
+        self.cell_nn_t = self.cell_izn_rate_t / (self.cell_ni*self.cell_sv_ion*self.cell_area)
+        self.cell_nn = self.cell_izn_rate / (self.cell_ni*self.cell_sv_ion*self.cell_area)
         
         ## fix negative values (usually won't be necessary)
         for i,v1 in enumerate(self.cell_nn):
@@ -1284,8 +1284,8 @@ class neutpy():
             
         #WRITE CELL QUANTITIES
         cell_vals_file = open(os.getcwd()+'/outputs/cell_values.txt','w')
-        cell_vals_file.write(('{:^{width}s}'*20+'\n').format("cell_area","cell_perimeter","cell_ni","cell_ne","cell_nn","cell_mfp_s", "cell_mfp_t", "cell_sigv_ion", "cell_sigv_rec", "cell_sigv_cx_s", "cell_sigv_el_s", "cell_sigv_eln_s", "cell_sigv_cx_t", "cell_sigv_el_t", "cell_sigv_eln_t", "cell_izn_rate", "c_i_t","X_i_t","P_0i_t","P_i_t",width=15))
-        for i,(v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19,v20) in enumerate(zip(self.cell_area,self.cell_perim,self.cell_ni, self.cell_ne, self.cell_nn, self.cell_mfp_s, self.cell_mfp_t, self.cell_sigv_ion, self.cell_sigv_rec, self.cell_sigv_cx_s, self.cell_sigv_el_s, self.cell_sigv_eln_s, self.cell_sigv_cx_t, self.cell_sigv_el_t, self.cell_sigv_eln_t, self.cell_izn_rate, self.c_i_t,self.X_i_t,self.P_0i_t,self.P_i_t)):
+        cell_vals_file.write(('{:^{width}s}'*20+'\n').format("cell_area","cell_perimeter","cell_ni","cell_ne","cell_nn","cell_mfp_s", "cell_mfp_t", "cell_sv_ion", "cell_sv_rec", "cell_sv_cx_s", "cell_sv_el_s", "cell_sv_eln_s", "cell_sv_cx_t", "cell_sv_el_t", "cell_sv_eln_t", "cell_izn_rate", "c_i_t","X_i_t","P_0i_t","P_i_t",width=15))
+        for i,(v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19,v20) in enumerate(zip(self.cell_area,self.cell_perim,self.cell_ni, self.cell_ne, self.cell_nn, self.cell_mfp_s, self.cell_mfp_t, self.cell_sv_ion, self.cell_sv_rec, self.cell_sv_cx_s, self.cell_sv_el_s, self.cell_sv_eln_s, self.cell_sv_cx_t, self.cell_sv_el_t, self.cell_sv_eln_t, self.cell_izn_rate, self.c_i_t,self.X_i_t,self.P_0i_t,self.P_i_t)):
             cell_vals_file.write(('{:>{width}.3E}'*20+'\n').format(v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19,v20,width=15))
         cell_vals_file.close()
         
