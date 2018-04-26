@@ -5,12 +5,10 @@ R0_a = 1.699
 Z0 = -0.028
 kappa_up = 1.615
 kappa_lo = 1.2
-#kappa_lo = 1.615
 s_k_up = 0.3
 s_k_lo = 0.0
 tri_up = 0.25
 tri_lo = 0.0
-#tri_lo = 0.25
 thetapts_approx = 30
 rpts = 50
 edge_rho = 0.8
@@ -92,7 +90,7 @@ xnuioni = 0.0
 xnuati = 0.0
 
 #NEUTRAL BEAM DEPOSITION
-nbeams_loc = /home/max/Nextcloud/Max/max_phd/Codes/nbeams/bin/Release/
+#nbeams_loc = /home/max/Nextcloud/Max/max_phd/Codes/nbeams/bin/Release/
 ebeam = 77.48
 abeam = 2
 alphain = 0.6475
@@ -107,7 +105,7 @@ eps_sep = 1.82
 shftknot = 0.033
 
 #IMPURITY CALCULATION
-adpak_loc = /home/max/Nextcloud/Max/max_phd/Codes/adpak/
+#adpak_loc = /home/max/Nextcloud/Max/max_phd/Codes/adpak/
 
 #NEUTRALS CALCULATION
 ntrl_rho_start = 0.8
