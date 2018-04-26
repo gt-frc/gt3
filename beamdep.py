@@ -77,8 +77,15 @@ class beamdep():
         sys.dont_write_bytecode = True 
         self.prep_nbi_infile(inp,brnd)
         #call nbeams. Note to those familiar with the old nbeams, I modified
-        #the code to take the input file as a commandline argument.
-        call([inp.nbeams_loc+'nbeams', os.getcwd()+'/inbeams.dat'])
+        #the source code to take the input file as a commandline argument. - MH
+        try:
+            call([inp.nbeams_loc+'nbeams', os.getcwd()+'/inbeams.dat'])
+        except:
+            try:
+                call(['nbeams', os.getcwd()+'/inbeams.dat'])
+            except:
+                print 'Unable to find nbeams executable. Stopping.'
+                sys.exit()
         self.read_nbi_outfile(inp,brnd)
         pass
     
