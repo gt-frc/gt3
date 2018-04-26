@@ -26,11 +26,11 @@ class imp_rad():
         
         try:
             call([inp.adpak_loc+'adpak', os.getcwd()+'/toadpak'])
-        except:
+        except AttributeError:
             try:
                 call(['adpak', os.getcwd()+'/toadpak'])
-            except AttributeError:
-                print 'Unable to locate adpak. Stopping.
+            except:
+                print 'Unable to locate adpak. Stopping.'
                 sys.exit()
 
         self.read_adpak_outfile(inp,brnd)

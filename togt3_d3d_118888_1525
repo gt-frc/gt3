@@ -108,10 +108,13 @@ shftknot = 0.033
 #adpak_loc = /home/max/Nextcloud/Max/max_phd/Codes/adpak/
 
 #NEUTRALS CALCULATION
-ntrl_rho_start = 0.8
-ntrl_rpts = 5
+ntrl_rho_start = 0.1
+ntrl_rpts = 30
 ntrl_thetapts = 33
-#neut_outfile = gt3_118888_1525_neut_hr.dat
+neut_outfile = gt3_118888_1525_neut.dat
+tri_min_angle = 20
+tri_min_area  = 0.02
+
 
 #ION ORBIT LOSS CALCULATION
 numcos = 4

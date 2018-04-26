@@ -539,7 +539,31 @@ class neutprep():
         np.savetxt(outfile,np.array([1,inp.R0_a,inp.Z0])[None],fmt='%i %f %f')
         np.savetxt(outfile,np.array([0])[None],fmt='%i')
         outfile.close()
-        call(["triangle", "-pq20a0.02nz",filepath])
+        
+        #construct options to pass to triangle, as specified in input file
+        #refer to https://www.cs.cmu.edu/~quake/triangle.html
+        tri_options = '-p'
+        try:
+            tri_options = tri_options + 'q' + inp.tri_min_angle
+        except:
+            pass
+        
+        try:
+            tri_options = tri_options + 'a' + inp.tri_min_area
+        except:
+            pass
+        
+        tri_options = tri_options + 'nz'
+        
+        #call triangle
+        try:
+            call([inp.triangle_loc+'triangle', tri_options,filepath])
+        except AttributeError:
+            try:
+                call(['triangle', tri_options,filepath])
+            except:
+                print 'triangle could not be found. Stopping.'
+                sys.exit
 
         ## READ TRIANGLE OUTPUT
 
