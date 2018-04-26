@@ -96,7 +96,7 @@ class gt3():
     def therm_instab(self):
         self.inp = read_infile(self.shotlabel)
         self.brnd  = background(self.inp)
-        self.nbi   = beamdep(self.inp,self.brnd)        
+        self.nbi   = beamdep(self.inp,self.brnd)
         self.imp   = imp_rad(self.inp,self.brnd)
         self.ntrl  = neutprep(self.inp,self.brnd)
         #self.jro   = jrostuff(self.inp,self.brnd,self.tiol,self.fiol,self.ntrl,self.nbi)
@@ -122,10 +122,12 @@ class gt3():
 if __name__ == "__main__":
     myshot = gt3('togt3_d3d_118888_1525')
     #myshot = gt3('togt3_dens_lim_test')
-    #myshot.therm_instab()
+    myshot.therm_instab()
     #myshot.brndandiol()
     #myshot.brndonly()
-    myshot.brndandntrls()
+    #myshot.brndandntrls()
+    
+    
     fig1 = plt.figure(figsize=(6,8))
     ax1 = fig1.add_subplot(1,1,1)
     ax1.axis('equal')
@@ -261,6 +263,8 @@ if __name__ == "__main__":
     except:
         pass
     plt.tight_layout()
+    
+    plt.plot(myshot.ntrl.izn_rate_1D[:,0] / myshot.ntrl.nn_1D[:,0])
     #plt.plot(myshot.brnd.rho[-1,:],myshot.brnd.rho[-1,:],lw=2,color='black')
     
     #ax1.plot(myshot.ntrl.sol_lim_pts[:,0],myshot.ntrl.sol_lim_pts[:,1],'o',color='red')

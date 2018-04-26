@@ -539,7 +539,7 @@ class neutprep():
         np.savetxt(outfile,np.array([1,inp.R0_a,inp.Z0])[None],fmt='%i %f %f')
         np.savetxt(outfile,np.array([0])[None],fmt='%i')
         outfile.close()
-        call(["triangle", "-pq10a0.05nz",filepath])
+        call(["triangle", "-pq20a0.02nz",filepath])
 
         ## READ TRIANGLE OUTPUT
 

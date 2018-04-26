@@ -1476,6 +1476,10 @@ class neutpyplot():
         #grid = plt.figure(figsize=(160,240))
         grid = plt.figure(figsize=(8,12))
         ax1 = grid.add_subplot(111)
+        ax1.set_title('"X-Miller"',fontsize=30)
+        ax1.set_ylabel(r'Z ($m$)',fontsize=30)
+        ax1.set_xlabel(r'R ($m$)',fontsize=30)
+        ax1.tick_params(labelsize=15)
         ax1.axis('equal')
         for i,(v1,v2) in enumerate(zip(self.xs,self.ys)):
             if neut.nSides[i]==len(v1):
@@ -1486,8 +1490,10 @@ class neutpyplot():
             #elif neut.nSides[i]==3 and len(v1)==3:
             #    v1 = np.append(v1,v1[0])
             #    v2 = np.append(v2,v2[0])
-            ax1.plot(v1,v2,color='black',lw=1)        
-
+            ax1.plot(v1,v2,color='black',lw=1)  
+        plt.tight_layout()
+        grid.savefig("neutpy_fig_mesh.png", dpi=300,transparent=True)
+        plt
     def cellprop(self,neut):
         colors = np.log10(neut.cell_nn)
 
@@ -1503,7 +1509,12 @@ class neutpyplot():
         fig, ax1 = plt.subplots(figsize=(8, 12))
         cax = ax1.add_collection(collection1)
         ax1.axis('equal')
+        ax1.set_title('Calculated Neutral Densities',fontsize=30)
+        ax1.set_ylabel(r'Z ($m$)',fontsize=30)
+        ax1.set_xlabel(r'R ($m$)',fontsize=30)
+        ax1.tick_params(labelsize=30)
         fig.colorbar(cax)
+        plt.tight_layout()
         fig.savefig("neutpy_fig2.png", dpi=300,transparent=True)
         
 if __name__ == "__main__":

@@ -4,12 +4,12 @@ Created on Sat Aug  5 16:05:08 2017
 
 @author: max
 """
-
+from __future__ import division
 from math import pi,sin,acos
 import numpy as np
 from scipy.constants import mu_0, elementary_charge, k
 from helpers import PolyArea
-from scipy.interpolate import UnivariateSpline, interp1d
+from scipy.interpolate import UnivariateSpline, interp1d, interp2d, griddata
 from scipy.integrate import quad
 import matplotlib.pyplot as plt
 import sys
@@ -72,17 +72,6 @@ class background():
             except AttributeError:
                 raise AttributeError("You haven't specified the number of radial points.")
 
-        ## CREATE r AND theta MATRICES FOR NEUTRALS CALCULATION
-        #try:
-        #    r1d_ntrl = np.concatenate((np.linspace(0, p.ntrl_rho_start*p.a, p.rpts_core, endpoint=False),
-        #                         np.linspace(p.ntrl_rho_start*p.a, p.a, p.ntrl_rpts)),axis=0)
-        #except AttributeError:
-        #    try:
-        #        r1d_ntrl = np.linspace(0,p.a,p.rpts)
-        #    except AttributeError:
-        #        raise AttributeError("You haven't specified the number of radial points for the neutrals \
-        #                             calculation or a global number of radial points.")
-
         theta1d = np.linspace(0,2*pi,p.thetapts)
         self.theta, self.r = np.meshgrid(theta1d,r1d)
         self.rho = self.r/self.r[-1,0]
@@ -92,35 +81,46 @@ class background():
         ## CREATE DENSITY, TEMPERATURE, PRESSURE, AND CURRENT DENSITY ARRAYS
         ##########################################################################################
         try:
-            self.ni = interp1d(p.ni_rho[:,0],p.ni_rho[:,1])(self.rho)
+            self.ni = UnivariateSpline(p.ni_rho[:,0],p.ni_rho[:,1],k=5,s=2.0)(self.rho)
+            #self.ni = interp1d(p.ni_rho[:,0],p.ni_rho[:,1])(self.rho)
         except AttributeError:
             self.ni = np.where(self.r<ped_loc*p.a,
                                (p.ni0-p.ni9)*(1-self.rho**2)**p.nu_ni + p.ni9,
                                (p.ni_sep-p.ni9)/(0.1*p.a)*(self.r-ped_loc*p.a)+p.ni9)
-
+        #gradient scale length
+        self.dni_dr  = np.gradient(self.ni,self.r[:,0],axis=0)
+        self.L_ni = -self.dni_dr / self.ni   
         #############################################
 
         try:
-            self.ne = interp1d(p.ne_rho[:,0],p.ne_rho[:,1])(self.rho)
+            self.ne = UnivariateSpline(p.ne_rho[:,0],p.ne_rho[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
             self.ne = np.where(self.r<ped_loc*p.a,
                                (p.ne0-p.ne9)*(1-self.rho**2)**p.nu_ne + p.ne9,
                                (p.ne_sep-p.ne9)/(0.1*p.a)*(self.r-ped_loc*p.a)+p.ne9)
-    
+
+        #gradient scale length
+        self.dne_dr  = np.gradient(self.ne,self.r[:,0],axis=0)
+        self.L_ne = -self.dne_dr / self.ne   
         #############################################
 
         try:
             #TODO: verify that this is how fracz is defined
-            self.fracz = interp1d(p.fracz_rho[:,0],p.fracz_rho[:,1])(self.rho)
+            self.fracz = UnivariateSpline(p.fracz_rho[:,0],p.fracz_rho[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
             self.fracz = np.zeros(self.rho.shape) + 0.025     
             
-        self.nC = self.ne * self.fracz   
+        self.nC = self.ne * self.fracz
+        
+        #gradient scale length
+        self.dnC_dr  = np.gradient(self.nC,self.r[:,0],axis=0)
+        self.L_nC = -self.dnC_dr / self.nC
+        
         self.z_eff = (self.ni*1.0**2 + self.nC*6.0**2) / (self.ni*1.0 + self.nC*6.0)
         #############################################
 
         try:
-            self.Ti_kev = interp1d(p.Ti_rho[:,0],p.Ti_rho[:,1])(self.rho)
+            self.Ti_kev = UnivariateSpline(p.Ti_rho[:,0],p.Ti_rho[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
             self.Ti_kev = np.where(self.r<ped_loc*p.a,
                              (p.Ti0-p.Ti9)*(1-self.rho**2)**p.nu_Ti + p.Ti9,
@@ -129,10 +129,13 @@ class background():
         self.Ti_ev = self.Ti_kev * 1000
         self.Ti_J  = self.Ti_ev  * elementary_charge
 
+        #gradient scale length
+        self.dTi_J_dr  = np.gradient(self.Ti_J,self.r[:,0],axis=0)
+        self.L_Ti_J = -self.dTi_J_dr / self.Ti_J
         #############################################
 
         try:
-            self.Te_kev = interp1d(p.Te_rho[:,0],p.Te_rho[:,1])(self.rho)
+            self.Te_kev = UnivariateSpline(p.Te_rho[:,0],p.Te_rho[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
             self.Te_kev = np.where(self.r<ped_loc*p.a,
                              (p.Te0-p.Te9)*(1-self.rho**2)**p.nu_Te + p.Te9,
@@ -141,10 +144,13 @@ class background():
         self.Te_ev = self.Te_kev * 1000
         self.Te_J  = self.Te_ev  * elementary_charge
         
+        #gradient scale length
+        self.dTe_J_dr  = np.gradient(self.Te_J,self.r[:,0],axis=0)
+        self.L_Te_J = -self.dTe_J_dr / self.Te_J        
         #############################################
 
         try:
-            E_r_fit = UnivariateSpline(p.er_rho[:,0], p.er_rho[:,1])
+            E_r_fit = UnivariateSpline(p.er_rho[:,0], p.er_rho[:,1],k=5,s=2.0)
             self.E_r = E_r_fit(self.rho)
             
             self.E_pot = np.zeros(self.r.shape)
@@ -164,76 +170,76 @@ class background():
         #############################################
 
         try:
-            self.fz1 = interp1d(p.fz1_rho[:,0],p.fz1_rho[:,1])(self.rho)
+            self.fz1 = UnivariateSpline(p.fz1_rho[:,0],p.fz1_rho[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
             self.fz1 = 0.025*self.ne
 
         #############################################
 
         try:
-            self.fracz = interp1d(p.fracz_rho[:,0],p.fracz_rho[:,1])(self.rho)
+            self.fracz = UnivariateSpline(p.fracz_rho[:,0],p.fracz_rho[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
             self.fracz = np.zeros(self.rho)+0.025
 
         #############################################
 
         try:
-            self.exlti = interp1d(p.exlti_rho[:,0],p.exlti_rho[:,1])(self.rho)
+            self.exlti = UnivariateSpline(p.exlti_rho[:,0],p.exlti_rho[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
             self.exlti = 0.0
 
         #############################################
 
         try:
-            self.exlte = interp1d(p.exlte_rho[:,0],p.exlte_rho[:,1])(self.rho)
+            self.exlte = UnivariateSpline(p.exlte_rho[:,0],p.exlte_rho[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
             self.exlte = 0.0
 
         #############################################
 
         try:
-            self.exlni = interp1d(p.exlni_rho[:,0],p.exlni_rho[:,1])(self.rho)
+            self.exlni = UnivariateSpline(p.exlni_rho[:,0],p.exlni_rho[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
             self.exlni = 0.0
 
         #############################################
 
         try:
-            self.vpolC = interp1d(p.vpolC_rho[:,0],p.vpolC_rho[:,1])(self.rho)
+            self.vpolC = UnivariateSpline(p.vpolC_rho[:,0],p.vpolC_rho[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
             self.vpolC = 0.0
 
         #############################################
 
         try:
-            self.vtorC = interp1d(p.vtorC_rho[:,0],p.vtorC_rho[:,1])(self.rho)
+            self.vtorC = UnivariateSpline(p.vtorC_rho[:,0],p.vtorC_rho[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
             self.vtorC = 0.0
 
         #############################################
 
         try:
-            self.vpolD = interp1d(p.vpolD_rho[:,0],p.vpolD_rho[:,1])(self.rho)
+            self.vpolD = UnivariateSpline(p.vpolD_rho[:,0],p.vpolD_rho[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
             self.vpolD = 0.0
 
         #############################################
 
         try:
-            self.vtorD = interp1d(p.vtorD_rho[:,0],p.vtorD_rho[:,1])(self.rho)
+            self.vtorD = UnivariateSpline(p.vtorD_rho[:,0],p.vtorD_rho[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
             self.vtorD = 0.0
         #############################################
 
         try:
-            self.q = interp1d(p.q_rho[:,0],p.q_rho[:,1])(self.rho)
+            self.q = UnivariateSpline(p.q_rho[:,0],p.q_rho[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
             self.q = np.zeros(self.rho.shape) #will calculated later with the other miller stuff
 
         #############################################
 
         try:
-            self.zbar2 = interp1d(p.zbar2_rho[:,0],p.zbar2_rho[:,1])(self.rho)
+            self.zbar2 = UnivariateSpline(p.zbar2_rho[:,0],p.zbar2_rho[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
             self.zbar2 = np.zeros(self.rho.shape) + 0.025
 
@@ -452,7 +458,7 @@ class background():
         def yscale(r,a):
             """
             """
-            nu=10.0 #nu=10ish works well
+            nu=5.0 #nu=10ish works well
             return np.power(r/a,nu) #* (xpt[1] / (a*sin(3.*pi/2.)) - kappa_lo)
             
         ##########################################################################
@@ -481,8 +487,8 @@ class background():
         xnum = 1001
         
         #DEFINE SEPERATRIX FUNCTION
-        gamma1 = 3
-        gamma2 = 0.5
+        gamma1 = 3.8
+        gamma2 = 1.0
         k_sep = kappa_sep(np.linspace(pi,2*pi,xnum),gamma1,gamma2)    
     
         #For each flux surface (i.e. r value)
@@ -602,5 +608,78 @@ class background():
             self.sigv_ion       = interp2(self.Ti_J)
             self.dsigv_ion_dT   = interp2.derivative()(self.Ti_J)
 
+        def calc_svel():
+        
+            tint = np.array([-1,0,1,2,3])
+            tnnt = np.array([0,1,2])
+
+            elast = np.array([[-1.3569E+01, -1.3337E+01, -1.3036E+01, -1.3569E+01, -1.3337E+01],
+                              [-1.3036E+01, -1.3337E+01, -1.3167E+01, -1.3046E+01, -1.3036E+01],
+                              [-1.3046E+01, -1.2796E+01, -1.3036E+01, -1.3046E+01, -1.2796E+01]])
+                
+            interp1 = interp2d(tint,tnnt,elast)
+            
+            Ti_exps   = np.linspace(-1,3,100)
+            Tn_exps   = np.linspace( 0,2,100)
+            svel_vals = 10.0**(interp1(Ti_exps,Tn_exps)) #in m^3/s
+            
+            Ti_vals   = np.logspace(-1,3,100)*1.6021E-19 #in joules
+            Tn_vals   = np.logspace( 0,2,100)*1.6021E-19 #in joules
+
+            dsvel_dTi_vals  = np.gradient(svel_vals,Ti_vals,axis=0)
+
+            Ti_vals2d, Tn_vals2d = np.meshgrid(Ti_vals,Tn_vals)
+            
+            Ti_mod = np.where(self.Ti_ev>1E3, 1E3 * 1.6021E-19, self.Ti_ev*1.6021E-19)
+            Tn_mod = np.zeros(Ti_mod.shape) + 2.0*1.6021E-19
+
+            self.svel       = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+                                       svel_vals.flatten(), 
+                                       (Ti_mod,Tn_mod),
+                                       method='linear', rescale=False)
+            self.dsvel_dT   = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+                                       dsvel_dTi_vals.flatten(), 
+                                       (Ti_mod,Tn_mod), 
+                                       method='linear', rescale=False)
+         
+        def calc_svcxi_st():
+            
+            tint = np.array([-1,0,1,2,3])
+            tnnt = np.array([0,1,2])
+            
+            cx = np.array([[-1.4097E+01, -1.3921E+01, -1.3553E+01, -1.4097E+01, -1.3921E+01],
+                           [-1.3553E+01, -1.3921E+01, -1.3824E+01, -1.3538E+01, -1.3553E+01],
+                           [-1.3538E+01, -1.3432E+01, -1.3553E+01, -1.3538E+01, -1.3432E+01]])
+                
+            interp1 = interp2d(tint,tnnt,cx)
+            
+            Ti_exps   = np.linspace(-1,3,100)
+            Tn_exps   = np.linspace( 0,2,100)
+            svcx_vals = 10.0**(interp1(Ti_exps,Tn_exps)) #in m^3/s
+            
+            Ti_vals   = np.logspace(-1,3,100)*1.6021E-19 #in joules
+            Tn_vals   = np.logspace( 0,2,100)*1.6021E-19 #in joules
+
+            dsvcx_dTi_vals  = np.gradient(svcx_vals,Ti_vals,axis=0)
+
+            Ti_vals2d, Tn_vals2d = np.meshgrid(Ti_vals,Tn_vals)
+            
+            Ti_mod = np.where(self.Ti_ev>1E3, 1E3 * 1.6021E-19, self.Ti_ev*1.6021E-19)
+            Tn_mod = np.zeros(Ti_mod.shape) + 2.0*1.6021E-19
+
+            self.svcx       = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+                                       svcx_vals.flatten(), 
+                                       (Ti_mod,Tn_mod),
+                                       method='linear', rescale=False)
+            
+            self.dsvcx_dT   = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+                                       dsvcx_dTi_vals.flatten(), 
+                                       (Ti_mod,Tn_mod), 
+                                       method='linear', rescale=False)
+
+
         calc_sigv_fus()
         calc_sigv_ion()
+        calc_svel()
+        calc_svcxi_st()
+        

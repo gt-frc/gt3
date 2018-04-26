@@ -1,24 +1,26 @@
 #GENERAL GEOMETRY
 a = 0.598
-B_phi_0 = 2.04
-R0_a = 1.65
-Z0 = 0.0
-kappa_up = 1.7
-kappa_lo = 1.4
-s_k_up = 0.0
+B_phi_0 = 2.004
+R0_a = 1.699
+Z0 = -0.028
+kappa_up = 1.615
+kappa_lo = 1.2
+#kappa_lo = 1.615
+s_k_up = 0.3
 s_k_lo = 0.0
-tri_up = 0.35
+tri_up = 0.25
 tri_lo = 0.0
+#tri_lo = 0.25
 thetapts_approx = 30
 rpts = 50
-#edge_rho = 0.8
-#rpts_edge = 50
-#rpts_core = 10
+edge_rho = 0.8
+rpts_edge = 50
+rpts_core = 50
 
 #XMILLER PARAMETERS
 xmil = 1
-xpt_R = 1.4
-xpt_Z = -1.1
+xpt_R = 1.480
+xpt_Z = -1.138
 xtheta1 = 3.6
 xtheta2 = 2.7
 xtheta3 = 0.1
@@ -32,29 +34,29 @@ IP = 1.38
 q95 = 3.57
 
 #1D PROFILE INPUT FILES
-ne_file         = gt3_118888_1525_ne.dat
-ni_file         = gt3_118888_1525_ni.dat
-Te_file         = gt3_118888_1525_Te.dat
-Ti_file         = gt3_118888_1525_Ti.dat
-er_file         = gt3_118888_1525_er.dat
-fz1_file        = gt3_118888_1525_fz1.dat
-fracz_file      = gt3_118888_1525_fracz.dat
-exlti_file      = gt3_118888_1525_exlti.dat
-exlte_file      = gt3_118888_1525_exlte.dat
-exlni_file      = gt3_118888_1525_exlni.dat
-vpolC_file      = gt3_118888_1525_vpolC.dat
-vtorC_file      = gt3_118888_1525_vtorC.dat
-q_file          = gt3_118888_1525_q.dat
-zbar2_file      = gt3_118888_1525_zbar2.dat
+ne_file         = /118888_1525/gt3_118888_1525_ne.dat
+ni_file         = /118888_1525/gt3_118888_1525_ni.dat
+Te_file         = /118888_1525/gt3_118888_1525_Te.dat
+Ti_file         = /118888_1525/gt3_118888_1525_Ti.dat
+er_file         = /118888_1525/gt3_118888_1525_er.dat
+fz1_file        = /118888_1525/gt3_118888_1525_fz1.dat
+fracz_file      = /118888_1525/gt3_118888_1525_fracz.dat
+exlti_file      = /118888_1525/gt3_118888_1525_exlti.dat
+exlte_file      = /118888_1525/gt3_118888_1525_exlte.dat
+exlni_file      = /118888_1525/gt3_118888_1525_exlni.dat
+vpolC_file      = /118888_1525/gt3_118888_1525_vpolC.dat
+vtorC_file      = /118888_1525/gt3_118888_1525_vtorC.dat
+q_file          = /118888_1525/gt3_118888_1525_q.dat
+zbar2_file      = /118888_1525/gt3_118888_1525_zbar2.dat
 
 2D QUANTITIES INPUT FILES
-bpol_file       = gt3_118888_1525_bpol.dat
-btor_file       = gt3_118888_1525_btor.dat
-psirz_file      = gt3_118888_1525_psirz.dat
+bpol_file       = /118888_1525/gt3_118888_1525_bpol.dat
+btor_file       = /118888_1525/gt3_118888_1525_btor.dat
+psirz_file      = /118888_1525/gt3_118888_1525_psirz.dat
 
 2D LINE INPUT FILES
-sep_file        = gt3_118888_1525_sep.dat
-lim_file        = gt3_diiid_wall.dat
+sep_file        = /118888_1525/gt3_118888_1525_sep.dat
+lim_file        = /machine/gt3_diiid_wall.dat
 
 #BACKGROUND DENSITIES AND TEMPERATURES (IF NOT READING FROM INPUT FILE)
 #ni0 = 3.629E19
@@ -111,7 +113,7 @@ adpak_loc = /home/max/Nextcloud/Max/max_phd/Codes/adpak/
 ntrl_rho_start = 0.8
 ntrl_rpts = 5
 ntrl_thetapts = 33
-neut_outfile = gt3_118888_1525_neut.dat
+#neut_outfile = gt3_118888_1525_neut_hr.dat
 
 #ION ORBIT LOSS CALCULATION
 numcos = 4

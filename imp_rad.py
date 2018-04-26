@@ -23,7 +23,16 @@ class imp_rad():
     def __init__(self,inp,brnd):
         sys.dont_write_bytecode = True 
         self.prep_adpak_infile(inp,brnd)
-        call([inp.adpak_loc+'adpak', os.getcwd()+'/toadpak'])
+        
+        try:
+            call(['adpak', os.getcwd()+'/toadpak'])
+        except:
+            try:
+                call([inp.adpak_loc+'adpak', os.getcwd()+'/toadpak'])
+            except AttributeError:
+                print 'Unable to locate adpak. Stopping.
+                sys.exit()
+
         self.read_adpak_outfile(inp,brnd)
         self.coronal_eq(inp,brnd)
         pass
@@ -170,7 +179,12 @@ class imp_rad():
         self.brnd_dEmiss_dT     = self.emiss_tot_interp2.derivative()(brnd.Te_J)
         self.brnd_dEmiss_dT_eq9     = self.emiss_tot_interp2.derivative()(5.0E2*1.6021E-19)
         self.brnd_dEmiss_dT_eq22     = self.emiss_tot_interp2.derivative()(21.0*1.6021E-19)
-
+        print
+        print '#######################'
+        print 'Emiss_marfe = ',self.emiss_tot_interp2(250.0*1.6021E-19)
+        print 'dEmiss_dT_marfe = ',self.emiss_tot_interp2.derivative()(250.0*1.6021E-19)
+        print '#######################'
+        print
         emiss_fig = plt.figure(figsize=(6,4))
         ax1 = emiss_fig.add_subplot(1,1,1)
         #ax1.set_xlim(4.5,5.5)
