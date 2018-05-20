@@ -14,7 +14,7 @@ from scipy.integrate import quad
 import matplotlib.pyplot as plt
 import sys
 
-class background():
+class miller_brnd():
     """Calculates various plasma properties using a modified Miller geometry
     
     Methods:
@@ -52,10 +52,10 @@ class background():
     """
     def __init__(self,inp):
         sys.dont_write_bytecode = True 
-        self.createbackground(inp)
+        self.miller(inp)
         self.xsec(inp)
 
-    def createbackground(self,p):
+    def miller(self,p):
         """Create background plasma using the miller model.
         
         Note:
@@ -116,7 +116,11 @@ class background():
         self.dnC_dr  = np.gradient(self.nC,self.r[:,0],axis=0)
         self.L_nC = -self.dnC_dr / self.nC
         
-        self.z_eff = (self.ni*1.0**2 + self.nC*6.0**2) / (self.ni*1.0 + self.nC*6.0)
+        self.z_eff = (self.ni*1.0**2 + self.nC*6.0**2) / self.ne
+        
+        #TODO: calculate z_0 over all charge states from imp_rad.
+        #Might need to move this calculation there.
+        self.z_0 = self.nC*6.0**2 / self.ni
         #############################################
 
         try:
@@ -250,9 +254,9 @@ class background():
         ## CREATE kappa, tri AND RELATED MATRICES
         ##########################################################################################
         upperhalf   = (self.theta>=0)&(self.theta<pi)
-        #self.kappa  = np.where(upperhalf, 
-        #                 p.kappa_up / (p.a**p.s_k_up) * self.r**p.s_k_up,
-        #                 p.kappa_lo / (p.a**p.s_k_lo) * self.r**p.s_k_lo)
+        self.kappa  = np.where(upperhalf, 
+                         p.kappa_up / (p.a**p.s_k_up) * self.r**p.s_k_up,
+                         p.kappa_lo / (p.a**p.s_k_lo) * self.r**p.s_k_lo)
         
         
         ## All we're doing with kappa in this next part is making the derivative between upper and lower
@@ -263,10 +267,11 @@ class background():
         ## resolution. It also makes Richard's stuff easier. Just deal with it 
         ## and don't put this in any papers. It's just a bandaid. We do the same 
         ## thing with triangularity. - MH
-        B_kappa = 0.0
-        self.kappa  = (((p.kappa_up / (p.a**p.s_k_up) * self.r**p.s_k_up) - (p.kappa_lo / (p.a**p.s_k_lo) * self.r**p.s_k_lo))/2.0 
-                * np.tanh(B_kappa*np.sin(self.theta))
-                + ((p.kappa_up / (p.a**p.s_k_up) * self.r**p.s_k_up) + (p.kappa_lo / (p.a**p.s_k_lo) * self.r**p.s_k_lo))/2.0)
+        
+        #B_kappa = 0.0
+        #self.kappa  = (((p.kappa_up / (p.a**p.s_k_up) * self.r**p.s_k_up) - (p.kappa_lo / (p.a**p.s_k_lo) * self.r**p.s_k_lo))/2.0 
+        #        * np.tanh(B_kappa*np.sin(self.theta))
+        #        + ((p.kappa_up / (p.a**p.s_k_up) * self.r**p.s_k_up) + (p.kappa_lo / (p.a**p.s_k_lo) * self.r**p.s_k_lo))/2.0)
          
         if p.xmil==1:               
             self.kappa = self.xmiller(self.kappa,p)
@@ -284,9 +289,6 @@ class background():
         s_tri  = np.where(upperhalf,
                          self.r*p.tri_up/(p.a*np.sqrt(1-tri)),
                          self.r*tri_lo/(p.a*np.sqrt(1-tri)))
-        
-        ## MODIFY kappa USING THE X-MILLER MODEL
-        
         
         ## CALCULATE INITIAL R,Z WITH NO SHAFRANOV SHIFT
         ## (NECESSARY TO GET ESTIMATES OF L_r WHEN CALCULATING SHAFRANOV SHIFT)
@@ -487,8 +489,8 @@ class background():
         xnum = 1001
         
         #DEFINE SEPERATRIX FUNCTION
-        gamma1 = 3.8
-        gamma2 = 1.0
+        gamma1 = 5.0 #3.8
+        gamma2 = 2.0 #1.0
         k_sep = kappa_sep(np.linspace(pi,2*pi,xnum),gamma1,gamma2)    
     
         #For each flux surface (i.e. r value)
@@ -526,6 +528,7 @@ class background():
         
         kappa = kappa + kappa_tilda
         return kappa
+    
     def xsec(self,inp):
         #Fusion Reactivity calculation  
         def calc_sigv_fus(mode='dd'):   
@@ -633,11 +636,11 @@ class background():
             Ti_mod = np.where(self.Ti_ev>1E3, 1E3 * 1.6021E-19, self.Ti_ev*1.6021E-19)
             Tn_mod = np.zeros(Ti_mod.shape) + 2.0*1.6021E-19
 
-            self.svel       = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+            self.sv_el       = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
                                        svel_vals.flatten(), 
                                        (Ti_mod,Tn_mod),
                                        method='linear', rescale=False)
-            self.dsvel_dT   = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+            self.dsv_el_dT   = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
                                        dsvel_dTi_vals.flatten(), 
                                        (Ti_mod,Tn_mod), 
                                        method='linear', rescale=False)
@@ -667,12 +670,12 @@ class background():
             Ti_mod = np.where(self.Ti_ev>1E3, 1E3 * 1.6021E-19, self.Ti_ev*1.6021E-19)
             Tn_mod = np.zeros(Ti_mod.shape) + 2.0*1.6021E-19
 
-            self.svcx       = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+            self.sv_cx       = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
                                        svcx_vals.flatten(), 
                                        (Ti_mod,Tn_mod),
                                        method='linear', rescale=False)
             
-            self.dsvcx_dT   = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+            self.dsv_cx_dT   = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
                                        dsvcx_dTi_vals.flatten(), 
                                        (Ti_mod,Tn_mod), 
                                        method='linear', rescale=False)
@@ -706,12 +709,12 @@ class background():
             Ti_mod  = np.where(self.Ti_ev>1E3,   1E3 * 1.6021E-19, self.Ti_ev*1.6021E-19)
             Ti_mod  = np.where(self.Ti_ev<1E-1, 1E-1 * 1.6021E-19, Ti_mod)
                 
-            self.svrec     = griddata(np.column_stack((zni_vals2d.flatten(), Ti_vals2d.flatten())), 
+            self.sv_rec     = griddata(np.column_stack((zni_vals2d.flatten(), Ti_vals2d.flatten())), 
                                        svrec_vals.flatten(), 
                                        (zni_mod,Ti_mod),
                                        method='linear', rescale=False)
             
-            self.dsvrec_dT = griddata(np.column_stack((zni_vals2d.flatten(), Ti_vals2d.flatten())), 
+            self.dsv_rec_dT = griddata(np.column_stack((zni_vals2d.flatten(), Ti_vals2d.flatten())), 
                                        dsvrec_dTi_vals.flatten(), 
                                        (zni_mod,Ti_mod), 
                                        method='linear', rescale=False)

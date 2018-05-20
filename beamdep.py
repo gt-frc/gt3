@@ -139,10 +139,8 @@ class beamdep():
         f.close()
     
     def read_nbi_outfile(self,inp,brnd):
-        print 'reading nbi outfile'
         with open(os.getcwd() + '/outbeams.dat', 'r') as f:
             for count, line in enumerate(f):
-                #print line
                 if line.startswith(" Total Absorbed Power"):
                     result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
                     try:

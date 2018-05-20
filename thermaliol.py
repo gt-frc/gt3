@@ -21,7 +21,7 @@ import sys
 m_d = 3.343583719e-27
 m_t = 5.006e-27
 
-m = m_t
+m = m_d
 class thermaliol():
     """
     """
@@ -95,7 +95,7 @@ class thermaliol():
         ## PREP FOR FLOSS, MLOSS, AND ELOSS CALCUALTIONS
         v_sep_min = np.nanmin(np.nanmin(v_sep,axis=0),axis=2).T
         v_sep_min[-1] = 0
-        
+        test = np.nanmin(v_sep,axis=3).T
         T_matrix = np.zeros(v_sep_min.shape)
         for indx,row in enumerate(T_matrix):
             T_matrix[indx,:] = Tprofile[indx]
@@ -127,38 +127,52 @@ class thermaliol():
         self.E_orb = np.repeat(self.E_orb_1D.reshape(-1,1),inp.thetapts,axis=1)
         self.E_orb_C = np.zeros(self.F_orb.shape)
 
-        iolplot=0
+        iolplot=1
+        #if iolplot==1:
+        #    fig = plt.figure(figsize=(5,5))
+        #    fig.suptitle('IOL a,b,c in DIII-D with cos:{}'.format(coslist[-2]), fontsize=15)
+        #    ax1 = fig.add_subplot(221)
+        #    ax1.set_title(r'$v_{sep-1}$',fontsize=12)
+        #    ax1.set_ylabel(r'R',fontsize=12)
+        #    ax1.set_xlabel(r'Z',fontsize=12)
+        #    ax1.axis('equal')
+        #    ax1.grid(b=True,which='both',axis='both')
+        #    CS = ax1.contourf(brnd.R,brnd.Z,v_sep_1[:,-2,:,0].T, 500)
+        #    plt.colorbar(CS)
+        #    
+        #    ax2 = fig.add_subplot(222)
+        #    ax2.set_title(r'$v_{sep-2}$',fontsize=12)
+        #    ax2.set_ylabel(r'R',fontsize=12)
+        #    ax2.set_xlabel(r'Z',fontsize=12)
+        #    ax2.axis('equal')
+        #    ax2.grid(b=True,which='both',axis='both')
+        #    CS = ax2.contourf(brnd.R,brnd.Z,v_sep_2[:,-2,:,0].T, 500)
+        #    plt.colorbar(CS)
+        #    
+        #    ax3 = fig.add_subplot(223)
+        #    ax3.set_title(r'$v_{sep}$',fontsize=12)
+        #    ax3.set_ylabel(r'R',fontsize=12)
+        #    ax3.set_xlabel(r'Z',fontsize=12)
+        #    ax3.axis('equal')
+        #    ax3.grid(b=True,which='both',axis='both')
+        #    #CS = ax3.pcolor(brnd.R,brnd.Z,v_sep[:,10,:,0].T,vmin=0, vmax=1E8)
+        #    CS = ax3.contourf(brnd.R,brnd.Z,v_sep[:,-2,:,0].T, 500)
+        #    plt.colorbar(CS)
+    
+        #    plt.tight_layout()
+        #    fig.subplots_adjust(top=0.84)
         if iolplot==1:
-            fig = plt.figure(figsize=(5,5))
-            fig.suptitle('IOL a,b,c in DIII-D with cos:-10', fontsize=15)
-            ax1 = fig.add_subplot(221)
-            ax1.set_title(r'$v_{sep-1}$',fontsize=12)
-            ax1.set_ylabel(r'R',fontsize=12)
-            ax1.set_xlabel(r'Z',fontsize=12)
+            fig = plt.figure(figsize=(6,8))
+            fig.suptitle(r'IOL v_{} with cos:{}'.format('esc',coslist[0]), fontsize=15)
+            ax1 = fig.add_subplot(111)
+            #ax1.set_title(r'$v_{sep}$',fontsize=12)
+            ax1.set_ylabel(r'Z',fontsize=12)
+            ax1.set_xlabel(r'R',fontsize=12)
             ax1.axis('equal')
             ax1.grid(b=True,which='both',axis='both')
-            CS = ax1.contourf(brnd.R,brnd.Z,v_sep_1[:,-10,:,0].T, 500)
+            CS = ax1.contourf(brnd.R,brnd.Z,np.log10((0.5*m*test[:,0,:]**2)/(1.6021E-19 * 1.0E3)), 500)
             plt.colorbar(CS)
-            
-            ax2 = fig.add_subplot(222)
-            ax2.set_title(r'$v_{sep-2}$',fontsize=12)
-            ax2.set_ylabel(r'R',fontsize=12)
-            ax2.set_xlabel(r'Z',fontsize=12)
-            ax2.axis('equal')
-            ax2.grid(b=True,which='both',axis='both')
-            CS = ax2.contourf(brnd.R,brnd.Z,v_sep_2[:,-10,:,0].T, 500)
-            plt.colorbar(CS)
-            
-            ax3 = fig.add_subplot(223)
-            ax3.set_title(r'$v_{sep}$',fontsize=12)
-            ax3.set_ylabel(r'R',fontsize=12)
-            ax3.set_xlabel(r'Z',fontsize=12)
-            ax3.axis('equal')
-            ax3.grid(b=True,which='both',axis='both')
-            #CS = ax3.pcolor(brnd.R,brnd.Z,v_sep[:,10,:,0].T,vmin=0, vmax=1E8)
-            CS = ax3.contourf(brnd.R,brnd.Z,v_sep[:,-10,:,0].T, 500)
-            plt.colorbar(CS)
-    
-            plt.tight_layout()
-            fig.subplots_adjust(top=0.84)
+            #plt.tight_layout()
+            fig.subplots_adjust(top=0.95)
+            #fig.subplots_adjust(top=0.95)
         return

@@ -79,9 +79,9 @@ class dens_lim():
         nlim2 = (1/f) * (t1y2/t2y2) * (1 + sqrt(1 + t3y2 / t4y2))        
         nlim3 = (1/f) * (t1y1/t2y1) * (1 - sqrt(1 + t3y1 / t4y1))        
         nlim4 = (1/f) * (t1y2/t2y2) * (1 - sqrt(1 + t3y2 / t4y2))        
-        #print 'nlim1 = ',nlim1
-        #print 'nlim2 = ',nlim2
-        #print 'nlim3 = ',nlim3
-        #print 'nlim4 = ',nlim4
-        #print 'n_av = ',n_av
+        print 'nlim1 = ',nlim1
+        print 'nlim2 = ',nlim2
+        print 'nlim3 = ',nlim3
+        print 'nlim4 = ',nlim4
+        print 'n_av = ',n_av
         #sys.exit()

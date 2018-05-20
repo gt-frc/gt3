@@ -10,7 +10,7 @@ from math import pi,cos
 import sys
 import matplotlib.pyplot as plt
 #from math import sqrt
-class jrostuff():
+class rad_trans():
     """
     
     Methods:
@@ -117,16 +117,16 @@ class jrostuff():
                     (C1 * np.sqrt(xmr_CC) * (brnd.Ti_ev**1.5))
 
         #plot, mostly for debugging purposes
-        xnuc_plot = plt.figure(figsize=(6,4))
-        ax1 = xnuc_plot.add_subplot(1,1,1)
-        ax1.set_title('WTF is xnuc??')
-        ax1.set_xlabel(r'$\rho$')
-        ax1.set_ylabel(r'???')
-        ax1.plot(brnd.rho[:,0],self.xnuc_DD[:,0],label='xnuc_DD')
-        ax1.plot(brnd.rho[:,0],self.xnuc_DC[:,0],label='xnuc_DC')
-        ax1.plot(brnd.rho[:,0],self.xnuc_CD[:,0],label='xnuc_CD')
-        ax1.plot(brnd.rho[:,0],self.xnuc_CC[:,0],label='xnuc_CC')
-        ax1.legend()
+        #xnuc_plot = plt.figure(figsize=(6,4))
+        ##ax1 = xnuc_plot.add_subplot(1,1,1)
+        ##ax1.set_title('WTF is xnuc??')
+        ##ax1.set_xlabel(r'$\rho$')
+        #ax1.set_ylabel(r'???')
+        #ax1.plot(brnd.rho[:,0],self.xnuc_DD[:,0],label='xnuc_DD')
+        #ax1.plot(brnd.rho[:,0],self.xnuc_DC[:,0],label='xnuc_DC')
+        #ax1.plot(brnd.rho[:,0],self.xnuc_CD[:,0],label='xnuc_CD')
+        #ax1.plot(brnd.rho[:,0],self.xnuc_CC[:,0],label='xnuc_CC')
+        #ax1.legend()
 
         return self.xnuc_DD, self.xnuc_DC, self.xnuc_CD, self.xnuc_CC
     
@@ -211,39 +211,39 @@ class jrostuff():
         self.xmomtor2 =   frac   * (totmomphi+self.anomtorq)
 
         #plot, mostly for debugging purposes
-        src_rate_plot = plt.figure(figsize=(6,4))
-        ax1 = src_rate_plot.add_subplot(1,1,1)
-        ax1.set_title('Neutral beam particle source rates (I think)')
-        ax1.set_xlabel(r'$\rho$')
-        ax1.set_ylabel(r'???')
-        ax1.plot(brnd.rho[:,0],self.snbi[:,0],label='snbi')
-        ax1.plot(brnd.rho[:,0],self.snbi_iol[:,0],label='snbi_iol')
-        ax1.legend()
+        #src_rate_plot = plt.figure(figsize=(6,4))
+        #ax1 = src_rate_plot.add_subplot(1,1,1)
+        #ax1.set_title('Neutral beam particle source rates (I think)')
+        #ax1.set_xlabel(r'$\rho$')
+        #ax1.set_ylabel(r'???')
+        #ax1.plot(brnd.rho[:,0],self.snbi[:,0],label='snbi')
+        #ax1.plot(brnd.rho[:,0],self.snbi_iol[:,0],label='snbi_iol')
+        #ax1.legend()
         
-        zeff_plot = plt.figure(figsize=(6,4))
-        ax1 = zeff_plot.add_subplot(1,1,1)
-        ax1.set_title('zeff')
-        ax1.set_xlabel(r'$\rho$')
-        ax1.set_ylabel(r'???')
-        ax1.plot(brnd.rho[:,0],self.zeff[:,0],label='zeff')
-        ax1.legend()
+        #zeff_plot = plt.figure(figsize=(6,4))
+        #ax1 = zeff_plot.add_subplot(1,1,1)
+        #ax1.set_title('zeff')
+        #ax1.set_xlabel(r'$\rho$')
+        #ax1.set_ylabel(r'???')
+        #ax1.plot(brnd.rho[:,0],self.zeff[:,0],label='zeff')
+        #ax1.legend()
         
-        qnbi_plot = plt.figure(figsize=(6,4))
-        ax1 = qnbi_plot.add_subplot(1,1,1)
-        ax1.set_title('qnbi')
-        ax1.set_xlabel(r'$\rho$')
-        ax1.set_ylabel(r'???')
-        ax1.plot(brnd.rho[:,0],self.qnbi[:,0],label='qnbi')
-        ax1.legend()
+        #qnbi_plot = plt.figure(figsize=(6,4))
+        #ax1 = qnbi_plot.add_subplot(1,1,1)
+        #ax1.set_title('qnbi')
+        #ax1.set_xlabel(r'$\rho$')
+        #ax1.set_ylabel(r'???')
+        #ax1.plot(brnd.rho[:,0],self.qnbi[:,0],label='qnbi')
+        #ax1.legend()
 
-        xmomtor_plot = plt.figure(figsize=(6,4))
-        ax1 = xmomtor_plot.add_subplot(1,1,1)
-        ax1.set_title('xmomtor')
-        ax1.set_xlabel(r'$\rho$')
-        ax1.set_ylabel(r'???')
-        ax1.plot(brnd.rho[:,0],self.xmomtor1[:,0],label='xmomtor1')
-        ax1.plot(brnd.rho[:,0],self.xmomtor2[:,0],label='xmomtor2')
-        ax1.legend()
+        #xmomtor_plot = plt.figure(figsize=(6,4))
+        #ax1 = xmomtor_plot.add_subplot(1,1,1)
+        #ax1.set_title('xmomtor')
+        #ax1.set_xlabel(r'$\rho$')
+        #ax1.set_ylabel(r'???')
+        #ax1.plot(brnd.rho[:,0],self.xmomtor1[:,0],label='xmomtor1')
+        #ax1.plot(brnd.rho[:,0],self.xmomtor2[:,0],label='xmomtor2')
+        #ax1.legend()
         
     #calculate gamma, qheati, qheate (with and without IOL)
     def calc_rad_part_flx(self,inp,brnd,tiol):
@@ -307,23 +307,23 @@ class jrostuff():
         
         
         
-        gamma_plot = plt.figure(figsize=(6,4))
-        ax1 = gamma_plot.add_subplot(1,1,1)
-        ax1.set_title('gamma')
-        ax1.set_xlabel(r'$\rho$')
-        ax1.set_ylabel(r'???')
-        ax1.plot(brnd.rho[:,0],self.gamma[:,0],label='gamma')
-        ax1.plot(brnd.rho[:,0],self.gammahat[:,0],label='gammahat')
-        ax1.legend()
+        #gamma_plot = plt.figure(figsize=(6,4))
+        #ax1 = gamma_plot.add_subplot(1,1,1)
+        #ax1.set_title('gamma')
+        #ax1.set_xlabel(r'$\rho$')
+        #ax1.set_ylabel(r'???')
+        #ax1.plot(brnd.rho[:,0],self.gamma[:,0],label='gamma')
+        #ax1.plot(brnd.rho[:,0],self.gammahat[:,0],label='gammahat')
+        #ax1.legend()
         
-        qheati_plot = plt.figure(figsize=(6,4))
-        ax1 = qheati_plot.add_subplot(1,1,1)
-        ax1.set_title('qheati')
-        ax1.set_xlabel(r'$\rho$')
-        ax1.set_ylabel(r'???')
-        ax1.plot(brnd.rho[:,0],self.qheati[:,0],label='qheati')
-        ax1.plot(brnd.rho[:,0],self.qhatheati[:,0],label='qhatheati')
-        ax1.legend()
+        #qheati_plot = plt.figure(figsize=(6,4))
+        #ax1 = qheati_plot.add_subplot(1,1,1)
+        #ax1.set_title('qheati')
+        #ax1.set_xlabel(r'$\rho$')
+        #ax1.set_ylabel(r'???')
+        #ax1.plot(brnd.rho[:,0],self.qheati[:,0],label='qheati')
+        #ax1.plot(brnd.rho[:,0],self.qhatheati[:,0],label='qhatheati')
+        #ax1.legend()
         
 
                 
@@ -337,14 +337,14 @@ class jrostuff():
         self.y11 = self.xmomtor1 + inp.xk * (brnd.ni * inp.ephia + brnd.B_p * self.gammahat)
         self.y22 = self.xmomtor2 + brnd.zbar2 * inp.xk * (brnd.nC * inp.ephia + brnd.B_p * self.gammaC)
         
-        y11y22_plot = plt.figure(figsize=(6,4))
-        ax1 = y11y22_plot.add_subplot(1,1,1)
-        ax1.set_title('y11 and y22')
-        ax1.set_xlabel(r'$\rho$')
-        ax1.set_ylabel(r'???')
-        ax1.plot(brnd.rho[:,0],self.y11[:,0],label='y11')
-        ax1.plot(brnd.rho[:,0],self.y22[:,0],label='y22')
-        ax1.legend()
+        #y11y22_plot = plt.figure(figsize=(6,4))
+        #ax1 = y11y22_plot.add_subplot(1,1,1)
+        #ax1.set_title('y11 and y22')
+        #ax1.set_xlabel(r'$\rho$')
+        #ax1.set_ylabel(r'???')
+        #ax1.plot(brnd.rho[:,0],self.y11[:,0],label='y11')
+        #ax1.plot(brnd.rho[:,0],self.y22[:,0],label='y22')
+        #ax1.legend()
 
         
         return self.y11, self.y22
@@ -380,30 +380,30 @@ class jrostuff():
         self.vpolC = brnd.vpolC #TODO: Need to interpolate this onto brnd.rho
         self.vpolD = self.vpolC / 0.4
         
-        intrin_plot = plt.figure(figsize=(6,4))
-        ax1 = intrin_plot.add_subplot(1,1,1)
-        ax1.set_title('intrinsic rotation')
-        ax1.set_xlabel(r'$\rho$')
-        ax1.set_ylabel(r'???')
-        ax1.plot(brnd.rho[:,0],self.intrin_D[:,0],label='intrin_D')
-        ax1.plot(brnd.rho[:,0],self.intrin_C[:,0],label='intrin_C')
-        ax1.legend()
+        #intrin_plot = plt.figure(figsize=(6,4))
+        #ax1 = intrin_plot.add_subplot(1,1,1)
+        #ax1.set_title('intrinsic rotation')
+        #ax1.set_xlabel(r'$\rho$')
+        #ax1.set_ylabel(r'???')
+        #ax1.plot(brnd.rho[:,0],self.intrin_D[:,0],label='intrin_D')
+        #ax1.plot(brnd.rho[:,0],self.intrin_C[:,0],label='intrin_C')
+        #ax1.legend()
         
-        vtorChat_plot = plt.figure(figsize=(6,4))
-        ax1 = vtorChat_plot.add_subplot(1,1,1)
-        ax1.set_title('vtorChat')
-        ax1.set_xlabel(r'$\rho$')
-        ax1.set_ylabel(r'???')
-        ax1.plot(brnd.rho[:,0],self.vtorChat[:,0],label='vtorChat')
-        ax1.legend()
+        #vtorChat_plot = plt.figure(figsize=(6,4))
+        #ax1 = vtorChat_plot.add_subplot(1,1,1)
+        #ax1.set_title('vtorChat')
+        #ax1.set_xlabel(r'$\rho$')
+        #ax1.set_ylabel(r'???')
+        #ax1.plot(brnd.rho[:,0],self.vtorChat[:,0],label='vtorChat')
+        #ax1.legend()
         
-        vtorDPert_plot = plt.figure(figsize=(6,4))
-        ax1 = vtorDPert_plot.add_subplot(1,1,1)
-        ax1.set_title('vtorDPert')
-        ax1.set_xlabel(r'$\rho$')
-        ax1.set_ylabel(r'???')
-        ax1.plot(brnd.rho[:,0],self.vtorDPert[:,0],label='vtorDPert')
-        ax1.legend()
+        #vtorDPert_plot = plt.figure(figsize=(6,4))
+        #ax1 = vtorDPert_plot.add_subplot(1,1,1)
+        #ax1.set_title('vtorDPert')
+        #ax1.set_xlabel(r'$\rho$')
+        #ax1.set_ylabel(r'???')
+        #ax1.plot(brnd.rho[:,0],self.vtorDPert[:,0],label='vtorDPert')
+        #ax1.legend()
         
         return self.intrin_D, self.intrin_C, self.vtorChat
         
@@ -430,14 +430,14 @@ class jrostuff():
         self.xnudrag_C  = (self.y22 + brnd.nC * inp.xmas2 * self.xnuc_CD * delv2) / \
                             (brnd.nC * inp.xmas2 * torv)
                             
-        nudrag_plot = plt.figure(figsize=(6,4))
-        ax1 = nudrag_plot.add_subplot(1,1,1)
-        ax1.set_title('nudrag')
-        ax1.set_xlabel(r'$\rho$')
-        ax1.set_ylabel(r'???')
-        ax1.plot(brnd.rho[:,0],self.xnudrag_D[:,0],label='xnudrag_D')
-        ax1.plot(brnd.rho[:,0],self.xnudrag_C[:,0],label='xnudrag_C')
-        ax1.legend()
+        #nudrag_plot = plt.figure(figsize=(6,4))
+        #ax1 = nudrag_plot.add_subplot(1,1,1)
+        #ax1.set_title('nudrag')
+        #ax1.set_xlabel(r'$\rho$')
+        #ax1.set_ylabel(r'???')
+        #ax1.plot(brnd.rho[:,0],self.xnudrag_D[:,0],label='xnudrag_D')
+        #ax1.plot(brnd.rho[:,0],self.xnudrag_C[:,0],label='xnudrag_C')
+        #ax1.legend()
             
         return self.xnudrag_D, self.xnudrag_C
         
@@ -502,19 +502,19 @@ class jrostuff():
         self.chi4=brnd.exlti/(brnd.ni*brnd.Ti_kev*inp.xk)*calc_qcond(self,inp,conv25=True,pressure=True)
         self.chi5=brnd.exlti/(brnd.ni*brnd.Ti_kev*inp.xk)*calc_qcond(self,inp,conv25=True,pressure=True,visc=True)
         
-        chi_plot = plt.figure(figsize=(6,4))
-        ax1 = chi_plot.add_subplot(1,1,1)
-        ax1.set_title('chi')
-        ax1.set_xlabel(r'$\rho$')
-        ax1.set_ylabel(r'???')
-        ax1.plot(brnd.rho[:,0],self.chi1[:,0],label='chi1')
-        ax1.plot(brnd.rho[:,0],self.chi2[:,0],label='chi2')
-        ax1.plot(brnd.rho[:,0],self.chi2[:,0],label='chi3')
-        ax1.plot(brnd.rho[:,0],self.chi2[:,0],label='chi4')
-        ax1.plot(brnd.rho[:,0],self.chi2[:,0],label='chi5')
-        ax1.legend()
+        #chi_plot = plt.figure(figsize=(6,4))
+        #ax1 = chi_plot.add_subplot(1,1,1)
+        #ax1.set_title('chi')
+        #ax1.set_xlabel(r'$\rho$')
+        #ax1.set_ylabel(r'???')
+        #ax1.plot(brnd.rho[:,0],self.chi1[:,0],label='chi1')
+        #ax1.plot(brnd.rho[:,0],self.chi2[:,0],label='chi2')
+        #ax1.plot(brnd.rho[:,0],self.chi2[:,0],label='chi3')
+        #ax1.plot(brnd.rho[:,0],self.chi2[:,0],label='chi4')
+        #ax1.plot(brnd.rho[:,0],self.chi2[:,0],label='chi5')
+        #ax1.legend()
         
-        for i,v in enumerate(self.chi1):
-            print i,v
+        #for i,v in enumerate(self.chi1):
+        #    print i,v
             
-        sys.exit()        
+        #sys.exit()        

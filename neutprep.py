@@ -6,7 +6,6 @@ Created on Sat Aug  5 16:54:44 2017
 """
 from __future__ import division
 import numpy as np
-from helpers import getangle, getpoint, cut, isinline, getangle3ptsdeg,makeline
 from scipy import interpolate
 from math import pi, cos, sin, sqrt, degrees
 from shapely.ops import polygonize
@@ -17,7 +16,59 @@ import os
 from subprocess import call
 import re
 import sys
-from neutpy import neutpy,neutpyplot
+#from neutpy import neutpy,neutpyplot
+
+def getangle(p1,p2):
+    if isinstance(p1,Point) and isinstance(p2,Point):
+        p1 = [p1.coords.xy[0][0],p1.coords.xy[1][0]]
+        p2 = [p2.coords.xy[0][0],p2.coords.xy[1][0]]
+    p1 = np.asarray(p1)
+    p1 = np.reshape(p1,(-1,2))
+    p2 = np.asarray(p2)
+    p2 = np.reshape(p2,(-1,2))
+    theta = np.arctan2(p1[:,1]-p2[:,1],p1[:,0]-p2[:,0])
+    theta_mod = np.where(theta<0,theta+pi,theta) #makes it so the angle is always measured counterclockwise from the horizontal
+    return theta
+
+def cut(line, distance):
+    # Cuts a line in two at a distance from its starting point
+    if distance <= 0.0 or distance >= 1.0:
+        return [LineString(line)]
+    coords = list(line.coords)
+    for i, p in enumerate(coords):
+        pd = line.project(Point(p),normalized=True)
+        if pd == distance:
+            return [
+                LineString(coords[:i+1]),
+                LineString(coords[i:])]
+        if pd > distance:
+            cp = line.interpolate(distance,normalized=True)
+            return [
+                LineString(coords[:i] + [(cp.x, cp.y)]),
+                LineString([(cp.x, cp.y)] + coords[i:])]
+
+def isinline(pt,line):
+    pt_s = Point(pt)
+    dist = line.distance(pt_s)
+    if dist < 1E-6:
+        return True
+    else:
+        return False
+
+def getangle3ptsdeg(p1,p2,p3):
+    a = sqrt((p1[0]-p2[0])**2+(p1[1]-p2[1])**2)
+    b = sqrt((p2[0]-p3[0])**2+(p2[1]-p3[1])**2)
+    c = sqrt((p1[0]-p3[0])**2+(p1[1]-p3[1])**2) 
+    #print ("a,b,c = ",a,b,c)
+    #print ("line2 = ",(c**2 - a**2 - b**2)/(-2*a*b))
+    theta = degrees(acos((c**2 - a**2 - b**2)/(-2*a*b))) #returns degree in radians
+    return theta
+
+def makeline(pt,r,theta):
+    #print (pt,r,theta)
+    pt2 = [r*cos(theta) + pt[0],r*sin(theta) + pt[1]]
+    line = LineString([(pt[0],pt[1]), (pt2[0],pt2[1])])
+    return pt2,line
 
 class neutprep():
     """Prepare input information for neutpy and run neutpy
@@ -101,6 +152,8 @@ class neutprep():
             self.prep_neutpy_input(inp,brnd)
             self.ntrl2grid(inp,brnd)
 
+    
+
     def read_outfile(self,inp,brnd):
         neutdata = np.loadtxt(self.neutfile_loc,skiprows=1)
         self.midpts = np.column_stack((neutdata[:,0],neutdata[:,1]))
@@ -111,7 +164,7 @@ class neutprep():
         self.iznrate_t_raw  = neutdata[:,6]
         self.iznrate_raw    = neutdata[:,7]
 
-    def plasmamesh(self,inp,brnd):
+    def mesh core(self,inp,brnd):
         #IF PARAMETERS ARE SPECIFIED IN INPUT, CREATE NEW R, Z, ni, etc. ARRAYS
         #FOR NEUTRALS CALCULATION
         
@@ -182,330 +235,9 @@ class neutprep():
         #also create the lim_pts array. This might get moved somewhere else
         #TODO: figure out where to put this.
         
-    def solmesh(self,inp,brnd):
-        #for now, all this does is calculate the strike point locations
-        self.in_strike  = np.asarray(makeline(inp.xpt,10.0,inp.xtheta1)[1].intersection(inp.lim_line).xy)
-        self.out_strike = np.asarray(makeline(inp.xpt,10.0,inp.xtheta4)[1].intersection(inp.lim_line).xy)
-        
-        #add inner strike point
-        union = inp.lim_line.union(makeline(inp.xpt,10.0,inp.xtheta1)[1])
-        result = [geom for geom in polygonize(union)][0]
-        
-        #add outer strike point
-        union = result.union(makeline(inp.xpt,10.0,inp.xtheta4)[1])
-        result = [geom for geom in polygonize(union)][0]
-        
-        self.wall_x, self.wall_y = result.exterior.coords.xy
-        
-        #delete the repeated point. It causes problems for FiPy
-        self.wall_x = np.delete(self.wall_x,-1)
-        self.wall_y = np.delete(self.wall_y,-1)
 
-        self.wall_pts = np.column_stack((self.wall_x,self.wall_y))
-        self.wall_line = LineString(self.wall_pts)
-        self.wall_ring = LinearRing(self.wall_pts)
-        #create wall segments for triangulation later
-        self.wall_segs = np.column_stack((
-                                        np.arange(len( self.wall_pts )),
-                                        np.roll(np.arange(len( self.wall_pts )),-1)
-                                        ))
+        
 
-    def solnT(self,inp,brnd):         
-        #####################################################################       
-        ## POPULATE DENSITY AND TEMPERATURE VALUES FOR THE SOL AND HALO REGIONS  
-        ##################################################################### 
-    
-        ## THESE WILL GET COMBINED WITH AN UNSTRUCTURED LIST OF DENSITIES AND TEMPERATURES
-        ## AT EVERY OTHER VERTEX IN THE PROBLEM AND USED IN A 2D INTERPOLATION
-        ## TO GET THE VALUES AT THE MIDDLES OF THE TRIANGLES GENERATED FOR GTNEUT
-        
-        
-        # FIND POSITION OF XPOINT IN SEP_LINE COORDINATES AND ROTATE TO START GOING
-        # AROUND THE SEPERATRIX COUNTER-CLOCKWISE
-    
-        sepx, sepy = self.sep_line.coords.xy
-        xpt_pos = int(len(sepx) - (inp.ntrl_thetapts-1)/4)
-        self.sep_pts = np.roll(np.column_stack((sepx,sepy)),-xpt_pos,axis=0)
-
-        #make new sep_line with x-point repeated for use in the bdry condition
-        sep_line2 = LineString(np.vstack((self.sep_pts,self.sep_pts[0])))
-        
-        #rotate wall points to start at inner strike point
-        in_str_loc = np.where((self.wall_pts[:,0] == self.in_strike[0]) & 
-                             (self.wall_pts[:,1] == self.in_strike[1]))[0][0]
-        wall_pts_rot = np.roll(self.wall_pts,-in_str_loc,axis=0)
-
-        #make new wall_line for use in the bdry condition
-        wall_line = LineString(wall_pts_rot)
-        
-        #cut the new wall line at the outboard strike point
-        dist = wall_line.project(Point(self.out_strike[0],self.out_strike[1]),normalized=True)
-        wall_line_cut = cut(wall_line,dist)[0]
-        
-        #get the final wall points for creating the FiPy input string
-        wallx, wally = wall_line_cut.coords.xy
-        wall_pts = np.column_stack((wallx,wally))
-        
-        #start making mesh. Start with points
-        mesh_info = ""
-        pt_count = 1
-        for i, (xval, yval) in enumerate(zip(self.sep_pts[:,0],self.sep_pts[:,1])):
-            mesh_info = mesh_info + ('Point(' + str(pt_count) + ') = {' + str(xval) + ', ' + str(yval) + ', 0, 1/10};')
-            pt_count+=1
-            
-        for i, (xval, yval) in enumerate(zip(wall_pts[:,0],wall_pts[:,1])):
-            mesh_info = mesh_info + ('Point(' + str(pt_count) + ') = {' + str(xval) + ', ' + str(yval) + ', 0, 1/10};')
-            pt_count+=1
-
-        #define lines for the mesh. Start with the seperatrix
-        line_count = 1
-        for i in np.linspace(1,len(sepx)-1,len(sepx)-1):
-            mesh_info = mesh_info + ('Line(' + str(line_count) + ') = {' + str(int(i)) + ', ' + str(int(i+1)) + '};')
-            line_count+=1
-
-        #return to the xpoint
-        mesh_info = mesh_info + ('Line(' + str(line_count) + ') = {' + str(int(len(sepx))) + ', ' + str(int(1)) + '};')
-        line_count+=1
-        
-        #line from xpt to inboard side strike point
-        mesh_info = mesh_info + ('Line(' + str(line_count) + ') = {' + str(int(1)) + ', ' + str(int(len(sepx)+1)) + '};')
-        line_count+=1
-        
-        #lines around the first wall to the outboard strike point
-        for i in np.linspace(int(len(sepx)+1),int(len(sepx)+1) + len(wallx)-2,len(wallx)-1):
-            mesh_info = mesh_info + ('Line(' + str(line_count) + ') = {' + str(int(i)) + ', ' + str(int(i+1)) + '};')
-            line_count+=1
-        
-        #return to the xpoint on the outboard side
-        mesh_info = mesh_info + ('Line(' + str(line_count) + ') = {' + str(int(line_count-1)) + ', ' + str(int(1)) + '};')
-       
-        #create lineloop and plane surface
-        lineloop = "Line Loop(1) = {1"
-        for i in np.linspace(2,line_count,line_count-1):
-            lineloop = lineloop + ", " + str(int(i))
-        lineloop = lineloop + "};"
-        mesh_info = mesh_info + lineloop
-        mesh_info = mesh_info + "Plane Surface(1) = {1};\n"
-
-        # Mesh info complete. Create mesh object.
-        m = Gmsh2D(mesh_info)
-        
-        ####################################################################
-        ## CREATE LINES FOR BOUNDARY CONDITIONS
-        ####################################################################
-        #already made lines for sep and first wall
-        #now make them for inner and outer divertor legs
-        idiv_line = LineString([self.sep_pts[0],self.in_strike])
-        odiv_line = LineString([self.sep_pts[0],self.out_strike])
-        
-        var = CellVariable(mesh=m)
-
-        ####################################################################
-        ## LOOP OVER QUANTITIES TO CALCULATE (ni, ne, Ti, Te)
-        ####################################################################
-        self.sol_param = np.column_stack((m.cellCenters.value[0],m.cellCenters.value[1]))
-        for j in [0,1,2,3]:
-            mask_array  = np.zeros(m.numberOfCells)
-            bcval       = np.zeros(m.numberOfCells)
-            for i,val in enumerate(mask_array):
-                face1num = m.cellFaceIDs.data[0,i]
-                face2num = m.cellFaceIDs.data[1,i]
-                face3num = m.cellFaceIDs.data[2,i]
-                
-                face1x = m.faceCenters.value[0,face1num]
-                face2x = m.faceCenters.value[0,face2num]
-                face3x = m.faceCenters.value[0,face3num]
-                
-                face1y = m.faceCenters.value[1,face1num]
-                face2y = m.faceCenters.value[1,face2num]
-                face3y = m.faceCenters.value[1,face3num]
-                
-                p1 = Point(face1x, face1y)
-                p2 = Point(face2x, face2y)
-                p3 = Point(face3x, face3y)
-                
-                ptinsol = sep_line2.distance(p1) < 1e-8 or sep_line2.distance(p2) < 1e-8 or sep_line2.distance(p3) < 1e-8
-                ptinidiv = idiv_line.distance(p1) < 1e-8 or idiv_line.distance(p2) < 1e-8 or idiv_line.distance(p3) < 1e-8
-                ptinodiv = odiv_line.distance(p1) < 1e-8 or odiv_line.distance(p2) < 1e-8 or odiv_line.distance(p3) < 1e-8
-                ptinwall = wall_line_cut.distance(p1) < 1e-8 or wall_line_cut.distance(p2) < 1e-8 or wall_line_cut.distance(p3) < 1e-8
-                
-                if ptinsol or ptinidiv or ptinodiv or ptinwall:
-                    mask_array[i] = 1
-                
-                if j==0:
-                    solbc = brnd.ni[-1,0]*1E-19
-                elif j==1:
-                    solbc = brnd.ne[-1,0]*1E-19
-                elif j==2:
-                    solbc = brnd.Te_kev[-1,0]
-                else:
-                    solbc = brnd.Te_kev[-1,0]
-                
-                if ptinsol:
-                    bcval[i] = solbc
-                if ptinidiv:
-                    bcval[i] = solbc
-                if ptinodiv:
-                    bcval[i] = solbc
-                if ptinwall:
-                    bcval[i] = solbc/100.0
-                    
-            mask = (CellVariable(mesh=m,value=mask_array)==1)
-            
-            largeValue = 1e+10
-            value = CellVariable(mesh=m,value=bcval)
-            eqn = DiffusionTerm(coeff=1.0) - ImplicitSourceTerm(largeValue * mask) + largeValue * mask * value - 200.0*(var - 0.06)*var 
-            print ("solving for quantity: ",j)
-            eqn.solve(var)
-            
-            if j==0 or j == 1:
-                var_final = var.value*1E19
-            else:
-                var_final = var.value
-    
-            self.sol_param = np.column_stack((self.sol_param,var_final))
-    
-        #ADD DENSITIES AND TEMPERATURES ALONG THE BOUNDARY TO sol_param
-        #FOR INCLUSION IN THE 2D INTERPOLATION
-        nibc = np.asarray(wallx)*0 + brnd.ni[-1,0]
-        nebc = np.asarray(wallx)*0 + brnd.ne[-1,0]
-        Tibc = np.asarray(wallx)*0 + brnd.Ti_kev[-1,0]
-        Tebc = np.asarray(wallx)*0 + brnd.Te_kev[-1,0]
-        
-        solbc_array = np.column_stack((wallx,wally,nibc,nebc,Tibc,Tebc))
-        self.sol_param = np.vstack((self.sol_param,solbc_array))
-        
-            
-        viewer = Viewer(vars=var, datamin=0., datamax=np.amax(var_final))
-        viewer.plot()
-        plt.show()
-        
-    def pfrnT(self,inp,brnd):         
-        #start making mesh
-        pt_count = 1
-        mesh_info = ""
-        mesh_info = mesh_info + ('Point(' + str(pt_count) + ') = {' + str(self.sep_pts[0,0]) + ', ' + str(self.sep_pts[0,1]) + ', 0, 1/20};')
-        pt_count+=1
-        mesh_info = mesh_info + ('Point(' + str(pt_count) + ') = {' + str(self.in_strike[0][0]) + ', ' + str(self.in_strike[1][0]) + ', 0, 1/30};')
-        pt_count+=1
-        mesh_info = mesh_info + ('Point(' + str(pt_count) + ') = {' + str(self.out_strike[0][0]) + ', ' + str(self.out_strike[1][0]) + ', 0, 1/30};')
-        pt_count+=1
-            
-        ####################################################################
-        # CREATE LINES FOR MESH_INFO
-        ####################################################################
-        line_count = 1
-        
-        mesh_info = mesh_info + ('Line(' + str(line_count) + ') = {' + str(int(1)) + ', ' + str(int(2)) + '};')
-        line_count+=1
-        mesh_info = mesh_info + ('Line(' + str(line_count) + ') = {' + str(int(2)) + ', ' + str(int(3)) + '};')
-        line_count+=1
-        mesh_info = mesh_info + ('Line(' + str(line_count) + ') = {' + str(int(3)) + ', ' + str(int(1)) + '};')
-        line_count+=1
-     
-       
-        ####################################################################
-        # CREATE LINELOOP AND PLANE SURFACE
-        ####################################################################
-        lineloop = "Line Loop(1) = {1, 2, 3};"
-        mesh_info = mesh_info + lineloop
-        mesh_info = mesh_info + "Plane Surface(1) = {1};\n"
-        # MESH_INFO COMPLETE!
-
-        ####################################################################
-        ## CREATE MESH OBJECT
-        ####################################################################
-        m = Gmsh2D(mesh_info)
-
-        ####################################################################
-        ## CREATE LINES FOR BOUNDARY CONDITIONS
-        ####################################################################
-        #already made lines for sep and first wall
-        #now make them for inner and outer divertor legs
-        idiv_line = LineString([(inp.xpt[0],inp.xpt[1]),(self.in_strike[0], self.in_strike[1])])
-        odiv_line = LineString([(inp.xpt[0],inp.xpt[1]),(self.out_strike[0], self.out_strike[1])])
-        bottom_line = LineString([(self.in_strike[0], self.in_strike[1]),(self.out_strike[0], self.out_strike[1])])
-        
-        var = CellVariable(mesh=m)
-        
-        ####################################################################
-        ## LOOP OVER QUANTITIES TO CALCULATE (ni, ne, Ti, Te)
-        ####################################################################
-        self.pfr_param = np.column_stack((m.cellCenters.value[0],m.cellCenters.value[1]))
-        for j in [0,1,2,3]:
-            
-            mask_array = np.zeros(m.numberOfCells)
-            bcval = np.zeros(m.numberOfCells)
-            for i,val in enumerate(mask_array):
-                face1num = m.cellFaceIDs.data[0,i]
-                face2num = m.cellFaceIDs.data[1,i]
-                face3num = m.cellFaceIDs.data[2,i]
-                
-                face1x = m.faceCenters.value[0,face1num]
-                face2x = m.faceCenters.value[0,face2num]
-                face3x = m.faceCenters.value[0,face3num]
-                
-                face1y = m.faceCenters.value[1,face1num]
-                face2y = m.faceCenters.value[1,face2num]
-                face3y = m.faceCenters.value[1,face3num]
-                
-                p1 = Point(face1x, face1y)
-                p2 = Point(face2x, face2y)
-                p3 = Point(face3x, face3y)
-                
-                #ptinsol = sep_line2.distance(p1) < 1e-8 or sep_line2.distance(p2) < 1e-8 or sep_line2.distance(p3) < 1e-8
-                ptinidiv = idiv_line.distance(p1) < 1e-8 or idiv_line.distance(p2) < 1e-8 or idiv_line.distance(p3) < 1e-8
-                ptinodiv = odiv_line.distance(p1) < 1e-8 or odiv_line.distance(p2) < 1e-8 or odiv_line.distance(p3) < 1e-8
-                ptinwall = bottom_line.distance(p1) < 1e-8 or bottom_line.distance(p2) < 1e-8 or bottom_line.distance(p3) < 1e-8
-                
-                if ptinidiv or ptinodiv or ptinwall:
-                    mask_array[i] = 1
-                
-                if j==0:
-                    solbc = brnd.ni[-1,0]*1E-19
-                elif j==1:
-                    solbc = brnd.ne[-1,0]*1E-19
-                elif j==2:
-                    solbc = brnd.Ti_kev[-1,0]
-                else:
-                    solbc = brnd.Te_kev[-1,0]
-                
-                if ptinidiv:
-                    bcval[i] = solbc
-                if ptinodiv:
-                    bcval[i] = solbc
-                if ptinwall:
-                    bcval[i] = solbc/100.0
-                    
-            mask = (CellVariable(mesh=m,value=mask_array)==1)
-            
-            largeValue = 1e+10
-            value = CellVariable(mesh=m,value=bcval)
-            eqn = DiffusionTerm() - ImplicitSourceTerm(largeValue * mask) + largeValue * mask * value 
-            print ("solving for quantity: ",j)
-            eqn.solve(var)
-            
-            if j==0 or j == 1:
-                var_final = var.value*1E19
-            else:
-                var_final = var.value
-    
-            self.pfr_param = np.column_stack((self.pfr_param,var_final))
-    
-        #ADD DENSITIES AND TEMPERATURES ALONG THE BOUNDARY TO sol_param
-        #FOR INCLUSION IN THE 2D INTERPOLATION
-        #nibc = np.asarray(limx)*0 + solnibc
-        #nebc = np.asarray(limx)*0 + solnebc
-        #Tibc = np.asarray(limx)*0 + solTibc
-        #Tebc = np.asarray(limx)*0 + solTebc
-        
-        #solbc_array = np.column_stack((limx,limy,nibc,nebc,Tibc,Tebc))
-        #sol_param = np.vstack((sol_param,solbc_array))
-    
-            
-        viewer = Viewer(vars=var, datamin=0., datamax=np.amax(var_final))
-        viewer.plot()
-        plt.show()
 
         
     def prep_neutpy_input(self,inp,brnd):
@@ -831,7 +563,7 @@ class neutprep():
         f.write('\n')
         f.write('\n#wall cells')
         for i,wcell in enumerate(wallcells):
-            f.write('\n'+'iType('+str(wcell[0])+') = 2 nSides('+str(wcell[0])+') = 1 adjCell('+str(wcell[0])+') = '+str(wcell[1])+' zwall('+str(wcell[0])+') = 6 awall('+str(wcell[0])+') = 12 twall('+str(wcell[0])+') = 0.002 f_abs('+str(wcell[0])+') = 0.0 s_ext('+str(wcell[0])+') = 1e+19') 
+            f.write('\n'+'iType('+str(wcell[0])+') = 2 nSides('+str(wcell[0])+') = 1 adjCell('+str(wcell[0])+') = '+str(wcell[1])+' zwall('+str(wcell[0])+') = 6 awall('+str(wcell[0])+') = 12 twall('+str(wcell[0])+') = 0.002 f_abs('+str(wcell[0])+') = 0.0 s_ext('+str(wcell[0])+') = 0.0') 
         f.write('\n')
         f.write('\n#plasma core and vacuum cells')
         for i,pcell in enumerate(plasmacells):
@@ -911,33 +643,33 @@ class neutprep():
         toneutpy["cell1_ctr_y"]  = cell1_ctr_y
         toneutpy["cell1_theta0"] = cell1_theta0
         
-        self.neutpy_inst = neutpy(inarrs=toneutpy)
-        plot = neutpyplot(self.neutpy_inst)
-        self.nn_s_raw = self.neutpy_inst.cell_nn_s
-        self.nn_t_raw = self.neutpy_inst.cell_nn_t
-        self.nn_raw = self.nn_s_raw + self.nn_t_raw
+        #self.neutpy_inst = neutpy(inarrs=toneutpy)
+        #plot = neutpyplot(self.neutpy_inst)
+        #self.nn_s_raw = self.neutpy_inst.cell_nn_s
+        #self.nn_t_raw = self.neutpy_inst.cell_nn_t
+        #self.nn_raw = self.nn_s_raw + self.nn_t_raw
         
-        self.iznrate_s_raw = self.neutpy_inst.cell_izn_rate_s
-        self.iznrate_t_raw = self.neutpy_inst.cell_izn_rate_t
-        self.iznrate_raw = self.iznrate_s_raw + self.iznrate_t_raw
+        #self.iznrate_s_raw = self.neutpy_inst.cell_izn_rate_s
+        #self.iznrate_t_raw = self.neutpy_inst.cell_izn_rate_t
+        #self.iznrate_raw = self.iznrate_s_raw + self.iznrate_t_raw
         
         #create output file
         #the file contains R,Z coordinates and then the values of several calculated parameters
         #at each of those points.
         
-        f = open(self.neutfile_loc,'w')
-        f.write(('{:^18s}'*8).format('R','Z','n_n_slow','n_n_thermal','n_n_total','izn_rate_slow','izn_rate_thermal','izn_rate_total'))
-        for i,pt in enumerate(self.midpts):
-            f.write(('\n'+'{:>18.5f}'*2+'{:>18.5E}'*6).format(
-                                        self.midpts[i,0],
-                                        self.midpts[i,1],
-                                        self.nn_s_raw[i],
-                                        self.nn_t_raw[i],
-                                        self.nn_raw[i],
-                                        self.iznrate_s_raw[i],
-                                        self.iznrate_t_raw[i],
-                                        self.iznrate_raw[i]))
-        f.close()
+        #f = open(self.neutfile_loc,'w')
+        #f.write(('{:^18s}'*8).format('R','Z','n_n_slow','n_n_thermal','n_n_total','izn_rate_slow','izn_rate_thermal','izn_rate_total'))
+        #for i,pt in enumerate(self.midpts):
+        #    f.write(('\n'+'{:>18.5f}'*2+'{:>18.5E}'*6).format(
+        #                                self.midpts[i,0],
+        #                                self.midpts[i,1],
+        #                                self.nn_s_raw[i],
+        #                                self.nn_t_raw[i],
+        #                                self.nn_raw[i],
+        #                                self.iznrate_s_raw[i],
+        #                                self.iznrate_t_raw[i],
+        #                                self.iznrate_raw[i]))
+        #f.close()
         
 
 
@@ -1001,3 +733,4 @@ class neutprep():
         #ax1.set_ylabel(r'???')
         #ax1.plot(brnd.rho[:,0],self.izn_rate_1D[:,0],label='izn rate')
         #ax1.legend()
+        
