@@ -72,8 +72,8 @@ class exp_neutpy_prep():
             ob_div_pts[i] = np.asarray(core.ob_div_line_cut.interpolate(v,normalized=True).xy).T[0]
                 
         #core
-        core_pts = np.zeros((inp.core_pol_pts*len(core.core_lines),2))
-        for num,line in enumerate(core.core_lines):
+        core_pts = np.zeros((inp.core_pol_pts*len(core.core_ntrl_lines),2))
+        for num,line in enumerate(core.core_ntrl_lines):
             for i,v in enumerate(np.linspace(0,1,inp.core_pol_pts,endpoint=False)):
                 core_pts[num*inp.core_pol_pts + i] = np.asarray(line.interpolate(v,normalized=True).xy).T[0]
             
@@ -112,7 +112,7 @@ class exp_neutpy_prep():
                                        np.roll(np.arange(inp.ob_div_pol_pts),-1)))[:-1]
 
         core_segs   = np.zeros((0,2),dtype='int')
-        for i,v in enumerate(core.core_lines):
+        for i,v in enumerate(core.core_ntrl_lines):
             new_segs = np.column_stack((np.arange(inp.core_pol_pts),
                                         np.roll(np.arange(inp.core_pol_pts),-1))) \
                                         + inp.core_pol_pts * i

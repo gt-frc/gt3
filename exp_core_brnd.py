@@ -14,8 +14,9 @@ from scipy.constants import elementary_charge
 from shapely.geometry import Point, LineString
 from shapely.ops import polygonize,linemerge
 import sys
+from math import atan2, pi, ceil,sin,cos
 
-def draw_line(R,Z,array,val,pathnum):
+def draw_contour_line(R,Z,array,val,pathnum):
     res = cntr.Cntr(R,Z,array).trace(val)[pathnum]
     x = res[:,0]
     y = res[:,1]
@@ -38,16 +39,45 @@ def cut(line, distance):
                 LineString(coords[:i] + [(cp.x, cp.y)]),
                 LineString([(cp.x, cp.y)] + coords[i:])]
 
+def draw_core_line(R,Z,psi,psi_val,sep_pts):
+    num_lines = int(len(cntr.Cntr(R,Z,psi).trace(psi_val))/2)
+    if num_lines==1:
+        #then we're definitely dealing with a surface inside the seperatrix
+        x,y = draw_contour_line(R,Z,psi,psi_val,0)
+    else:
+        #we need to find which of the surfaces is inside the seperatrix
+        for j,line in enumerate(cntr.Cntr(R,Z,psi).trace(psi_val)[:num_lines]):
+        #for j,line in enumerate(cntr.Cntr(R,Z,self.psi_norm_raw).trace(v)):
+            x,y = draw_contour_line(R,Z,psi,psi_val,j)
+            if (np.amax(x) < np.amax(sep_pts[:,0]) and \
+                np.amin(x) > np.amin(sep_pts[:,0]) and \
+                np.amax(y) < np.amax(sep_pts[:,1]) and \
+                np.amin(y) > np.amin(sep_pts[:,1])):
+                #then it's an internal flux surface
+                break
+    pts = np.column_stack((x,y))
+    line    = LineString(pts)
+    out_pt  = pts[np.argmax(pts,axis=0)[0]]
+    in_pt   = pts[np.argmin(pts,axis=0)[0]]
+    top_pt  = pts[np.argmax(pts,axis=0)[1]]
+    bot_pt  = pts[np.argmin(pts,axis=0)[1]]
+    fs_axis = [(out_pt[0]+in_pt[0])/2,(out_pt[1]+in_pt[1])/2]
+    return line, fs_axis
+
 class exp_core_brnd():
-    def __init__(self,inp):
+    def __init__(self,inp,ntrl_switch):
         
-        R         = inp.psirz_exp[:,0].reshape(-1,65)
-        Z         = inp.psirz_exp[:,1].reshape(-1,65)
-        psi       = inp.psirz_exp[:,2].reshape(-1,65)        
+        R_psi = inp.psirz_exp[:,0].reshape(-1,65)
+        Z_psi = inp.psirz_exp[:,1].reshape(-1,65)
+        psi   = inp.psirz_exp[:,2].reshape(-1,65)        
         
-        self.sep_lines(inp,R,Z,psi)
-        self.core_lines(inp,R,Z,psi)
-        self.core_nT(inp,R,Z,psi)
+        self.sep_lines(inp,R_psi,Z_psi,psi)
+        self.core_lines_main(inp,R_psi,Z_psi,psi)
+        self.core_main(inp,R_psi,Z_psi,psi)
+        if ntrl_switch==1:
+            self.core_lines_ntrl(inp,R_psi,Z_psi,psi)
+            self.core_nT_ntrl(inp,R,Z,psi)
+        #self.comp_mesh(inp,R,Z,psi)
     
     def sep_lines(self,inp,R,Z,psi):
         #find x-point location  
@@ -103,16 +133,16 @@ class exp_core_brnd():
                                  self.xpt,
                                  method='cubic')
         #psi_shift_xpt = interp2d(R,Z,psi_shift,kind='linear')(xpt[0],xpt[1]) #get new value at sep
-        self.psi_norm = psi_shift / psi_shift_xpt
+        self.psi_norm_raw = psi_shift / psi_shift_xpt
         
         #create lines for seperatrix and divertor legs of seperatrix
-        num_lines = int(len(cntr.Cntr(R,Z,self.psi_norm).trace(1.0))/2)
+        num_lines = int(len(cntr.Cntr(R,Z,self.psi_norm_raw).trace(1.0))/2)
         if num_lines==1:
             #in this case, the contour points that matplotlib returned constitute
             #a single line from inboard divertor to outboard divertor. We need to
             #add in the x-point in at the appropriate locations and split into a
             #main and a lower seperatrix line, each of which will include the x-point.
-            x_psi,y_psi = draw_line(R,Z,self.psi_norm,1.0,0)
+            x_psi,y_psi = draw_contour_line(R,Z,self.psi_norm_raw,1.0,0)
             
             
             loc1 = np.argmax(y_psi>self.xpt[1])
@@ -154,6 +184,12 @@ class exp_core_brnd():
             entire_sep_pts = np.vstack((ib_div_pts,sep_pts[1:,:],ob_div_pts))
             self.entire_sep_line = LineString(entire_sep_pts)
 
+            #these are useful later
+            self.obmp_pt = self.main_sep_pts[np.argmax(self.main_sep_pts,axis=0)[0]]
+            self.ibmp_pt = self.main_sep_pts[np.argmin(self.main_sep_pts,axis=0)[0]]
+            self.top_pt  = self.main_sep_pts[np.argmax(self.main_sep_pts,axis=0)[1]]
+            self.bot_pt  = self.main_sep_pts[np.argmin(self.main_sep_pts,axis=0)[1]]
+            self.geo_axis = [(self.obmp_pt[0] + self.ibmp_pt[0])/2,(self.obmp_pt[1] + self.ibmp_pt[1])/2]
             #TODO: add point to wall line
                 
         elif num_lines==2:
@@ -161,7 +197,7 @@ class exp_core_brnd():
             #seperatrix trace (line 1).
             
             #first do lower seperatrix line
-            x_psi,y_psi = draw_line(R,Z,self.psi_norm,1.0,0)
+            x_psi,y_psi = draw_contour_line(R,Z,self.psi_norm_raw,1.0,0)
             loc = np.argmax(x_psi>self.xpt[0])
             
             x_psi = np.insert(x_psi, loc, self.xpt[0])
@@ -185,7 +221,7 @@ class exp_core_brnd():
             #TODO: add point to wall line
     
             #now to main seperatrix line
-            x_psi,y_psi = draw_line(R,Z,self.psi_norm,1.0,1)
+            x_psi,y_psi = draw_contour_line(R,Z,self.psi_norm_raw,1.0,1)
             self.main_sep_pts = np.insert(np.column_stack((x_psi,y_psi)),0,self.xpt,axis=0)
             self.main_sep_line = LineString(self.main_sep_pts[:-1])
             self.main_sep_line_closed = LineString(self.main_sep_pts)
@@ -196,30 +232,203 @@ class exp_core_brnd():
             #to the x-point 
             #TODO: 
 
-    def core_lines(self,inp,R,Z,psi):
-        self.core_lines = []
-        #psi_pts = np.concatenate((np.linspace(0,0.8,5,endpoint=False),np.linspace(0.8,1.0,4,endpoint=False)))
-        psi_pts = np.linspace(inp.corelines_begin,1,inp.num_corelines,endpoint=False)
-        for i,v in enumerate(psi_pts):
-            num_lines = int(len(cntr.Cntr(R,Z,self.psi_norm).trace(v))/2)
+    def core_lines_main(self,inp,R,Z,psi):                    
+        #define lines to be used for the main computational grid                    
+        self.core_main_lines = []
+        psi_pts_main = np.concatenate((np.linspace(0,0.8,20,endpoint=False),np.linspace(0.8,1.0,20,endpoint=False)))
+        for i,v in enumerate(psi_pts_main):
+            num_lines = int(len(cntr.Cntr(R,Z,self.psi_norm_raw).trace(v))/2)
             if num_lines==1:
                 #then we're definitely dealing with a surface inside the seperatrix
-                x,y = draw_line(R,Z,self.psi_norm,v,0)
-                self.core_lines.append(LineString(np.column_stack((x[:-1],y[:-1]))))
+                x,y = draw_contour_line(R,Z,self.psi_norm_raw,v,0)
+                self.core_main_lines.append(LineString(np.column_stack((x[:-1],y[:-1]))))
             else:
                 #we need to find which of the surfaces is inside the seperatrix
-                for j,line in enumerate(cntr.Cntr(R,Z,self.psi_norm).trace(v)[:num_lines]):
-                #for j,line in enumerate(cntr.Cntr(R,Z,self.psi_norm).trace(v)):
-                    x,y = draw_line(R,Z,self.psi_norm,v,j)
+                for j,line in enumerate(cntr.Cntr(R,Z,self.psi_norm_raw).trace(v)[:num_lines]):
+                #for j,line in enumerate(cntr.Cntr(R,Z,self.psi_norm_raw).trace(v)):
+                    x,y = draw_contour_line(R,Z,self.psi_norm_raw,v,j)
                     if (np.amax(x) < np.amax(self.main_sep_pts[:,0]) and \
                         np.amin(x) > np.amin(self.main_sep_pts[:,0]) and \
                         np.amax(y) < np.amax(self.main_sep_pts[:,1]) and \
                         np.amin(y) > np.amin(self.main_sep_pts[:,1])):
                         #then it's an internal flux surface
-                        self.core_lines.append(LineString(np.column_stack((x[:-1],y[:-1]))))
+                        self.core_main_lines.append(LineString(np.column_stack((x[:-1],y[:-1]))))
                         break
 
-    def core_nT(self,inp,R,Z,psi):
+    def core_lines_ntrl(self,inp,R,Z,psi):
+        #define lines to be used in the neutrals calculation
+        self.core_ntrl_lines = []
+        psi_pts_ntrl = np.linspace(inp.corelines_begin,1,inp.num_corelines,endpoint=False)
+        for i,v in enumerate(psi_pts_ntrl):
+            num_lines = int(len(cntr.Cntr(R,Z,self.psi_norm_raw).trace(v))/2)
+            if num_lines==1:
+                #then we're definitely dealing with a surface inside the seperatrix
+                x,y = draw_contour_line(R,Z,self.psi_norm_raw,v,0)
+                self.core_lines.append(LineString(np.column_stack((x[:-1],y[:-1]))))
+            else:
+                #we need to find which of the surfaces is inside the seperatrix
+                for j,line in enumerate(cntr.Cntr(R,Z,self.psi_norm_raw).trace(v)[:num_lines]):
+                #for j,line in enumerate(cntr.Cntr(R,Z,self.psi_norm_raw).trace(v)):
+                    x,y = draw_contour_line(R,Z,self.psi_norm_raw,v,j)
+                    if (np.amax(x) < np.amax(self.main_sep_pts[:,0]) and \
+                        np.amin(x) > np.amin(self.main_sep_pts[:,0]) and \
+                        np.amax(y) < np.amax(self.main_sep_pts[:,1]) and \
+                        np.amin(y) > np.amin(self.main_sep_pts[:,1])):
+                        #then it's an internal flux surface
+                        self.core_ntrl_lines.append(LineString(np.column_stack((x[:-1],y[:-1]))))
+                        break
+
+
+    def core_main(self,inp,R_psi,Z_psi,psi):
+        #define rho points
+        #rho1d = np.concatenate((np.linspace(0, 0.8, 80, endpoint=False), 
+        #                         np.linspace(0.8, 1, 40, endpoint=True)))
+        rho1d = np.linspace(0,1,100)
+        #define theta points
+        def atan3(y,x):
+            result = atan2(y,x)
+            if result<0:
+                result = result + 2*pi
+            return result
+        
+        #these theta markers correspond to the obmp, top, ibmp, bot, and obmp+2pi, respectively
+        theta_marker = np.zeros(5)
+        theta_marker[0] = atan2((self.obmp_pt[1]-self.geo_axis[1]),(self.obmp_pt[0]-self.geo_axis[0]))
+        theta_marker[1] = atan3((self.top_pt[1]-self.geo_axis[1]),(self.top_pt[0]-self.geo_axis[0]))
+        theta_marker[2] = atan3((self.ibmp_pt[1]-self.geo_axis[1]),(self.ibmp_pt[0]-self.geo_axis[0]))
+        theta_marker[3] = atan3((self.xpt[1]-self.geo_axis[1]),(self.xpt[0]-self.geo_axis[0]))
+        theta_marker[4] = theta_marker[0] + 2*pi
+        
+        thetapts_approx = 30
+        min_delta_theta = 2*pi/thetapts_approx
+        
+        theta1d = np.zeros(0)
+        for i in range(4):
+            quad_pts = ceil((theta_marker[i+1] - theta_marker[i])/min_delta_theta)
+            quad_theta = np.linspace(theta_marker[i],theta_marker[i+1],quad_pts)
+            theta1d = np.concatenate((theta1d,quad_theta))
+        
+        self.theta,self.rho = np.meshgrid(theta1d,rho1d)
+        
+        #fill in parameters that are only functions of rho
+        try:
+            self.ni = UnivariateSpline(inp.ni_data[:,0],inp.ni_data[:,1],k=5,s=2.0)(self.rho)
+        except AttributeError:
+            pass
+        
+        try:
+            self.ne = UnivariateSpline(inp.ne_data[:,0],inp.ne_data[:,1],k=5,s=2.0)(self.rho)
+        except AttributeError:
+            pass
+        
+        try:
+            self.Ti_kev = UnivariateSpline(inp.Ti_data[:,0],inp.Ti_data[:,1],k=5,s=2.0)(self.rho)
+        except AttributeError:
+            pass
+        
+        try:
+            self.Te_kev = UnivariateSpline(inp.Te_data[:,0],inp.Te_data[:,1],k=5,s=2.0)(self.rho)
+        except AttributeError:
+            pass
+        
+        try:
+            E_r_fit    = UnivariateSpline(inp.er_data[:,0],inp.er_data[:,1],k=5,s=2.0)
+            self.E_r   = E_r_fit(self.rho)
+            self.E_pot = np.zeros(self.rho.shape)
+            for i,rhoval in enumerate(rho1d):
+                self.E_pot[i] = E_r_fit.integral(rhoval, 1.0)
+        except AttributeError:
+            pass
+        
+        try:
+            self.fracz    = UnivariateSpline(inp.fracz_data[:,0],inp.fracz_data[:,1],k=5,s=2.0)(self.rho)
+        except AttributeError:
+            pass
+        
+        try:
+            self.fz1      = UnivariateSpline(inp.fz1_data[:,0],inp.fz1_data[:,1],k=5,s=2.0)(self.rho)
+        except AttributeError:
+            pass
+        
+        try:
+            self.q        = UnivariateSpline(inp.q_data[:,0],inp.q_data[:,1],k=5,s=2.0)(self.rho)
+        except AttributeError:
+            pass
+        
+        try:
+            self.vpolC    = UnivariateSpline(inp.vpolC_data[:,0],inp.vpolC_data[:,1],k=5,s=2.0)(self.rho)
+        except AttributeError:
+            pass
+        
+        try:
+            self.vpolD    = UnivariateSpline(inp.vpolD_data[:,0],inp.vpolD_data[:,1],k=5,s=2.0)(self.rho)
+        except AttributeError:
+            pass
+        
+        try:
+            self.vtorC    = UnivariateSpline(inp.vtorC_data[:,0],inp.vtorC_data[:,1],k=5,s=2.0)(self.rho)
+        except AttributeError:
+            pass
+        
+        try:
+            self.vtorD    = UnivariateSpline(inp.vtorD_data[:,0],inp.vtorD_data[:,1],k=5,s=2.0)(self.rho)
+        except AttributeError:
+            pass
+        
+        try:
+            self.zbar2    = UnivariateSpline(inp.zbar2_data[:,0],inp.zbar2_data[:,1],k=5,s=2.0)(self.rho)
+        except AttributeError:
+            pass
+
+        #get parameters that depend on both rho and theta
+        self.R        = np.zeros(self.rho.shape)
+        self.Z        = np.zeros(self.rho.shape)
+        self.psi_norm = np.zeros(self.rho.shape)
+        
+        #move along line between m_axis and obmp and define flux surfaces and params that depend on theta
+        rho_line = LineString([Point(self.m_axis),Point(self.obmp_pt)])
+        for i,rhoval in enumerate(rho1d):
+
+            #get R,Z coordinates of each point along the rho_line
+            pt_coords = np.asarray(rho_line.interpolate(rhoval,normalized=True).coords)[0]
+
+            #get psi value at that point
+            psi_val = griddata(np.column_stack((R_psi.flatten(),Z_psi.flatten())),
+                               self.psi_norm_raw.flatten(),
+                               pt_coords,
+                               method='linear')
+            
+            fs_line, fs_axis = draw_core_line(R_psi,Z_psi,self.psi_norm_raw,psi_val,self.main_sep_pts)
+
+            for j,thetaval in enumerate(theta1d):
+                if rhoval<1.0:
+                    thetaline = LineString([Point(fs_axis),
+                                            Point([3.0*cos(thetaval)+fs_axis[0],
+                                                   3.0*sin(thetaval)+fs_axis[1]])])
+                    int_pt = fs_line.intersection(thetaline)
+                else:
+                    if thetaval == theta_marker[3]:
+                        int_pt = Point(self.xpt)
+                    else:
+                        thetaline = LineString([Point(self.geo_axis),
+                                                Point([3.0*cos(thetaval)+self.geo_axis[0],
+                                                       3.0*sin(thetaval)+self.geo_axis[1]])])
+                        int_pt = self.main_sep_line_closed.intersection(thetaline)
+                        
+                self.R[i,j] = int_pt.x
+                self.Z[i,j] = int_pt.y
+                self.psi_norm[i] = psi_val
+                
+        self.R[0]        = self.m_axis[0]        
+        self.Z[0]        = self.m_axis[1]     
+        self.psi_norm[0] = 0    
+        
+        plt.axis('equal')
+        for i,(Rvals,Zvals) in enumerate(zip(self.R,self.Z)):
+            plt.plot(Rvals,Zvals,lw=0.5)
+
+    def core_nT_ntrl(self,inp,R,Z,psi):
+        #CREATE ARRAYS OF POINTS, DENSITIES AND TEMPERATURES FOR THE NEUTRALS CALCULATION
         
         #Master arrays that will contain all the points we'll use to get n,T
         #throughout the plasma chamber via 2-D interpolation
@@ -230,7 +439,6 @@ class exp_core_brnd():
         
         ##########################################
         #Calculate n,T throughout the core plasma using radial profile input files, uniform on flux surface
-        
         ni     = UnivariateSpline(inp.ni_data[:,0],inp.ni_data[:,1],k=5,s=2.0)
         ne     = UnivariateSpline(inp.ne_data[:,0],inp.ne_data[:,1],k=5,s=2.0)
         Ti_kev = UnivariateSpline(inp.Ti_data[:,0],inp.Ti_data[:,1],k=5,s=2.0)
@@ -238,17 +446,7 @@ class exp_core_brnd():
         
         #get approximate rho values associated with the psi values we're using
         #draw line between magnetic axis and the seperatrix at the outboard midplane
-        self.obmp_pt = self.main_sep_pts[np.argmax(self.main_sep_pts,axis=0)[0]]
-        self.ibmp_pt = self.main_sep_pts[np.argmin(self.main_sep_pts,axis=0)[0]]
-        self.top_pt  = self.main_sep_pts[np.argmax(self.main_sep_pts,axis=0)[1]]
-        self.bot_pt  = self.main_sep_pts[np.argmin(self.main_sep_pts,axis=0)[1]]
-
         rho_line = LineString([Point(self.m_axis),Point(self.obmp_pt)])
-        #for several points on the rho line specified above:
-        
-        #To get smooth gradients for use in the SOL calculation, you need around
-        # 50-100 radial points in the far edge and around 100 or so theta points
-        # TODO: There is almost certainly a faster way to get these gradients.
         rho_pts = np.concatenate((np.linspace(0, 0.95, 20, endpoint=False), 
                                  np.linspace(0.95, 1, 50, endpoint=False)),axis=0)
         
@@ -264,21 +462,21 @@ class exp_core_brnd():
 
             #get psi value at that point
             psi_val = griddata(np.column_stack((R.flatten(),Z.flatten())),
-                                 self.psi_norm.flatten(),
+                                 self.psi_norm_raw.flatten(),
                                  pt_coords,
                                  method='linear')
             #map this n,T data to every point on the corresponding flux surface
-            num_lines = int(len(cntr.Cntr(R,Z,self.psi_norm).trace(psi_val))/2)
+            num_lines = int(len(cntr.Cntr(R,Z,self.psi_norm_raw).trace(psi_val))/2)
 
             if num_lines==1:
                 #then we're definitely dealing with a surface inside the seperatrix
-                x,y = draw_line(R,Z,self.psi_norm,psi_val,0)
+                x,y = draw_contour_line(R,Z,self.psi_norm_raw,psi_val,0)
                 surf = LineString(np.column_stack((x,y)))
             else:
                 #we need to find which of the surfaces is inside the seperatrix
-                for j,line in enumerate(cntr.Cntr(R,Z,self.psi_norm).trace(psi_val)[:num_lines]):
-                    #for j,line in enumerate(cntr.Cntr(R,Z,self.psi_norm).trace(v)):
-                    x,y = draw_line(R,Z,self.psi_norm,psi_val,j)
+                for j,line in enumerate(cntr.Cntr(R,Z,self.psi_norm_raw).trace(psi_val)[:num_lines]):
+                    #for j,line in enumerate(cntr.Cntr(R,Z,self.psi_norm_raw).trace(v)):
+                    x,y = draw_contour_line(R,Z,self.psi_norm_raw,psi_val,j)
                     if (np.amax(x) < np.amax(self.main_sep_pts[:,0]) and \
                         np.amin(x) > np.amin(self.main_sep_pts[:,0]) and \
                         np.amax(y) < np.amax(self.main_sep_pts[:,1]) and \
@@ -307,8 +505,3 @@ class exp_core_brnd():
             self.ne_pts = np.vstack((self.ne_pts,np.append(pt,self.ne_sep_val)))
             self.Ti_kev_pts = np.vstack((self.Ti_kev_pts,np.append(pt,self.Ti_kev_sep_val)))
             self.Te_kev_pts = np.vstack((self.Te_kev_pts,np.append(pt,self.Te_kev_sep_val)))
-
-
-
-
-

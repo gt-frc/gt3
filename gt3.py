@@ -62,11 +62,9 @@ class gt3():
         self.shotlabel = shotlabel
 
     def coreonly(self):
+        ntrl_switch = 0
         self.inp = read_infile(self.shotlabel)
-        self.core  = exp_core_brnd(self.inp) if self.inp.exp_inp else mil_core_brnd(self.inp)
-        self.sol   = exp_sol_brnd(self.inp,self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
-        self.pfr   = exp_pfr_brnd(self.inp,self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
-        self.ntrl  = exp_neutpy_prep(self.inp,self.core,self.sol,self.pfr)       
+        self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
 
     def coreandiol(self):
         self.inp   = read_infile(self.shotlabel)
@@ -121,20 +119,17 @@ class gt3():
 
 if __name__ == "__main__":
     myshot = gt3('144977_3000/togt3_d3d_144977_3000')
-    #myshot = gt3('togt3_dens_lim_test')
-    #myshot.therm_instab()
-    #myshot.brndandiol()
-    myshot.brndonly()
-    #myshot.brndandntrls()
-    #myshot.brndandnbi()
-    sys.exit()
-    fig1 = plt.figure(figsize=(6,8))
-    ax1 = fig1.add_subplot(1,1,1)
-    ax1.axis('equal')
-    ax1.contour(myshot.brnd.R,myshot.brnd.Z,myshot.brnd.rho,10)
-    ax1.plot(myshot.brnd.R[-1,:],myshot.brnd.Z[-1,:])
-    ax1.plot(myshot.inp.lim_vertex_closed[:,0],myshot.inp.lim_vertex_closed[:,1])
-    ax1.plot(myshot.inp.sep_exp_closed[:,0],myshot.inp.sep_exp_closed[:,1])
+    myshot.coreonly()
+    
+    #sys.exit()
+    
+    #fig1 = plt.figure(figsize=(6,8))
+    #ax1 = fig1.add_subplot(1,1,1)
+    #ax1.axis('equal')
+    #ax1.contour(myshot.core.R,myshot.core.Z,myshot.core.rho,10)
+    #ax1.plot(myshot.core.R[-1,:],myshot.core.Z[-1,:])
+    #ax1.plot(myshot.inp.lim_vertex_closed[:,0],myshot.inp.lim_vertex_closed[:,1])
+    #ax1.plot(myshot.inp.sep_exp_closed[:,0],myshot.inp.sep_exp_closed[:,1])
     
     fontsize=12
     fig2 = plt.figure(figsize=(7,10))
@@ -144,7 +139,7 @@ if __name__ == "__main__":
     try:
         ax1 = fig2.add_subplot(rows,cols,num)
         ax1.set_title(r'$n_i$', fontsize=fontsize)
-        ax1.plot(myshot.brnd.rho[:,0],myshot.brnd.ni[:,0],lw=2,color='black')
+        ax1.plot(myshot.core.rho[:,0],myshot.core.ni[:,0],lw=2,color='black')
         num +=1
     except:
         pass
@@ -152,7 +147,7 @@ if __name__ == "__main__":
     try:
         ax2 = fig2.add_subplot(rows,cols,num)
         ax2.set_title(r'$n_e$', fontsize=fontsize)
-        ax2.plot(myshot.brnd.rho[:,0],myshot.brnd.ne[:,0],lw=2,color='black')
+        ax2.plot(myshot.core.rho[:,0],myshot.core.ne[:,0],lw=2,color='black')
         num +=1
     except:
         pass
@@ -160,7 +155,7 @@ if __name__ == "__main__":
     try:
         ax3 = fig2.add_subplot(rows,cols,num)
         ax3.set_title(r'$T_i$', fontsize=fontsize)
-        ax3.plot(myshot.brnd.rho[:,0],myshot.brnd.Ti_kev[:,0],lw=2,color='black')
+        ax3.plot(myshot.core.rho[:,0],myshot.core.Ti_kev[:,0],lw=2,color='black')
         num +=1
     except:
         pass
@@ -168,7 +163,7 @@ if __name__ == "__main__":
     try:
         ax4 = fig2.add_subplot(rows,cols,num)
         ax4.set_title(r'$T_e$', fontsize=fontsize)
-        ax4.plot(myshot.brnd.rho[:,0],myshot.brnd.Te_kev[:,0],lw=2,color='black')
+        ax4.plot(myshot.core.rho[:,0],myshot.core.Te_kev[:,0],lw=2,color='black')
         num +=1
     except:
         pass
@@ -176,7 +171,7 @@ if __name__ == "__main__":
     try:
         ax5 = fig2.add_subplot(rows,cols,num)
         ax5.set_title(r'$j_r$', fontsize=fontsize)
-        ax5.plot(myshot.brnd.rho[:,0],myshot.brnd.j_r[:,0],lw=2,color='black')
+        ax5.plot(myshot.core.rho[:,0],myshot.core.j_r[:,0],lw=2,color='black')
         num +=1
     except:
         pass
@@ -184,7 +179,7 @@ if __name__ == "__main__":
     try:
         ax6 = fig2.add_subplot(rows,cols,num)
         ax6.set_title(r'$E_r$', fontsize=fontsize)
-        ax6.plot(myshot.brnd.rho[:,0],myshot.brnd.E_r[:,0],lw=2,color='black')
+        ax6.plot(myshot.core.rho[:,0],myshot.core.E_r[:,0],lw=2,color='black')
         num +=1
     except:
         pass
@@ -192,7 +187,7 @@ if __name__ == "__main__":
     try:
         ax7 = fig2.add_subplot(rows,cols,num)
         ax7.set_title(r'$fracz$', fontsize=fontsize)
-        ax7.plot(myshot.brnd.rho[:,0],myshot.brnd.fracz[:,0],lw=2,color='black')
+        ax7.plot(myshot.core.rho[:,0],myshot.core.fracz[:,0],lw=2,color='black')
         num +=1
     except:
         pass
@@ -200,7 +195,7 @@ if __name__ == "__main__":
     try:
         ax8 = fig2.add_subplot(rows,cols,num)
         ax8.set_title(r'$v_{\theta,C}$', fontsize=fontsize)
-        ax8.plot(myshot.brnd.rho[:,0],myshot.brnd.vpolC[:,0],lw=2,color='black')
+        ax8.plot(myshot.core.rho[:,0],myshot.core.vpolC[:,0],lw=2,color='black')
         num +=1
     except:
         pass
@@ -208,7 +203,7 @@ if __name__ == "__main__":
     try:
         ax9 = fig2.add_subplot(rows,cols,num)
         ax9.set_title(r'$v_{\phi,C}$', fontsize=fontsize)
-        ax9.plot(myshot.brnd.rho[:,0],myshot.brnd.vtorC[:,0],lw=2,color='black')
+        ax9.plot(myshot.core.rho[:,0],myshot.core.vtorC[:,0],lw=2,color='black')
         num +=1
     except:
         pass
@@ -217,7 +212,7 @@ if __name__ == "__main__":
         ax10 = fig2.add_subplot(rows,cols,num)
         ax10.set_title(r'$F_{orb}$', fontsize=fontsize)
         ax10.set_xlim(0.9,1.0)
-        ax10.plot(myshot.brnd.rho[:,0],myshot.tiol.F_orb_1D,lw=2,color='black')    
+        ax10.plot(myshot.core.rho[:,0],myshot.tiol.F_orb_1D,lw=2,color='black')    
         num +=1
     except:
         pass
@@ -226,7 +221,7 @@ if __name__ == "__main__":
         ax11 = fig2.add_subplot(rows,cols,num)
         ax11.set_title(r'$M_{orb}$', fontsize=fontsize)
         ax11.set_xlim(0.9,1.0)
-        ax11.plot(myshot.brnd.rho[:,0],myshot.tiol.M_orb_1D,lw=2,color='black')    
+        ax11.plot(myshot.core.rho[:,0],myshot.tiol.M_orb_1D,lw=2,color='black')    
         num +=1
     except:
         pass
@@ -235,7 +230,7 @@ if __name__ == "__main__":
         ax12 = fig2.add_subplot(rows,cols,num)
         ax12.set_title(r'$E_{orb}$', fontsize=fontsize)
         ax12.set_xlim(0.9,1.0)
-        ax12.plot(myshot.brnd.rho[:,0],myshot.tiol.E_orb_1D,lw=2,color='black')    
+        ax12.plot(myshot.core.rho[:,0],myshot.tiol.E_orb_1D,lw=2,color='black')    
         num +=1
     except:
         pass
@@ -243,7 +238,7 @@ if __name__ == "__main__":
     try:
         ax13 = fig2.add_subplot(rows,cols,num)
         ax13.set_title(r'$I_{cum}$', fontsize=fontsize)
-        ax13.plot(myshot.brnd.rho[:,0],myshot.brnd.I[:,0],lw=2,color='black')    
+        ax13.plot(myshot.core.rho[:,0],myshot.core.I[:,0],lw=2,color='black')    
         num +=1
     except:
         pass
@@ -251,7 +246,7 @@ if __name__ == "__main__":
     try:
         ax14 = fig2.add_subplot(rows,cols,num)
         ax14.set_title(r'$Z_{eff}$', fontsize=fontsize)
-        ax14.plot(myshot.brnd.rho[:,0],myshot.brnd.z_eff[:,0],lw=2,color='black')    
+        ax14.plot(myshot.core.rho[:,0],myshot.core.z_eff[:,0],lw=2,color='black')    
         num +=1
     except:
         pass
@@ -259,15 +254,15 @@ if __name__ == "__main__":
     try:
         ax15 = fig2.add_subplot(rows,cols,num)
         ax15.set_title(r'$NBI Dep. Prof.$', fontsize=fontsize)
-        ax15.plot(myshot.brnd.rho[:,0],myshot.nbi.pNB_tot[:,0],lw=2,color='black')    
+        ax15.plot(myshot.core.rho[:,0],myshot.nbi.pNB_tot[:,0],lw=2,color='black')    
         num +=1
     except:
         pass
     plt.tight_layout()
     
-    #plt.plot(myshot.brnd.rho[-1,:],myshot.brnd.rho[-1,:],lw=2,color='black')
+    #plt.plot(myshot.core.rho[-1,:],myshot.core.rho[-1,:],lw=2,color='black')
     
     #ax1.plot(myshot.ntrl.sol_lim_pts[:,0],myshot.ntrl.sol_lim_pts[:,1],'o',color='red')
     #ax1.plot(sep[:,0],sep[:,1], color='green',lw=3)
-    #CS = ax1.contourf(myshot.brnd.R,myshot.brnd.Z,myshot.brnd.B_p,500) #plot something calculated by miller
+    #CS = ax1.contourf(myshot.core.R,myshot.core.Z,myshot.core.B_p,500) #plot something calculated by miller
     #plt.colorbar(CS)
