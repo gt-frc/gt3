@@ -93,20 +93,37 @@ class read_infile():
 
         self.invars = {}
         self.invars["exp_inp"]          = ["bool",r0di]
-        self.invars["a"]                = ["float",r0df]
+
+        
+
+        #EXPERIMENTAL BACKGROUND PARAMETERS
+        self.invars["rhopts"]           = ["int",r0di]
+        self.invars["edge_rho"]         = ["float",r0df]
+        self.invars["rhopts_edge"]      = ["int",r0di]
+        self.invars["rhopts_core"]      = ["int",r0di]
+        self.invars["thetapts_approx"]  = ["int",r0di]
         self.invars["BT0"]              = ["float",r0df]
-        self.invars["R0_a"]             = ["float",r0df]
+        
+        #MILLER BACKGROUND PARAMETERS
+        self.invars["a"]                = ["float",r0df]
+        self.invars["R0_a"]             = ["float",r0df]   
         self.invars["Z0"]               = ["float",r0df]
         self.invars["kappa_up"]         = ["float",r0df]
         self.invars["kappa_lo"]         = ["float",r0df]
+        self.invars["s_k_up"]           = ["float",r0df]
+        self.invars["s_k_lo"]           = ["float",r0df]
         self.invars["tri_up"]           = ["float",r0df]
         self.invars["tri_lo"]           = ["float",r0df]
         self.invars["xmil"]             = ["int",r0di]
         self.invars["xpt_R"]            = ["float",r0df]
         self.invars["xpt_Z"]            = ["float",r0df]
-        self.invars["thetapts"]         = ["int",r0di]
+        self.invars["xtheta1"]          = ["float",r0df]
+        self.invars["xtheta2"]          = ["float",r0df]
+        self.invars["xtheta3"]          = ["float",r0df]
+        self.invars["xtheta4"]          = ["float",r0df]
         self.invars["rmeshnum_p"]       = ["int",r0di]
-        self.invars["rpts"]             = ["int",r0di]
+
+        #RADIAL PROFILES
         self.invars["ni0"]              = ["float",r0df]
         self.invars["ni9"]              = ["float",r0df]
         self.invars["ni_sep"]           = ["float",r0df]
@@ -126,19 +143,8 @@ class read_infile():
         self.invars["j0"]               = ["float",r0df]
         self.invars["j_sep"]            = ["float",r0df]
         self.invars["nu_j"]             = ["float",r0df]
-        self.invars["q95"]              = ["float",r0df]
-        self.invars["s_k_up"]           = ["float",r0df]
-        self.invars["s_k_lo"]           = ["float",r0df]
-        self.invars["xtheta1"]          = ["float",r0df]
-        self.invars["xtheta2"]          = ["float",r0df]
-        self.invars["xtheta3"]          = ["float",r0df]
-        self.invars["xtheta4"]          = ["float",r0df]
-        self.invars["numcos"]           = ["int",r0di]
-        self.invars["edge_rho"]         = ["float",r0df]
-        self.invars["rpts_edge"]        = ["int",r0di]
-        self.invars["rpts_core"]        = ["int",r0di]
-        self.invars["corelines_begin"]  = ["float", r0df]
-        self.invars["num_corelines"]    = ["int",   r0di]
+
+        #SOL PARAMETERS
         self.invars["sollines_psi_max"] = ["float", r0df]
         self.invars["num_sollines"]     = ["int",   r0di]
         self.invars["xi_sep_pts"]       = ["int",   r0di]
@@ -146,19 +152,28 @@ class read_infile():
         self.invars["ob_trim_off"]      = ["float", r0df]
         self.invars["xi_ib_pts"]        = ["int",   r0di]
         self.invars["xi_ob_pts"]        = ["int",   r0di]
-        self.invars["core_pol_pts"]     = ["int",   r0di]
-        self.invars["ib_div_pol_pts"]   = ["int",   r0di]
-        self.invars["ob_div_pol_pts"]   = ["int",   r0di]
+
+        #NEUTRALS PARAMETERS
+        self.invars["thetapts_ntrl"]    = ["int",r0di]
+        self.invars["rhopts_ntrl"]      = ["int",r0di]
+        self.invars["edge_rho_ntrl"]    = ["float", r0df]
+        self.invars["rhopts_edge_ntrl"] = ["float", r0df]
+        self.invars["rhopts_core_ntrl"] = ["float", r0df]
+        self.invars["wall_ni_min"]      = ["float", r0df]
+        self.invars["wall_ne_min"]      = ["float", r0df]
+        self.invars["wall_Ti_min"]      = ["float", r0df]
+        self.invars["wall_Te_min"]      = ["float", r0df]
+
+        #PFR PARAMETERS
         self.invars["pfr_ni_val"]       = ["float", r0df]
         self.invars["pfr_ne_val"]       = ["float", r0df]
         self.invars["pfr_Ti_val"]       = ["float", r0df]
         self.invars["pfr_Te_val"]       = ["float", r0df]
-        self.invars["wall_ni_min"]       = ["float", r0df]
-        self.invars["wall_ne_min"]       = ["float", r0df]
-        self.invars["wall_Ti_min"]       = ["float", r0df]
-        self.invars["wall_Te_min"]       = ["float", r0df]
-     
-        #NEW FROM CONSTS
+
+        #IOL PARAMETERS
+        self.invars["numcos"]           = ["int",r0di]
+
+        #RAD TRANS RELATED QUANTITIES - NEEDS WORK
         self.invars["eq1"]              = ["float",r0df]
         self.invars["eq2"]              = ["float",r0df]
         self.invars["xmas1"]            = ["float",r0df]
@@ -168,6 +183,7 @@ class read_infile():
         self.invars["delma"]            = ["float",r0df]
         self.invars["xnuati"]           = ["float",r0df]
         self.invars["xnuioni"]          = ["float",r0df]
+        self.invars["q95"]              = ["float",r0df]
         
         #NEUTRALS CALCULATION
         self.invars["neut_outfile"]     = ["str",r0ds]        
@@ -216,7 +232,7 @@ class read_infile():
         self.in_map2d["btor_file"]      = ["str",r0ds,'btor_exp']
         
         self.in_line2d = {}
-        self.in_line2d["wall_file"]      = ["str",r0ds,'wall_exp']
+        self.in_line2d["wall_file"]     = ["str",r0ds,'wall_exp']
         self.in_line2d["sep_file"]      = ["str",r0ds,'sep_exp']
         
         #Read input variables
@@ -250,7 +266,7 @@ class read_infile():
         #adjust thetapts so there are lines at theta = 0, pi/2, pi, and 3pi/2
         #this is critical for x-miller mode, but could be nice for the experimental input mode as well
         
-        self.thetapts =  int(4 * ceil(float(self.thetapts)/4))+1
+        #self.thetapts =  int(4 * ceil(float(self.thetapts_approx)/4))+1
         #self.xpt = np.array([self.xpt_R,self.xpt_Z])
 
     def read_exp(self):

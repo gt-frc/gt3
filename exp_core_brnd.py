@@ -70,13 +70,13 @@ class exp_core_brnd():
         R_psi = inp.psirz_exp[:,0].reshape(-1,65)
         Z_psi = inp.psirz_exp[:,1].reshape(-1,65)
         psi   = inp.psirz_exp[:,2].reshape(-1,65)        
-        
+        B_pol_raw = np.sqrt((np.gradient(psi,axis=1)/R_psi)**2 + (-np.gradient(psi,axis=0)/R_psi)**2)
         self.sep_lines(inp,R_psi,Z_psi,psi)
-        self.core_lines_main(inp,R_psi,Z_psi,psi)
-        self.core_main(inp,R_psi,Z_psi,psi)
+        #self.core_lines_main(inp,R_psi,Z_psi,psi)
+        self.core_main(inp,R_psi,Z_psi,psi,B_pol_raw)
         if ntrl_switch==1:
             self.core_lines_ntrl(inp,R_psi,Z_psi,psi)
-            self.core_nT_ntrl(inp,R,Z,psi)
+            self.core_nT_ntrl(inp,R_psi,Z_psi,psi)
         #self.comp_mesh(inp,R,Z,psi)
     
     def sep_lines(self,inp,R,Z,psi):
@@ -219,7 +219,7 @@ class exp_core_brnd():
             self.ob_div_line = line
             self.ob_div_line_cut = cut(line,line.project(int_pt,normalized=True))[0]
             #TODO: add point to wall line
-    
+
             #now to main seperatrix line
             x_psi,y_psi = draw_contour_line(R,Z,self.psi_norm_raw,1.0,1)
             self.main_sep_pts = np.insert(np.column_stack((x_psi,y_psi)),0,self.xpt,axis=0)
@@ -279,11 +279,18 @@ class exp_core_brnd():
                         break
 
 
-    def core_main(self,inp,R_psi,Z_psi,psi):
+    def core_main(self,inp,R_psi,Z_psi,psi,B_pol_raw):
         #define rho points
-        #rho1d = np.concatenate((np.linspace(0, 0.8, 80, endpoint=False), 
-        #                         np.linspace(0.8, 1, 40, endpoint=True)))
-        rho1d = np.linspace(0,1,100)
+        try:
+            rho1d = np.concatenate((np.linspace(0, inp.edge_rho, inp.rhopts_core, endpoint=False), 
+                                    np.linspace(inp.edge_rho, 1, inp.rhopts_edge, endpoint=True)))
+        except:
+            try:
+                rho1d = np.linspace(0,1,inp.rhopts)
+            except:
+                print 'rho parameters not defined. Using 100 evenly spaced rho values'
+                rho1d = np.linspace(0,1,100)
+                
         #define theta points
         def atan3(y,x):
             result = atan2(y,x)
@@ -299,8 +306,11 @@ class exp_core_brnd():
         theta_marker[3] = atan3((self.xpt[1]-self.geo_axis[1]),(self.xpt[0]-self.geo_axis[0]))
         theta_marker[4] = theta_marker[0] + 2*pi
         
-        thetapts_approx = 30
-        min_delta_theta = 2*pi/thetapts_approx
+        try:
+            min_delta_theta = 2*pi/inp.thetapts_approx
+        except:
+            print 'thetapts_approx not defined. Setting to 30'
+            min_delta_theta = 2*pi/30
         
         theta1d = np.zeros(0)
         for i in range(4):
@@ -308,6 +318,7 @@ class exp_core_brnd():
             quad_theta = np.linspace(theta_marker[i],theta_marker[i+1],quad_pts)
             theta1d = np.concatenate((theta1d,quad_theta))
         
+        self.thetapts = len(theta1d)
         self.theta,self.rho = np.meshgrid(theta1d,rho1d)
         
         #fill in parameters that are only functions of rho
@@ -383,25 +394,34 @@ class exp_core_brnd():
         #get parameters that depend on both rho and theta
         self.R        = np.zeros(self.rho.shape)
         self.Z        = np.zeros(self.rho.shape)
+        self.psi      = np.zeros(self.rho.shape)
         self.psi_norm = np.zeros(self.rho.shape)
         
-        #move along line between m_axis and obmp and define flux surfaces and params that depend on theta
+        #move along line between m_axis and obmp and define psi values corresponding to rho values
         rho_line = LineString([Point(self.m_axis),Point(self.obmp_pt)])
+        init_coords = np.zeros((0,2))
         for i,rhoval in enumerate(rho1d):
-
-            #get R,Z coordinates of each point along the rho_line
             pt_coords = np.asarray(rho_line.interpolate(rhoval,normalized=True).coords)[0]
+            init_coords = np.vstack((init_coords,pt_coords))
 
-            #get psi value at that point
-            psi_val = griddata(np.column_stack((R_psi.flatten(),Z_psi.flatten())),
-                               self.psi_norm_raw.flatten(),
-                               pt_coords,
-                               method='linear')
-            
-            fs_line, fs_axis = draw_core_line(R_psi,Z_psi,self.psi_norm_raw,psi_val,self.main_sep_pts)
+        psi_vals      = griddata(np.column_stack((R_psi.flatten(),Z_psi.flatten())),
+                            psi.flatten(),
+                            init_coords,
+                            method='linear')
+        
+        psi_norm_vals = griddata(np.column_stack((R_psi.flatten(),Z_psi.flatten())),
+                            self.psi_norm_raw.flatten(),
+                            init_coords,
+                            method='linear')
+
+        for i,(psi_val, psi_norm_val) in enumerate(zip(psi_vals,psi_norm_vals)): 
+            self.psi[i] = psi_val
+            self.psi_norm[i] = psi_norm_val
+                 
+            fs_line, fs_axis = draw_core_line(R_psi,Z_psi,self.psi_norm_raw,psi_norm_val,self.main_sep_pts)
 
             for j,thetaval in enumerate(theta1d):
-                if rhoval<1.0:
+                if psi_norm_val<1.0:
                     thetaline = LineString([Point(fs_axis),
                                             Point([3.0*cos(thetaval)+fs_axis[0],
                                                    3.0*sin(thetaval)+fs_axis[1]])])
@@ -409,20 +429,27 @@ class exp_core_brnd():
                 else:
                     if thetaval == theta_marker[3]:
                         int_pt = Point(self.xpt)
+
                     else:
                         thetaline = LineString([Point(self.geo_axis),
                                                 Point([3.0*cos(thetaval)+self.geo_axis[0],
                                                        3.0*sin(thetaval)+self.geo_axis[1]])])
                         int_pt = self.main_sep_line_closed.intersection(thetaline)
-                        
-                self.R[i,j] = int_pt.x
-                self.Z[i,j] = int_pt.y
-                self.psi_norm[i] = psi_val
-                
+
+                self.R[i,j]   = int_pt.x
+                self.Z[i,j]   = int_pt.y               
+
         self.R[0]        = self.m_axis[0]        
         self.Z[0]        = self.m_axis[1]     
-        self.psi_norm[0] = 0    
-        
+        self.psi_norm[0] = 0
+        self.B_p         = griddata(np.column_stack((R_psi.flatten(),Z_psi.flatten())),
+                                    B_pol_raw.flatten(),
+                                    (self.R,self.Z),
+                                    method='linear') 
+
+        self.B_t = inp.BT0 * self.m_axis[0] / self.R
+        self.B_tot = np.sqrt(self.B_p**2 + self.B_t**2)
+        self.f_phi = self.B_t/self.B_tot
         plt.axis('equal')
         for i,(Rvals,Zvals) in enumerate(zip(self.R,self.Z)):
             plt.plot(Rvals,Zvals,lw=0.5)

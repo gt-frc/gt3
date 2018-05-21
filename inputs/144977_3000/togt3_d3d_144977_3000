@@ -1,41 +1,42 @@
-#FLUX SURFACES FROM MILLER OR EXPERIMENTAL PSI DATA
+#FLUX SURFACES FROM MILLER OR EXPERIMENTAL PSI DATA (1 FOR EXPERIMENTAL, 0 FOR MILLER)
 exp_inp = 1
 
-#MAGNETIC FIELD
-BT0 = 2.11 
-
-#CURRENT-RELATED PARAMETERS
+#CURRENT- AND MAGNETIC FIELD-RELATED PARAMETERS
 j0 = 1120000.0 
 j_sep = 0 
 nu_j = 1
 IP = 1.28 
-q95 = 3.884 
+q95 = 3.884
+BT0 = 2.11
 
-#PARAMETERS FOR MESHING
-#rpts = 500
+#MAIN MESH PARAMETERS
+thetapts_approx = 30
+rhopts = 100
 #edge_rho = 0.8
-#rpts_edge = 50
-#rpts_core = 10
-thetapts = 30
+#rhopts_edge = 50
+#rhopts_core = 10
 
-#PARAMETERS FOR EXPERIMENTAL PSI PROCESSING
-corelines_begin = 0.75
-num_corelines = 5
-sollines_psi_max = 1.07
-num_sollines = 3
-xi_sep_pts = 30
-ib_trim_off = 0.1
-ob_trim_off = 0.1
-xi_ib_pts = 10
-xi_ob_pts = 10
-core_pol_pts = 30
-ib_div_pol_pts = 7
-ob_div_pol_pts = 7
-
+#NEUTRALS PARAMETERS
+thetapts_ntrl = 30
+#rhopts_ntrl = 500
+edge_rho_ntrl = 0.8
+rhopts_edge_ntrl = 50
+rhopts_core_ntrl = 10
 wall_ni_min = 1.0E15
 wall_ne_min = 1.0E15
 wall_Ti_min = 0.002
 wall_Te_min = 0.002
+
+#SOL PARAMETERS
+sollines_psi_max = 1.07
+num_sollines = 3
+xi_sep_pts = 30
+xi_ib_pts = 10
+xi_ob_pts = 10
+ib_trim_off = 0.1
+ob_trim_off = 0.1
+
+PFR PARAMETERS:
 pfr_ni_val = 1.0E14
 pfr_ne_val = 1.0E14
 pfr_Ti_val = 0.002
@@ -65,8 +66,6 @@ psirz_file      = /144977_3000/gt3_144977_3000_psirz.dat
 2D LINE INPUT FILES
 #sep_file        = /144977_3000/gt3_144977_3000_sep.dat
 wall_file        = /machine/gt3_diiid_wall.dat
-
-
 
 #PARAMETERS FOR MILLER BACKGROUND
 #a = 0.59
@@ -112,7 +111,7 @@ wall_file        = /machine/gt3_diiid_wall.dat
 #Te_dp = 0.01
 #nu_Te = 3.5
 
-# JROSTUFF-RELATED PARAMETERS
+# RAD TRANS PARAMETERS
 eq1 = 1.60e-19
 eq2 = 9.60e-19
 xmas1 = 3.35e-27

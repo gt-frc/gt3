@@ -67,51 +67,57 @@ class gt3():
         self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
 
     def coreandiol(self):
+        ntrl_switch = 0
         self.inp   = read_infile(self.shotlabel)
-        self.core  = exp_core_brnd(self.inp) if self.inp.exp_inp else mil_core_brnd(self.inp)
-        self.tiol  = thermaliol(self.inp,self.brnd)
-        self.fiol  = fastiol(self.inp,self.brnd)
+        self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
+        self.tiol  = thermaliol(self.inp,self.core)
+        self.fiol  = fastiol(self.inp,self.core)
         
     def coreandimp(self):
+        ntrl_switch = 0
         self.inp = read_infile(self.shotlabel)
-        self.core  = exp_core_brnd(self.inp) if self.inp.exp_inp else mil_core_brnd(self.inp)
-        self.imp   = imp_rad(self.inp,self.brnd)
+        self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
+        self.imp   = imp_rad(self.inp,self.core)
         
     def ntrlsonly(self):
+        ntrl_switch = 1
         self.inp = read_infile(self.shotlabel)
-        self.core  = exp_core_brnd(self.inp) if self.inp.exp_inp else mil_core_brnd(self.inp)
+        self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
         self.sol   = exp_sol_brnd(self.inp,self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
         self.pfr   = exp_pfr_brnd(self.inp,self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
         self.ntrl  = exp_neutpy_prep(self.inp,self.core,self.sol,self.pfr) 
         
     def coreandnbi(self):
+        ntrl_switch = 0
         self.inp = read_infile(self.shotlabel)
-        self.core  = exp_core_brnd(self.inp) if self.inp.exp_inp else mil_core_brnd(self.inp)
-        self.nbi   = beamdep(self.inp,self.brnd)
+        self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
+        self.nbi   = beamdep(self.inp,self.core)
         
     def therm_instab(self):
+        ntrl_switch = 1
         self.inp = read_infile(self.shotlabel)
-        self.core  = exp_core_brnd(self.inp) if self.inp.exp_inp else mil_core_brnd(self.inp)
-        self.nbi   = beamdep(self.inp,self.brnd)
-        self.imp   = imp_rad(self.inp,self.brnd)
-        #self.ntrl  = neutprep(self.inp,self.brnd)
-        #self.rtrn   = rad_trans(self.inp,self.brnd,self.tiol,self.fiol,self.ntrl,self.nbi)
-        #self.ti    = thermal_inst(self.inp,self.brnd,self.nbi,self.imp,self.ntrl)
-        #self.dl    = dens_lim(self.inp,self.brnd,self.nbi,self.imp,self.ntrl)
-        #self.mar   = marfe(self.inp,self.brnd,self.nbi,self.imp,self.ntrl)
+        self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
+        self.nbi   = beamdep(self.inp,self.core)
+        self.imp   = imp_rad(self.inp,self.core)
+        #self.ntrl  = neutprep(self.inp,self.core)
+        #self.rtrn   = rad_trans(self.inp,self.core,self.tiol,self.fiol,self.ntrl,self.nbi)
+        #self.ti    = thermal_inst(self.inp,self.core,self.nbi,self.imp,self.ntrl)
+        #self.dl    = dens_lim(self.inp,self.core,self.nbi,self.imp,self.ntrl)
+        #self.mar   = marfe(self.inp,self.core,self.nbi,self.imp,self.ntrl)
 
     def allthethings(self):
+        ntrl_switch = 1
         self.inp = read_infile(self.shotlabel)
-        self.core  = exp_core_brnd(self.inp) if self.inp.exp_inp else mil_core_brnd(self.inp)
+        self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
         self.sol   = exp_sol_brnd(self.inp,self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
         self.pfr   = exp_pfr_brnd(self.inp,self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
         self.ntrl  = exp_neutpy_prep(self.inp,self.core,self.sol,self.pfr) 
-        self.imp   = imp_rad(self.inp,self.brnd)
-        self.tiol  = thermaliol(self.inp,self.brnd)
-        self.fiol  = fastiol(self.inp,self.brnd)
-        self.nbi   = beamdep(self.inp,self.brnd)
-        self.rtrn   = rad_trans(self.inp,self.brnd,self.tiol,self.fiol,self.ntrl,self.nbi)
-        #self.ti    = thermal_inst(self.inp,self.brnd,self.nbi,self.imp,self.rtrn)
+        self.imp   = imp_rad(self.inp,self.core)
+        self.tiol  = thermaliol(self.inp,self.core)
+        self.fiol  = fastiol(self.inp,self.core)
+        self.nbi   = beamdep(self.inp,self.core)
+        self.rtrn   = rad_trans(self.inp,self.core,self.tiol,self.fiol,self.ntrl,self.nbi)
+        #self.ti    = thermal_inst(self.inp,self.core,self.nbi,self.imp,self.rtrn)
 
     def plotstuff(self):
         #self.plots = gt3plots(self)
@@ -119,8 +125,8 @@ class gt3():
 
 if __name__ == "__main__":
     myshot = gt3('144977_3000/togt3_d3d_144977_3000')
-    myshot.coreonly()
-    
+    #myshot.coreonly()
+    myshot.coreandiol()
     #sys.exit()
     
     #fig1 = plt.figure(figsize=(6,8))

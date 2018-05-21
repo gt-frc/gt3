@@ -39,8 +39,8 @@ class thermaliol():
         
         Tprofile = brnd.Ti_kev.T[0]
 
-        polpts = len(brnd.r[-1])
-        radpts = len(brnd.r.T[-1])
+        polpts = len(brnd.rho[-1])
+        radpts = len(brnd.rho.T[-1])
         
         #THE FOLLOWING ARRAYS ARE 4-DIMENSIONAL ARRAYS
         #[ LAUNCH THETA POSITION , LAUNCH ANGLE COSINE,  LAUNCH r  , EXIT THETA POSITION  ]
@@ -51,10 +51,10 @@ class thermaliol():
         #MAYBE SOMETHING TO IMPROVE ON IN THE FUTURE.
         
         #CREATE ARRAYS FOR LAUNCH POINTS IN THE PLASMA
-        r0          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],brnd.r)[-1]
+        r0          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],brnd.rho)[-1]
         B0          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],brnd.B_tot)[-1]
         f0          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],brnd.f_phi)[-1]
-        Psi0        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],brnd.Psi)[-1]
+        psi0        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],brnd.psi)[-1]
         phi0        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],brnd.E_pot)[-1]*1E3 #now in volts
         xi0         = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],coslist[:,None,None],np.ones(brnd.R.shape))[1]
 
@@ -62,12 +62,12 @@ class thermaliol():
         R1          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.R[-1][:,None,None,None])[-1]
         f1          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.f_phi[-1][:,None,None,None])[-1]
         B1          = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.B_tot[-1][:,None,None,None])[-1]
-        Psi1        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.Psi[-1][:,None,None,None])[-1]
+        psi1        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.psi[-1][:,None,None,None])[-1]
         phi1        = np.broadcast_arrays(np.ones(polpts)[:,None,None,None],np.ones(inp.numcos)[:,None,None],np.ones(radpts)[:,None],np.ones(polpts)[:],brnd.E_pot[-1][:,None,None,None])[-1]*1E3 #now in volts
         
         a = (np.abs(B1/B0)*f0/f1)**2 - 1 + (1 - xi0**2)*np.abs(B1/B0)
-        b = 2*e*(Psi0-Psi1)/(R1*m*f1) * np.abs(B1/B0)*f0/f1*xi0
-        c = (e*(Psi0-Psi1)/(R1*m*f1))**2 - 2*e*(phi0-phi1)/m
+        b = 2*e*(psi0-psi1)/(R1*m*f1) * np.abs(B1/B0)*f0/f1*xi0
+        c = (e*(psi0-psi1)/(R1*m*f1))**2 - 2*e*(phi0-phi1)/m
 
         v_sep_1 = (-b + np.sqrt(b**2 - 4*a*c))/(2*a)
         v_sep_2 = (-b - np.sqrt(b**2 - 4*a*c))/(2*a)
@@ -110,21 +110,21 @@ class thermaliol():
         integrand = gammaincc(3/2,eps_min)
         self.F_orb_1D = np.sum(integrand,axis=1)*(2/(inp.numcos))/2
         self.F_orb_1D = np.nan_to_num(self.F_orb_1D)
-        self.F_orb = np.repeat(self.F_orb_1D.reshape(-1,1),inp.thetapts,axis=1)
+        self.F_orb = np.repeat(self.F_orb_1D.reshape(-1,1),brnd.thetapts,axis=1)
         self.F_orb_C = np.zeros(self.F_orb.shape) #TODO:
 
         ## M_orb calculation
         integrand = zeta_matrix*gammaincc(2,eps_min)
         self.M_orb_1D = np.sum(integrand,axis=1)*(2/(inp.numcos))/2
         self.M_orb_1D = np.nan_to_num(self.M_orb_1D)
-        self.M_orb = np.repeat(self.M_orb_1D.reshape(-1,1),inp.thetapts,axis=1)
+        self.M_orb = np.repeat(self.M_orb_1D.reshape(-1,1),brnd.thetapts,axis=1)
         self.M_orb_C = np.zeros(self.F_orb.shape) #TODO:
 
         ## E_orb calculation
         integrand = gammaincc(5/2,eps_min)
         self.E_orb_1D = np.sum(integrand,axis=1)*(2/(inp.numcos))/2
         self.E_orb_1D = np.nan_to_num(self.E_orb_1D)
-        self.E_orb = np.repeat(self.E_orb_1D.reshape(-1,1),inp.thetapts,axis=1)
+        self.E_orb = np.repeat(self.E_orb_1D.reshape(-1,1),brnd.thetapts,axis=1)
         self.E_orb_C = np.zeros(self.F_orb.shape)
 
         iolplot=1

@@ -378,7 +378,7 @@ class mil_core_brnd():
         ## THE PROBLEM IS THAT WE'VE GOT 2 EQUATIONS IN 3 UNKNOWNS. HOWEVER, IF WE ASSUME THAT THE POLOIDAL
         ## INTEGRAL OF THE FLUX SURFACE AVERAGE OF THE POLOIDAL MAGNETIC FIELD IS APPROX. THE SAME AS THE
         ## POLOIDAL INTEGRAL OF THE ACTUAL POLOIDAL MAGNETIC FIELD, THEN WE CAN CALCULATE THE Q PROFILE
-        self.B_phi = p.B_phi_0 * self.R[0,0] / self.R
+        self.B_t = p.B_phi_0 * self.R[0,0] / self.R
         
         #Calculate initial crappy guess on q
         q_mil = p.B_phi_0*self.R[0,0] / (2*pi*B_p_bar) * np.tile(np.sum(self.L_seg/self.R**2,axis=1), (p.thetapts, 1)).T #Equation 16 in the miller paper. The last term is how I'm doing a flux surface average
@@ -396,9 +396,9 @@ class mil_core_brnd():
         self.B_p[0,:] = 0
         
         
-        self.B_phi = p.B_phi_0 * self.R[0,0] / self.R
-        self.B_tot = np.sqrt(self.B_p**2 + self.B_phi**2)
-        self.f_phi = self.B_phi/self.B_tot
+        self.B_t = p.B_phi_0 * self.R[0,0] / self.R
+        self.B_tot = np.sqrt(self.B_p**2 + self.B_t**2)
+        self.f_phi = self.B_t/self.B_tot
         #######################################################################
         ## CALCULATE ELECTRIC POTENTIAL FROM EXPERIMENTAL RADIAL ELECTRIC FIELD DATA
         
