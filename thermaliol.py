@@ -69,6 +69,8 @@ class thermaliol():
         b = 2*e*(psi0-psi1)/(R1*m*f1) * np.abs(B1/B0)*f0/f1*xi0
         c = (e*(psi0-psi1)/(R1*m*f1))**2 - 2*e*(phi0-phi1)/m
 
+        np.warnings.filterwarnings('ignore')
+
         v_sep_1 = (-b + np.sqrt(b**2 - 4*a*c))/(2*a)
         v_sep_2 = (-b - np.sqrt(b**2 - 4*a*c))/(2*a)
         

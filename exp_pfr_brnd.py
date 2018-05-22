@@ -48,16 +48,16 @@ class exp_pfr_brnd():
         self.pfr_nT(inp,core)
         
     def pfr_lines(self,inp,R,Z,core):
-        num_lines = int(len(cntr.Cntr(R,Z,core.psi_norm).trace(0.999))/2)
+        num_lines = int(len(cntr.Cntr(R,Z,core.psi_norm_raw).trace(0.999))/2)
         if num_lines==1:
             #then we're definitely dealing with a surface inside the seperatrix
             print 'Did not find PFR flux surface. Stopping.'
             sys.exit()
         else:
             #we need to find the surface that is contained within the private flux region
-            for j,line in enumerate(cntr.Cntr(R,Z,core.psi_norm).trace(0.99)[:num_lines]):
-            #for j,line in enumerate(cntr.Cntr(R,Z,self.psi_norm).trace(v)):
-                x,y = draw_line(R,Z,core.psi_norm,0.99,j)
+            for j,line in enumerate(cntr.Cntr(R,Z,core.psi_norm_raw).trace(0.99)[:num_lines]):
+            #for j,line in enumerate(cntr.Cntr(R,Z,self.psi_norm_raw).trace(v)):
+                x,y = draw_line(R,Z,core.psi_norm_raw,0.99,j)
                 if (np.amax(y) < np.amin(core.main_sep_pts[:,1])):
                     #then it's a pfr flux surface, might need to add additional checks later
                     pfr_line_raw = LineString(np.column_stack((x,y)))

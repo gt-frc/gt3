@@ -51,33 +51,34 @@ class exp_neutpy_prep():
     def __init__(self,inp,core,sol,pfr):
         self.triangle_prep(inp,core,sol,pfr)
         self.read_triangle(core)
+        self.run_neutpy(inp)
         
     def triangle_prep(self,inp,core,sol,pfr):
-        sol_pol_pts = inp.core_pol_pts + inp.ib_div_pol_pts + inp.ob_div_pol_pts
+        sol_pol_pts = inp.core_thetapts_ntrl + inp.ib_thetapts_ntrl + inp.ob_thetapts_ntrl
         
         #GET POINTS FOR TRIANGULATION
         #main seperatrix
-        sep_pts = np.zeros((inp.core_pol_pts,2))
-        for i,v in enumerate(np.linspace(0,1,inp.core_pol_pts,endpoint=False)):
+        sep_pts = np.zeros((inp.core_thetapts_ntrl,2))
+        for i,v in enumerate(np.linspace(0,1,inp.core_thetapts_ntrl,endpoint=False)):
             sep_pts[i] = np.asarray(core.main_sep_line.interpolate(v,normalized=True).xy).T[0]
         
         #inboard divertor leg
-        ib_div_pts = np.zeros((inp.ib_div_pol_pts,2))
-        for i,v in enumerate(np.linspace(0,1,inp.ib_div_pol_pts,endpoint=True)): #skipping the x-point (point 0)
+        ib_div_pts = np.zeros((inp.ib_thetapts_ntrl,2))
+        for i,v in enumerate(np.linspace(0,1,inp.ib_thetapts_ntrl,endpoint=True)): #skipping the x-point (point 0)
             ib_div_pts[i] = np.asarray(core.ib_div_line_cut.interpolate(v,normalized=True).xy).T[0]
         
         #outboard divertor leg
-        ob_div_pts = np.zeros((inp.ob_div_pol_pts,2))
-        for i,v in enumerate(np.linspace(0,1,inp.ob_div_pol_pts,endpoint=True)): #skipping the x-point (point 0)
+        ob_div_pts = np.zeros((inp.ob_thetapts_ntrl,2))
+        for i,v in enumerate(np.linspace(0,1,inp.ob_thetapts_ntrl,endpoint=True)): #skipping the x-point (point 0)
             ob_div_pts[i] = np.asarray(core.ob_div_line_cut.interpolate(v,normalized=True).xy).T[0]
                 
         #core
-        core_pts = np.zeros((inp.core_pol_pts*len(core.core_ntrl_lines),2))
+        core_pts = np.zeros((inp.core_thetapts_ntrl*len(core.core_ntrl_lines),2))
         for num,line in enumerate(core.core_ntrl_lines):
-            for i,v in enumerate(np.linspace(0,1,inp.core_pol_pts,endpoint=False)):
-                core_pts[num*inp.core_pol_pts + i] = np.asarray(line.interpolate(v,normalized=True).xy).T[0]
+            for i,v in enumerate(np.linspace(0,1,inp.core_thetapts_ntrl,endpoint=False)):
+                core_pts[num*inp.core_thetapts_ntrl + i] = np.asarray(line.interpolate(v,normalized=True).xy).T[0]
             
-        self.core_ring = LinearRing(core_pts[:inp.core_pol_pts])
+        self.core_ring = LinearRing(core_pts[:inp.core_thetapts_ntrl])
         
         
         #sol
@@ -102,20 +103,20 @@ class exp_neutpy_prep():
         #CREATED. IF SO, USE THE NUMBER OF THAT POINT AND DELETE THE WALL
         #VERSION OF IT IN THE ALL_PTS ARRAY.
 
-        sep_segs    = np.column_stack((np.arange(inp.core_pol_pts),
-                                       np.roll(np.arange(inp.core_pol_pts),-1)))
+        sep_segs    = np.column_stack((np.arange(inp.core_thetapts_ntrl),
+                                       np.roll(np.arange(inp.core_thetapts_ntrl),-1)))
         
-        ib_div_segs = np.column_stack((np.arange(inp.ib_div_pol_pts),
-                                       np.roll(np.arange(inp.ib_div_pol_pts),-1)))[:-1]
+        ib_div_segs = np.column_stack((np.arange(inp.ib_thetapts_ntrl),
+                                       np.roll(np.arange(inp.ib_thetapts_ntrl),-1)))[:-1]
         
-        ob_div_segs = np.column_stack((np.arange(inp.ob_div_pol_pts),
-                                       np.roll(np.arange(inp.ob_div_pol_pts),-1)))[:-1]
+        ob_div_segs = np.column_stack((np.arange(inp.ob_thetapts_ntrl),
+                                       np.roll(np.arange(inp.ob_thetapts_ntrl),-1)))[:-1]
 
         core_segs   = np.zeros((0,2),dtype='int')
         for i,v in enumerate(core.core_ntrl_lines):
-            new_segs = np.column_stack((np.arange(inp.core_pol_pts),
-                                        np.roll(np.arange(inp.core_pol_pts),-1))) \
-                                        + inp.core_pol_pts * i
+            new_segs = np.column_stack((np.arange(inp.core_thetapts_ntrl),
+                                        np.roll(np.arange(inp.core_thetapts_ntrl),-1))) \
+                                        + inp.core_thetapts_ntrl * i
             core_segs = np.vstack((core_segs,new_segs))
 
         sol_segs    = np.zeros((0,2),dtype='int')
@@ -210,14 +211,14 @@ class exp_neutpy_prep():
             except:
                 print 'triangle could not be found. Stopping.'
                 sys.exit
-                
+      
     def read_triangle(self,core):
         ## READ TRIANGLE OUTPUT
 
         ## DECLARE FILE PATHS
-        nodepath = os.getcwd() + '/exp_mesh.1.node'
-        elepath = os.getcwd() + '/exp_mesh.1.ele'
-        neighpath = os.getcwd() + '/exp_mesh.1.neigh'
+        nodepath = os.getcwd() + '/outputs/exp_mesh.1.node'
+        elepath = os.getcwd() + '/outputs/exp_mesh.1.ele'
+        neighpath = os.getcwd() + '/outputs/exp_mesh.1.neigh'
 
         ## GET NODE DATA
         with open(nodepath, 'r') as node:
@@ -562,49 +563,50 @@ class exp_neutpy_prep():
 
         
         #create dictionary to pass to neutpy
-        toneutpy={}
-        toneutpy["nCells"]       = nTri
-        toneutpy["nPlasmReg"]    = pcellcount
-        toneutpy["nWallSegm"]    = wcellcount
-        toneutpy["aneut"]        = 2
-        toneutpy["zion"]         = 1
-        toneutpy["aion"]         = 2
-        toneutpy["tslow"]        = 0.002
-        toneutpy["int_method"]   = 'midpoint'
-        toneutpy["phi_int_pts"]  = 10
-        toneutpy["xi_int_pts"]   = 10
-        toneutpy["xsec_ioni"]    = 'janev'
-        toneutpy["xsec_ione"]    = 'janev'
-        toneutpy["xsec_cx"]      = 'janev'
-        toneutpy["xsec_rec"]     = 'stacey_thomas'
-        toneutpy["xsec_el"]      = 'janev'
-        toneutpy["xsec_eln"]     = 'stacey_thomas'
-        toneutpy["refmod_e"]     = 'stacey'
-        toneutpy["refmod_n"]     = 'stacey'
+        self.toneutpy={}
+        self.toneutpy["nCells"]       = nTri
+        self.toneutpy["nPlasmReg"]    = pcellcount
+        self.toneutpy["nWallSegm"]    = wcellcount
+        self.toneutpy["aneut"]        = 2
+        self.toneutpy["zion"]         = 1
+        self.toneutpy["aion"]         = 2
+        self.toneutpy["tslow"]        = 0.002
+        self.toneutpy["int_method"]   = 'midpoint'
+        self.toneutpy["phi_int_pts"]  = 10
+        self.toneutpy["xi_int_pts"]   = 10
+        self.toneutpy["xsec_ioni"]    = 'janev'
+        self.toneutpy["xsec_ione"]    = 'janev'
+        self.toneutpy["xsec_cx"]      = 'janev'
+        self.toneutpy["xsec_rec"]     = 'stacey_thomas'
+        self.toneutpy["xsec_el"]      = 'janev'
+        self.toneutpy["xsec_eln"]     = 'stacey_thomas'
+        self.toneutpy["refmod_e"]     = 'stacey'
+        self.toneutpy["refmod_n"]     = 'stacey'
         
-        toneutpy["iType"]        = np.asarray([0]*nTri + [1]*pcellcount + [2]*wcellcount)
-        toneutpy["nSides"]       = np.asarray([3]*nTri + [1]*(pcellcount + wcellcount))
-        toneutpy["zwall"]        = np.asarray([0]*(nTri+pcellcount) + [6]*wcellcount)
-        toneutpy["awall"]        = np.asarray([0]*(nTri+pcellcount) + [12]*wcellcount)
-        toneutpy["elecTemp"]     = Te_tri[:nTri]
-        toneutpy["ionTemp"]      = Ti_tri[:nTri]
-        toneutpy["elecDens"]     = ne_tri[:nTri]
-        toneutpy["ionDens"]      = ni_tri[:nTri]
-        toneutpy["twall"]        = np.asarray([0]*nTri + [5000]*pcellcount + [0.002]*wcellcount)
-        toneutpy["f_abs"]        = np.asarray([0]*(nTri+pcellcount) + [0]*wcellcount)
-        toneutpy["alb_s"]        = np.asarray([0]*nTri + [0]*pcellcount + [0]*wcellcount)
-        toneutpy["alb_t"]        = np.asarray([0]*nTri + [0]*pcellcount + [0]*wcellcount)
-        toneutpy["s_ext"]        = np.asarray([0.0]*nTri + [0.0]*pcellcount + [0.0]*wcellcount)
+        self.toneutpy["iType"]        = np.asarray([0]*nTri + [1]*pcellcount + [2]*wcellcount)
+        self.toneutpy["nSides"]       = np.asarray([3]*nTri + [1]*(pcellcount + wcellcount))
+        self.toneutpy["zwall"]        = np.asarray([0]*(nTri+pcellcount) + [6]*wcellcount)
+        self.toneutpy["awall"]        = np.asarray([0]*(nTri+pcellcount) + [12]*wcellcount)
+        self.toneutpy["elecTemp"]     = Te_tri[:nTri]
+        self.toneutpy["ionTemp"]      = Ti_tri[:nTri]
+        self.toneutpy["elecDens"]     = ne_tri[:nTri]
+        self.toneutpy["ionDens"]      = ni_tri[:nTri]
+        self.toneutpy["twall"]        = np.asarray([0]*nTri + [5000]*pcellcount + [0.002]*wcellcount)
+        self.toneutpy["f_abs"]        = np.asarray([0]*(nTri+pcellcount) + [0]*wcellcount)
+        self.toneutpy["alb_s"]        = np.asarray([0]*nTri + [0]*pcellcount + [0]*wcellcount)
+        self.toneutpy["alb_t"]        = np.asarray([0]*nTri + [0]*pcellcount + [0]*wcellcount)
+        self.toneutpy["s_ext"]        = np.asarray([0.0]*nTri + [0.0]*pcellcount + [0.0]*wcellcount)
         
-        toneutpy["adjCell"]      = neighbors
-        toneutpy["lsides"]       = lsides
-        toneutpy["angles"]       = angles
-        toneutpy["cell1_ctr_x"]  = cell1_ctr_x
-        toneutpy["cell1_ctr_y"]  = cell1_ctr_y
-        toneutpy["cell1_theta0"] = cell1_theta0
+        self.toneutpy["adjCell"]      = neighbors
+        self.toneutpy["lsides"]       = lsides
+        self.toneutpy["angles"]       = angles
+        self.toneutpy["cell1_ctr_x"]  = cell1_ctr_x
+        self.toneutpy["cell1_ctr_y"]  = cell1_ctr_y
+        self.toneutpy["cell1_theta0"] = cell1_theta0
         
+    def run_neutpy(self,inp):
         time0 = time.time()
-        self.neutpy_inst = neutpy(inarrs=toneutpy)
+        self.neutpy_inst = neutpy(inarrs=self.toneutpy)
         time1 = time.time()
         print 'neutpy time = ',time1-time0
         plot = neutpyplot(self.neutpy_inst)
@@ -620,7 +622,7 @@ class exp_neutpy_prep():
         #the file contains R,Z coordinates and then the values of several calculated parameters
         #at each of those points.
         
-        f = open(self.neutfile_loc,'w')
+        f = open(inp.neut_outfile,'w')
         f.write(('{:^18s}'*8).format('R','Z','n_n_slow','n_n_thermal','n_n_total','izn_rate_slow','izn_rate_thermal','izn_rate_total'))
         for i,pt in enumerate(self.midpts):
             f.write(('\n'+'{:>18.5f}'*2+'{:>18.5E}'*6).format(

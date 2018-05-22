@@ -73,9 +73,9 @@ class beamdep():
     
     """
     
-    def __init__(self,inp,brnd):
+    def __init__(self,inp,core):
         sys.dont_write_bytecode = True 
-        self.prep_nbi_infile(inp,brnd)
+        self.prep_nbi_infile(inp,core)
         #call nbeams. Note to those familiar with the old nbeams, I modified
         #the source code to take the input file as a commandline argument. - MH
         try:
@@ -86,10 +86,10 @@ class beamdep():
             except:
                 print 'Unable to find nbeams executable. Stopping.'
                 sys.exit()
-        self.read_nbi_outfile(inp,brnd)
+        self.read_nbi_outfile(inp,core)
         pass
     
-    def prep_nbi_infile(self,inp,brnd):
+    def prep_nbi_infile(self,inp,core):
         #f1=open(inp.nbeams_loc+"inbeams.dat","w")
         f=open("inbeams.dat","w")
         f.write("$nbin\n")
@@ -109,8 +109,8 @@ class beamdep():
         f.write("nbptype = 1\n")
         f.write("maxiter = 2\n")
         f.write("pwrfrac(1,1) = "+str(inp.pwrfrac1)+"   "+str(inp.pwrfrac2)+"   "+str(inp.pwrfrac3)+"\n")
-        f.write("a = "+str(inp.a)+"\n")
-        f.write("r0 = "+str(inp.R0_a)+"\n")
+        f.write("a = "+str(core.a)+"\n")
+        f.write("r0 = "+str(core.R0_a)+"\n")
         f.write("b0 = "+str(inp.bknot)+"\n")
         f.write("n = 51\n")
         f.write("e0 = "+str(inp.epsknot)+"\n")
@@ -122,10 +122,10 @@ class beamdep():
         
         rho_nbi = np.linspace(0,1,51)
         
-        ni_nbi = interp1d(brnd.rho[:,0],brnd.ni[:,0])(rho_nbi)
-        ne_nbi = interp1d(brnd.rho[:,0],brnd.ne[:,0])(rho_nbi)
-        Ti_nbi = interp1d(brnd.rho[:,0],brnd.Ti_kev[:,0])(rho_nbi)
-        Te_nbi = interp1d(brnd.rho[:,0],brnd.Te_kev[:,0])(rho_nbi)
+        ni_nbi = interp1d(core.rho[:,0],core.ni[:,0])(rho_nbi)
+        ne_nbi = interp1d(core.rho[:,0],core.ne[:,0])(rho_nbi)
+        Ti_nbi = interp1d(core.rho[:,0],core.Ti_kev[:,0])(rho_nbi)
+        Te_nbi = interp1d(core.rho[:,0],core.Te_kev[:,0])(rho_nbi)
         
         for i,v in enumerate(rho_nbi):
             f.write('ni20('+str(i+1)+',1) = '+str(ni_nbi[i]*1E-20)+'\n')

@@ -17,15 +17,20 @@ rhopts = 100
 #rhopts_core = 10
 
 #NEUTRALS PARAMETERS
-thetapts_ntrl = 30
+neut_outfile = gt3_144977_3000_neut.dat
+core_thetapts_ntrl = 30
+ib_thetapts_ntrl = 10
+ob_thetapts_ntrl = 10
 #rhopts_ntrl = 500
 edge_rho_ntrl = 0.8
-rhopts_edge_ntrl = 50
+rhopts_edge_ntrl = 5
 rhopts_core_ntrl = 10
 wall_ni_min = 1.0E15
 wall_ne_min = 1.0E15
 wall_Ti_min = 0.002
 wall_Te_min = 0.002
+tri_min_angle = 20
+tri_min_area  = 0.02
 
 #SOL PARAMETERS
 sollines_psi_max = 1.07
@@ -140,13 +145,7 @@ shftknot = 0.10239
 #IMPURITY CALCULATION
 #adpak_loc = /home/max/Nextcloud/Max/max_phd/Codes/adpak/
 
-#NEUTRALS CALCULATION
-ntrl_rho_start = 0.1
-ntrl_rpts = 30
-ntrl_thetapts = 33
-neut_outfile = gt3_144977_3000_neut.dat
-tri_min_angle = 20
-tri_min_area  = 0.02
+
 
 
 #ION ORBIT LOSS CALCULATION

@@ -190,6 +190,10 @@ class exp_core_brnd():
             self.top_pt  = self.main_sep_pts[np.argmax(self.main_sep_pts,axis=0)[1]]
             self.bot_pt  = self.main_sep_pts[np.argmin(self.main_sep_pts,axis=0)[1]]
             self.geo_axis = [(self.obmp_pt[0] + self.ibmp_pt[0])/2,(self.obmp_pt[1] + self.ibmp_pt[1])/2]
+            self.R0_a = self.geo_axis[0]
+            #TODO: Is this how a is actually defined?
+            #a is used by nbeams. I'm not sure it's used anywhere else.
+            self.a = self.obmp_pt[0] - self.R0_a
             #TODO: add point to wall line
                 
         elif num_lines==2:
@@ -258,7 +262,7 @@ class exp_core_brnd():
     def core_lines_ntrl(self,inp,R,Z,psi):
         #define lines to be used in the neutrals calculation
         self.core_ntrl_lines = []
-        psi_pts_ntrl = np.linspace(inp.corelines_begin,1,inp.num_corelines,endpoint=False)
+        psi_pts_ntrl = np.linspace(inp.edge_rho_ntrl,1,inp.rhopts_edge_ntrl,endpoint=False)
         for i,v in enumerate(psi_pts_ntrl):
             num_lines = int(len(cntr.Cntr(R,Z,self.psi_norm_raw).trace(v))/2)
             if num_lines==1:
@@ -342,6 +346,9 @@ class exp_core_brnd():
         except AttributeError:
             pass
         
+        self.Te_J = self.Te_kev * 1.6021E-16
+        self.Ti_J = self.Ti_kev * 1.6021E-16
+        
         try:
             E_r_fit    = UnivariateSpline(inp.er_data[:,0],inp.er_data[:,1],k=5,s=2.0)
             self.E_r   = E_r_fit(self.rho)
@@ -354,8 +361,9 @@ class exp_core_brnd():
         try:
             self.fracz    = UnivariateSpline(inp.fracz_data[:,0],inp.fracz_data[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
-            pass
-        
+            self.fracz = np.zeros(self.rho.shape) + 0.025            
+        self.nC = self.ne * self.fracz        
+
         try:
             self.fz1      = UnivariateSpline(inp.fz1_data[:,0],inp.fz1_data[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:

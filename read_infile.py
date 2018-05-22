@@ -154,7 +154,9 @@ class read_infile():
         self.invars["xi_ob_pts"]        = ["int",   r0di]
 
         #NEUTRALS PARAMETERS
-        self.invars["thetapts_ntrl"]    = ["int",r0di]
+        self.invars["core_thetapts_ntrl"]    = ["int",r0di]
+        self.invars["ib_thetapts_ntrl"]    = ["int",r0di]
+        self.invars["ob_thetapts_ntrl"]    = ["int",r0di]
         self.invars["rhopts_ntrl"]      = ["int",r0di]
         self.invars["edge_rho_ntrl"]    = ["float", r0df]
         self.invars["rhopts_edge_ntrl"] = ["float", r0df]

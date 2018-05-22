@@ -56,10 +56,10 @@ class exp_sol_brnd():
         sol_width_obmp = 0.02
         psi_pts = np.linspace(1,inp.sollines_psi_max,inp.num_sollines+1,endpoint=True)[1:]
         for i,v in enumerate(psi_pts):
-            num_lines = int(len(cntr.Cntr(R,Z,core.psi_norm).trace(v))/2)
+            num_lines = int(len(cntr.Cntr(R,Z,core.psi_norm_raw).trace(v))/2)
             if num_lines==1:
                 #then we're definitely dealing with a surface inside the seperatrix
-                x,y = draw_line(R,Z,core.psi_norm,v,0)
+                x,y = draw_line(R,Z,core.psi_norm_raw,v,0)
                 self.sol_lines.append(LineString(np.column_stack((x,y))))
             else:
                 #TODO: 
@@ -113,15 +113,15 @@ class exp_sol_brnd():
         
         psi_pts = np.linspace(0.95,1.0,20,endpoint=False)
         for i,psi_val in enumerate(psi_pts):
-            num_lines = int(len(cntr.Cntr(R,Z,core.psi_norm).trace(psi_val))/2)
+            num_lines = int(len(cntr.Cntr(R,Z,core.psi_norm_raw).trace(psi_val))/2)
             if num_lines==1:
                 #then we're definitely dealing with a surface inside the seperatrix
-                x,y = draw_line(R,Z,core.psi_norm,psi_val,0)
+                x,y = draw_line(R,Z,core.psi_norm_raw,psi_val,0)
             else:
                 #we need to find which of the surfaces is inside the seperatrix
-                for j,line in enumerate(cntr.Cntr(R,Z,core.psi_norm).trace(psi_val)[:num_lines]):
+                for j,line in enumerate(cntr.Cntr(R,Z,core.psi_norm_raw).trace(psi_val)[:num_lines]):
                 #for j,line in enumerate(cntr.Cntr(R,Z,self.psi_norm).trace(v)):
-                    x,y = draw_line(R,Z,core.psi_norm,psi_val,j)
+                    x,y = draw_line(R,Z,core.psi_norm_raw,psi_val,j)
                     if (np.amax(x) < np.amax(core.main_sep_pts[:,0]) and \
                         np.amin(x) > np.amin(core.main_sep_pts[:,0]) and \
                         np.amax(y) < np.amax(core.main_sep_pts[:,1]) and \
@@ -161,15 +161,15 @@ class exp_sol_brnd():
 
         #draw core line just inside the seperatrix (seperatrix would be too noisy)
         psi_val = 0.98
-        num_lines = int(len(cntr.Cntr(R,Z,core.psi_norm).trace(psi_val))/2)
+        num_lines = int(len(cntr.Cntr(R,Z,core.psi_norm_raw).trace(psi_val))/2)
         if num_lines==1:
             #then we're definitely dealing with a surface inside the seperatrix
-            x,y = draw_line(R,Z,core.psi_norm,psi_val,0)
+            x,y = draw_line(R,Z,core.psi_norm_raw,psi_val,0)
         else:
             #we need to find which of the surfaces is inside the seperatrix
-            for j,line in enumerate(cntr.Cntr(R,Z,core.psi_norm).trace(psi_val)[:num_lines]):
+            for j,line in enumerate(cntr.Cntr(R,Z,core.psi_norm_raw).trace(psi_val)[:num_lines]):
             #for j,line in enumerate(cntr.Cntr(R,Z,psi_norm).trace(v)):
-                x,y = draw_line(R,Z,core.psi_norm,psi_val,j)
+                x,y = draw_line(R,Z,core.psi_norm_raw,psi_val,j)
                 if (np.amax(x) < np.amax(core.main_sep_pts[:,0]) and \
                     np.amin(x) > np.amin(core.main_sep_pts[:,0]) and \
                     np.amax(y) < np.amax(core.main_sep_pts[:,1]) and \

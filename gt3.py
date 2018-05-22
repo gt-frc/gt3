@@ -35,15 +35,6 @@ class gt3():
         plotstuff
 
     Attributes:
-        inp (obj):    Contains as attributes those quantities that are 
-                        specified in input files
-        brnd (obj):     Contains as attributes those quantities related
-                        to the background plasma (i.e. ni, Te, j_r, etc.)
-        tiol (obj):     Contains as attributes those quantities related
-                        to the thermal ion-orbit loss calculation
-        ntrl (obj):     Contains as attributes those quantities related
-                        to the neutrals calculation performed by neutpy
-        plots (obj):    Contains as attributes things related to plotting
         
     External Dependencies:
         Triangle:       Used to create the triangular mesh for neutpy. Source
@@ -53,7 +44,6 @@ class gt3():
         Neutpy:         
         nbeams:
         adpack:
-                            6
     """
     
     def __init__(self, shotlabel=None):
@@ -97,13 +87,15 @@ class gt3():
         ntrl_switch = 1
         self.inp = read_infile(self.shotlabel)
         self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
+        self.sol   = exp_sol_brnd(self.inp,self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
+        self.pfr   = exp_pfr_brnd(self.inp,self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
         self.nbi   = beamdep(self.inp,self.core)
         self.imp   = imp_rad(self.inp,self.core)
-        #self.ntrl  = neutprep(self.inp,self.core)
+        self.ntrl  = exp_neutpy_prep(self.inp,self.core,self.sol,self.pfr) 
         #self.rtrn   = rad_trans(self.inp,self.core,self.tiol,self.fiol,self.ntrl,self.nbi)
         #self.ti    = thermal_inst(self.inp,self.core,self.nbi,self.imp,self.ntrl)
-        #self.dl    = dens_lim(self.inp,self.core,self.nbi,self.imp,self.ntrl)
-        #self.mar   = marfe(self.inp,self.core,self.nbi,self.imp,self.ntrl)
+        self.dl    = dens_lim(self.inp,self.core,self.nbi,self.imp,self.ntrl)
+        self.mar   = marfe(self.inp,self.core,self.nbi,self.imp,self.ntrl)
 
     def allthethings(self):
         ntrl_switch = 1
@@ -126,7 +118,8 @@ class gt3():
 if __name__ == "__main__":
     myshot = gt3('144977_3000/togt3_d3d_144977_3000')
     #myshot.coreonly()
-    myshot.coreandiol()
+    #myshot.coreandiol()
+    myshot.therm_instab()
     #sys.exit()
     
     #fig1 = plt.figure(figsize=(6,8))
