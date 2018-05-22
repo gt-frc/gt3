@@ -75,6 +75,7 @@ class read_infile():
         sys.dont_write_bytecode = True 
         self.read_vars(infile)
         self.read_exp()
+        self.set_ntrl_switch()
         #if hasattr(self, 'wall_file'):
         #    self.wall_prep()
 
@@ -165,6 +166,8 @@ class read_infile():
         self.invars["wall_ne_min"]      = ["float", r0df]
         self.invars["wall_Ti_min"]      = ["float", r0df]
         self.invars["wall_Te_min"]      = ["float", r0df]
+        self.invars["tri_min_angle"]      = ["float", r0df]
+        self.invars["tri_min_area"]      = ["float", r0df]
 
         #PFR PARAMETERS
         self.invars["pfr_ni_val"]       = ["float", r0df]
@@ -299,6 +302,32 @@ class read_infile():
             except:
                 pass
         self.wall_line = LineString(self.wall_exp)
+        
+    def set_ntrl_switch(self):
+        #set neutral switch for modes that need neutrals
+        #0: don't run neutrals because not necessary for calculations being done
+        #1: neutrals needed, but the neut_outfile specified in input file exists. Use that data rather than running neutpy
+        #2: run neutpy
+        
+        #check if specified neutpy_outfile exists. If so, read in and skip everything else.
+        outfile_found=0
+        try:
+            for root, subdirs, files in os.walk(os.getcwd()):
+                for filename in files:
+                    if filename == self.neut_outfile:
+                        outfile_found = 1
+                        os.path.join(root,filename)
+                        self.neutfile_loc = os.path.join(root,filename)
+                        self.ntrl_switch = 1
+                        
+            if outfile_found==0:
+                self.neutfile_loc = os.getcwd() + '/' + self.neut_outfile
+                self.ntrl_switch = 2
+        except AttributeError:
+            #neut_outfile wasn't specified in input file. Assign default value of neut_outfile.dat
+            self.neutfile_loc = os.getcwd() + '/neut_outfile.dat'
+            self.ntrl_switch=2
+
             
     def wall_prep(self):
         """

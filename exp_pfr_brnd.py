@@ -48,7 +48,7 @@ class exp_pfr_brnd():
         self.pfr_nT(inp,core)
         
     def pfr_lines(self,inp,R,Z,core):
-        num_lines = int(len(cntr.Cntr(R,Z,core.psi_norm_raw).trace(0.999))/2)
+        num_lines = int(len(cntr.Cntr(R,Z,core.psi_norm_raw).trace(0.99))/2)
         if num_lines==1:
             #then we're definitely dealing with a surface inside the seperatrix
             print 'Did not find PFR flux surface. Stopping.'

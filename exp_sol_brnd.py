@@ -238,23 +238,23 @@ class exp_sol_brnd():
                                             k=5,
                                             s=0.0)(np.linspace(inp.ib_trim_off,1.0-inp.ob_trim_off,inp.xi_sep_pts))
         
-        ni_ib_wall = core.ni_sep_val * 1.0
-        ni_ob_wall = core.ni_sep_val * 1.0
+        ni_ib_wall = core.ni_sep_val * 1.5
+        ni_ob_wall = core.ni_sep_val * 1.5
         ni_ib = np.linspace(ni_ib_wall,core.ni_sep_val,inp.xi_ib_pts,endpoint=False)
         ni_ob = np.linspace(core.ni_sep_val,ni_ob_wall,inp.xi_ob_pts,endpoint=True)     
         
-        ne_ib_wall = core.ne_sep_val * 1.0
-        ne_ob_wall = core.ne_sep_val * 1.0
+        ne_ib_wall = core.ne_sep_val * 1.5
+        ne_ob_wall = core.ne_sep_val * 1.5
         ne_ib = np.linspace(ne_ib_wall,core.ne_sep_val,inp.xi_ib_pts,endpoint=False)
         ne_ob = np.linspace(core.ne_sep_val,ne_ob_wall,inp.xi_ob_pts,endpoint=True) 
         
-        Ti_ib_wall = core.Ti_J_sep_val * 1.0
-        Ti_ob_wall = core.Ti_J_sep_val * 1.0
+        Ti_ib_wall = core.Ti_J_sep_val * 1.5
+        Ti_ob_wall = core.Ti_J_sep_val * 1.5
         Ti_ib = np.linspace(Ti_ib_wall,core.Ti_J_sep_val,inp.xi_ib_pts,endpoint=False)
         Ti_ob = np.linspace(core.Ti_J_sep_val,Ti_ob_wall,inp.xi_ob_pts,endpoint=True)    
 
-        Te_ib_wall = core.Te_J_sep_val * 1.0
-        Te_ob_wall = core.Te_J_sep_val * 1.0
+        Te_ib_wall = core.Te_J_sep_val * 1.5
+        Te_ob_wall = core.Te_J_sep_val * 1.5
         Te_ib = np.linspace(Te_ib_wall,core.Te_J_sep_val,inp.xi_ib_pts,endpoint=False)
         Te_ob = np.linspace(core.Te_J_sep_val,Te_ob_wall,inp.xi_ob_pts,endpoint=True)    
 

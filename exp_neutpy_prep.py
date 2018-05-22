@@ -51,7 +51,7 @@ class exp_neutpy_prep():
     def __init__(self,inp,core,sol,pfr):
         self.triangle_prep(inp,core,sol,pfr)
         self.read_triangle(core)
-        self.run_neutpy(inp)
+        self.run_neutpy(inp,core)
         
     def triangle_prep(self,inp,core,sol,pfr):
         sol_pol_pts = inp.core_thetapts_ntrl + inp.ib_thetapts_ntrl + inp.ob_thetapts_ntrl
@@ -188,16 +188,14 @@ class exp_neutpy_prep():
         #construct options to pass to triangle, as specified in input file
         #refer to https://www.cs.cmu.edu/~quake/triangle.html
         
-        tri_min_angle = 10.0
-        tri_min_area = 0.02
         tri_options = '-p'
         try:
-            tri_options = tri_options + 'q' + str(tri_min_angle)
+            tri_options = tri_options + 'q' + str(inp.tri_min_angle)
         except:
             pass
         
         try:
-            tri_options = tri_options + 'a' + str(tri_min_area)
+            tri_options = tri_options + 'a' + str(inp.tri_min_area)
         except:
             pass
         
@@ -604,19 +602,19 @@ class exp_neutpy_prep():
         self.toneutpy["cell1_ctr_y"]  = cell1_ctr_y
         self.toneutpy["cell1_theta0"] = cell1_theta0
         
-    def run_neutpy(self,inp):
+    def run_neutpy(self,inp,core):
         time0 = time.time()
         self.neutpy_inst = neutpy(inarrs=self.toneutpy)
         time1 = time.time()
         print 'neutpy time = ',time1-time0
         plot = neutpyplot(self.neutpy_inst)
-        self.nn_s_raw = self.neutpy_inst.cell_nn_s
-        self.nn_t_raw = self.neutpy_inst.cell_nn_t
-        self.nn_raw = self.nn_s_raw + self.nn_t_raw
+        self.n_n_slow = self.neutpy_inst.cell_nn_s
+        self.n_n_thermal = self.neutpy_inst.cell_nn_t
+        self.n_n_total = self.nn_s_raw + self.nn_t_raw
         
-        self.iznrate_s_raw = self.neutpy_inst.cell_izn_rate_s
-        self.iznrate_t_raw = self.neutpy_inst.cell_izn_rate_t
-        self.iznrate_raw = self.iznrate_s_raw + self.iznrate_t_raw
+        self.izn_rate_slow = self.neutpy_inst.cell_izn_rate_s
+        self.izn_rate_thermal = self.neutpy_inst.cell_izn_rate_t
+        self.izn_rate_total = self.iznrate_s_raw + self.iznrate_t_raw
         
         #create output file
         #the file contains R,Z coordinates and then the values of several calculated parameters
@@ -628,10 +626,32 @@ class exp_neutpy_prep():
             f.write(('\n'+'{:>18.5f}'*2+'{:>18.5E}'*6).format(
                                         self.midpts[i,0],
                                         self.midpts[i,1],
-                                        self.nn_s_raw[i],
-                                        self.nn_t_raw[i],
-                                        self.nn_raw[i],
-                                        self.iznrate_s_raw[i],
-                                        self.iznrate_t_raw[i],
-                                        self.iznrate_raw[i]))
-        f.close() 
+                                        self.n_n_slow[i],
+                                        self.n_n_thermal[i],
+                                        self.n_n_total[i],
+                                        self.izn_rate_slow[i],
+                                        self.izn_rate_thermal[i],
+                                        self.izn_rate_total[i]))
+        f.close()
+        
+        #interpolate results onto core grid
+        core.n_n_slow = griddata(np.column_stack((self.midpts[:,0],self.midpts[:,1])),
+                                 self.n_n_slow,
+                                 (core.R,core.Z),
+                                 method='linear')
+        core.n_n_thermal = griddata(np.column_stack((self.midpts[:,0],self.midpts[:,1])),
+                                 self.n_n_thermal,
+                                 (core.R,core.Z),
+                                 method='linear')
+        core.izn_rate_slow = griddata(np.column_stack((self.midpts[:,0],self.midpts[:,1])),
+                                 self.izn_rate_slow,
+                                 (core.R,core.Z),
+                                 method='linear')
+        core.izn_rate_thermal = griddata(np.column_stack((self.midpts[:,0],self.midpts[:,1])),
+                                 self.izn_rate_thermal,
+                                 (core.R,core.Z),
+                                 method='linear')
+
+        core.n_n_total = core.n_n_slow + core.n_n_thermal
+        core.izn_rate_total = core.izn_rate_slow + core.izn_rate_thermal        
+        

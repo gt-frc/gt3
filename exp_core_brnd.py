@@ -74,10 +74,19 @@ class exp_core_brnd():
         self.sep_lines(inp,R_psi,Z_psi,psi)
         #self.core_lines_main(inp,R_psi,Z_psi,psi)
         self.core_main(inp,R_psi,Z_psi,psi,B_pol_raw)
-        if ntrl_switch==1:
+        if ntrl_switch==2:
             self.core_lines_ntrl(inp,R_psi,Z_psi,psi)
             self.core_nT_ntrl(inp,R_psi,Z_psi,psi)
         #self.comp_mesh(inp,R,Z,psi)
+
+    
+    def update_ntrl_data(self,n_n_slow,n_n_thermal,izn_rate_slow,izn_rate_thermal):
+        self.n_n_slow = n_n_slow
+        self.n_n_thermal = n_n_thermal
+        self.n_n_total = n_n_slow + n_n_thermal
+        self.izn_rate_slow = izn_rate_slow
+        self.izn_rate_thermal = izn_rate_thermal
+        self.izn_rate_total = izn_rate_slow + izn_rate_thermal
     
     def sep_lines(self,inp,R,Z,psi):
         #find x-point location  
@@ -458,9 +467,18 @@ class exp_core_brnd():
         self.B_t = inp.BT0 * self.m_axis[0] / self.R
         self.B_tot = np.sqrt(self.B_p**2 + self.B_t**2)
         self.f_phi = self.B_t/self.B_tot
-        plt.axis('equal')
-        for i,(Rvals,Zvals) in enumerate(zip(self.R,self.Z)):
-            plt.plot(Rvals,Zvals,lw=0.5)
+        #plt.axis('equal')
+        #for i,(Rvals,Zvals) in enumerate(zip(self.R,self.Z)):
+        #    plt.plot(Rvals,Zvals,lw=0.5)
+            
+        #create neutrals variables. These will remain zero unless set by exp_neutpy_prep or read_ntrl_data modules
+        self.n_n_slow       = np.zeros(self.rho.shape)
+        self.n_n_thermal      = np.zeros(self.rho.shape)
+        self.n_n_total      = np.zeros(self.rho.shape)
+        
+        self.izn_rate_slow  = np.zeros(self.rho.shape)
+        self.izn_rate_thermal  = np.zeros(self.rho.shape)
+        self.izn_rate_total    = np.zeros(self.rho.shape)
 
     def core_nT_ntrl(self,inp,R,Z,psi):
         #CREATE ARRAYS OF POINTS, DENSITIES AND TEMPERATURES FOR THE NEUTRALS CALCULATION

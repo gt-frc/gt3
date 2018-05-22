@@ -10,7 +10,7 @@ q95 = 3.884
 BT0 = 2.11
 
 #MAIN MESH PARAMETERS
-thetapts_approx = 30
+thetapts_approx = 50
 rhopts = 100
 #edge_rho = 0.8
 #rhopts_edge = 50
@@ -27,10 +27,10 @@ rhopts_edge_ntrl = 5
 rhopts_core_ntrl = 10
 wall_ni_min = 1.0E15
 wall_ne_min = 1.0E15
-wall_Ti_min = 0.002
-wall_Te_min = 0.002
+wall_Ti_min = 0.005
+wall_Te_min = 0.005
 tri_min_angle = 20
-tri_min_area  = 0.02
+tri_min_area  = 0.01
 
 #SOL PARAMETERS
 sollines_psi_max = 1.07

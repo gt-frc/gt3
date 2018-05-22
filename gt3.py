@@ -5,7 +5,7 @@
 import matplotlib.pyplot as plt
 #from gt3plots import gt3plots
 import numpy as np
-import scipy.interpolate as interpolate
+from scipy.interpolate import griddata
 import sys
 from math import pi
 from read_infile import read_infile
@@ -45,47 +45,52 @@ class gt3():
         nbeams:
         adpack:
     """
+
+
     
     def __init__(self, shotlabel=None):
         sys.dont_write_bytecode = True 
         #Create shotlabel as an attribute of plasma class
         self.shotlabel = shotlabel
+        self.inp = read_infile(self.shotlabel)
+        self.ntrl_switch = self.inp.ntrl_switch
 
+
+                 
     def coreonly(self):
         ntrl_switch = 0
-        self.inp = read_infile(self.shotlabel)
         self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
 
     def coreandiol(self):
         ntrl_switch = 0
-        self.inp   = read_infile(self.shotlabel)
         self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
         self.tiol  = thermaliol(self.inp,self.core)
         self.fiol  = fastiol(self.inp,self.core)
         
     def coreandimp(self):
         ntrl_switch = 0
-        self.inp = read_infile(self.shotlabel)
         self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
         self.imp   = imp_rad(self.inp,self.core)
         
     def ntrlsonly(self):
-        ntrl_switch = 1
-        self.inp = read_infile(self.shotlabel)
-        self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
-        self.sol   = exp_sol_brnd(self.inp,self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
-        self.pfr   = exp_pfr_brnd(self.inp,self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
-        self.ntrl  = exp_neutpy_prep(self.inp,self.core,self.sol,self.pfr) 
+        ntrl_switch = self.ntrl_switch
+        print ntrl_switch
+        if ntrl_switch==1: #neutrals output file already exists. Read it in. No need to run neutpy.
+            self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)
+            self.ntrl  = read_ntrl_data(self.inp,self.core)
+        elif ntrl_switch==2: #need to run neutpy
+            self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
+            self.sol   = exp_sol_brnd(self.inp,self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
+            self.pfr   = exp_pfr_brnd(self.inp,self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
+            self.ntrl  = exp_neutpy_prep(self.inp,self.core,self.sol,self.pfr) 
         
     def coreandnbi(self):
         ntrl_switch = 0
-        self.inp = read_infile(self.shotlabel)
         self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
         self.nbi   = beamdep(self.inp,self.core)
         
     def therm_instab(self):
         ntrl_switch = 1
-        self.inp = read_infile(self.shotlabel)
         self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
         self.sol   = exp_sol_brnd(self.inp,self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
         self.pfr   = exp_pfr_brnd(self.inp,self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
@@ -99,7 +104,6 @@ class gt3():
 
     def allthethings(self):
         ntrl_switch = 1
-        self.inp = read_infile(self.shotlabel)
         self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
         self.sol   = exp_sol_brnd(self.inp,self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
         self.pfr   = exp_pfr_brnd(self.inp,self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
@@ -115,11 +119,46 @@ class gt3():
         #self.plots = gt3plots(self)
         pass
 
+class read_ntrl_data():
+    def __init__(self,inp,core):
+        print 'reading ntrl data'
+        ntrl_data = np.loadtxt(inp.neutfile_loc,skiprows=1)
+        self.ntrl_R              = ntrl_data[:,0]
+        self.ntrl_Z              = ntrl_data[:,1]
+        self.n_n_slow            = ntrl_data[:,2]
+        self.n_n_thermal         = ntrl_data[:,3]
+        self.n_n_total           = ntrl_data[:,4]
+        self.izn_rate_slow       = ntrl_data[:,5]
+        self.izn_rate_thermal    = ntrl_data[:,6]
+        self.izn_rate_total      = ntrl_data[:,7]
+        
+        n_n_slow = griddata(np.column_stack((self.ntrl_R,self.ntrl_Z)),
+                                 self.n_n_slow,
+                                 (core.R,core.Z),
+                                 method='linear')
+        n_n_thermal = griddata(np.column_stack((self.ntrl_R,self.ntrl_Z)),
+                                 self.n_n_thermal,
+                                 (core.R,core.Z),
+                                 method='linear')
+        izn_rate_slow = griddata(np.column_stack((self.ntrl_R,self.ntrl_Z)),
+                                 self.izn_rate_slow,
+                                 (core.R,core.Z),
+                                 method='linear')
+        izn_rate_thermal = griddata(np.column_stack((self.ntrl_R,self.ntrl_Z)),
+                                 self.izn_rate_thermal,
+                                 (core.R,core.Z),
+                                 method='linear')
+        
+        core.update_ntrl_data(n_n_slow,n_n_thermal,izn_rate_slow,izn_rate_thermal)
+
 if __name__ == "__main__":
     myshot = gt3('144977_3000/togt3_d3d_144977_3000')
     #myshot.coreonly()
     #myshot.coreandiol()
-    myshot.therm_instab()
+    #myshot.therm_instab()
+    myshot.ntrlsonly()
+    plt.axis('equal')
+    plt.contourf(myshot.core.R,myshot.core.Z,myshot.core.n_n_total,500)
     #sys.exit()
     
     #fig1 = plt.figure(figsize=(6,8))
@@ -257,11 +296,11 @@ if __name__ == "__main__":
         num +=1
     except:
         pass
-    plt.tight_layout()
+    #plt.tight_layout()
     
     #plt.plot(myshot.core.rho[-1,:],myshot.core.rho[-1,:],lw=2,color='black')
     
     #ax1.plot(myshot.ntrl.sol_lim_pts[:,0],myshot.ntrl.sol_lim_pts[:,1],'o',color='red')
     #ax1.plot(sep[:,0],sep[:,1], color='green',lw=3)
-    #CS = ax1.contourf(myshot.core.R,myshot.core.Z,myshot.core.B_p,500) #plot something calculated by miller
+     #plot something calculated by miller
     #plt.colorbar(CS)
