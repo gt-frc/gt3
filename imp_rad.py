@@ -20,9 +20,9 @@ class imp_rad():
     Methods:
         
     """
-    def __init__(self,inp,brnd):
+    def __init__(self,inp,core):
         sys.dont_write_bytecode = True 
-        self.prep_adpak_infile(inp,brnd)
+        self.prep_adpak_infile(inp,core)
         
         try:
             call([inp.adpak_loc+'adpak', os.getcwd()+'/toadpak'])
@@ -33,11 +33,11 @@ class imp_rad():
                 print 'Unable to locate adpak. Stopping.'
                 sys.exit()
 
-        self.read_adpak_outfile(inp,brnd)
-        self.coronal_eq(inp,brnd)
+        self.read_adpak_outfile(inp,core)
+        self.coronal_eq(inp,core)
         pass
     
-    def prep_adpak_infile(self,inp,brnd):
+    def prep_adpak_infile(self,inp,core):
         
         #TODO: Convert adpack routines to python binary using f2py so we can
         #eliminate the main.f driver program and do what we need to in python.
@@ -77,7 +77,7 @@ class imp_rad():
         f.write('\n')
         f.close()
     
-    def read_adpak_outfile(self,inp,brnd):
+    def read_adpak_outfile(self,inp,core):
         
         #some regex commands we'll use when reading stuff in from the input file
         regex1 = "r'.*?data \(+%s.*?\/(.*?)\/.*'%(v)"
@@ -105,7 +105,7 @@ class imp_rad():
                     exec("result = re.match(%s,data).group(1)"%(self.v3d[v][0]))
                     exec("self.%s[cs,:,:] = np.asarray(result.split(),dtype=float).reshape(-1,self.nte)"%(v))
 
-    def coronal_eq(self,inp,brnd):
+    def coronal_eq(self,inp,core):
         def null(M, eps=1e-20):
             u, s, vh = np.linalg.svd(M)
             return vh[np.argmin(np.abs(s))]
@@ -137,8 +137,8 @@ class imp_rad():
                 frac_abun[i,j,:] = result / np.sum(result) #solve(M,b)
 
         #CALCULATE IMPURITY DENSITIES BY CHARGE STATE
-        self.brnd_nC_cs     = []
-        self.brnd_rad_cs    = []
+        self.core_nC_cs     = []
+        self.core_rad_cs    = []
         emiss_tot = np.zeros(self.tei.shape)
         #loop over charge states
         for cs in np.arange(self.inucz+1):
@@ -148,13 +148,13 @@ class imp_rad():
             
             #for each charge state, get the fractional abundance for the charge state
             # under consideration at each point in the plasma
-            brnd_frac_abun  = np.zeros(brnd.nC.shape)
-            for (r,theta),nC in np.ndenumerate(brnd.nC):
-                brnd_frac_abun[r,theta] = frac_abun_interp( np.log10(brnd.Te_kev[r,theta]) , brnd.ne[r,theta] )
+            brnd_frac_abun  = np.zeros(core.nC.shape)
+            for (r,theta),nC in np.ndenumerate(core.nC):
+                brnd_frac_abun[r,theta] = frac_abun_interp( np.log10(core.Te_kev[r,theta]) , core.ne[r,theta] )
             
             #multiply the fractional abundance by the overal impurity density to get the
             #density of this charge state
-            self.brnd_nC_cs.append( brnd_frac_abun * brnd.nC )
+            self.core_nC_cs.append( brnd_frac_abun * core.nC )
 
             #create the emissivity function over the entire range of temperatures
             emiss_cs_interp = interp2d(self.tei_lin,self.anei*1E6,self.alradr[cs,:,:])
@@ -175,10 +175,10 @@ class imp_rad():
         new_T_J                 = new_T_kev * 1.0E3 * 1.6021E-19
         self.emiss_tot_interp2  = UnivariateSpline(new_T_J,new_Em,s=0)
         
-        self.brnd_emissivity    = self.emiss_tot_interp2(brnd.Te_J)
-        self.brnd_dEmiss_dT     = self.emiss_tot_interp2.derivative()(brnd.Te_J)
-        self.brnd_dEmiss_dT_eq9     = self.emiss_tot_interp2.derivative()(5.0E2*1.6021E-19)
-        self.brnd_dEmiss_dT_eq22     = self.emiss_tot_interp2.derivative()(21.0*1.6021E-19)
+        self.core_emissivity    = self.emiss_tot_interp2(core.Te_J)
+        self.core_dEmiss_dT     = self.emiss_tot_interp2.derivative()(core.Te_J)
+        #self.core_dEmiss_dT_eq9     = self.emiss_tot_interp2.derivative()(5.0E2*1.6021E-19)
+        #self.core_dEmiss_dT_eq22     = self.emiss_tot_interp2.derivative()(21.0*1.6021E-19)
         print
         print '#######################'
         print 'Emiss_marfe = ',self.emiss_tot_interp2(250.0*1.6021E-19)

@@ -74,7 +74,6 @@ class gt3():
         
     def ntrlsonly(self):
         ntrl_switch = self.ntrl_switch
-        print ntrl_switch
         if ntrl_switch==1: #neutrals output file already exists. Read it in. No need to run neutpy.
             self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)
             self.ntrl  = read_ntrl_data(self.inp,self.core)
@@ -91,12 +90,16 @@ class gt3():
         
     def therm_instab(self):
         ntrl_switch = 1
-        self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
-        self.sol   = exp_sol_brnd(self.inp,self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
-        self.pfr   = exp_pfr_brnd(self.inp,self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
+        if ntrl_switch==1: #neutrals output file already exists. Read it in. No need to run neutpy.
+            self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)
+            self.ntrl  = read_ntrl_data(self.inp,self.core)
+        elif ntrl_switch==2: #need to run neutpy
+            self.core  = exp_core_brnd(self.inp,ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp,ntrl_switch)      
+            self.sol   = exp_sol_brnd(self.inp,self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
+            self.pfr   = exp_pfr_brnd(self.inp,self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
+            self.ntrl  = exp_neutpy_prep(self.inp,self.core,self.sol,self.pfr) 
         self.nbi   = beamdep(self.inp,self.core)
         self.imp   = imp_rad(self.inp,self.core)
-        self.ntrl  = exp_neutpy_prep(self.inp,self.core,self.sol,self.pfr) 
         #self.rtrn   = rad_trans(self.inp,self.core,self.tiol,self.fiol,self.ntrl,self.nbi)
         #self.ti    = thermal_inst(self.inp,self.core,self.nbi,self.imp,self.ntrl)
         self.dl    = dens_lim(self.inp,self.core,self.nbi,self.imp,self.ntrl)
@@ -155,10 +158,11 @@ if __name__ == "__main__":
     myshot = gt3('144977_3000/togt3_d3d_144977_3000')
     #myshot.coreonly()
     #myshot.coreandiol()
-    #myshot.therm_instab()
-    myshot.ntrlsonly()
-    plt.axis('equal')
-    plt.contourf(myshot.core.R,myshot.core.Z,myshot.core.n_n_total,500)
+    myshot.therm_instab()
+    #myshot.ntrlsonly()
+    #plt.axis('equal')
+    #plt.contourf(myshot.core.R,myshot.core.Z,np.log10(myshot.core.n_n_total),500)
+    #plt.colorbar()
     #sys.exit()
     
     #fig1 = plt.figure(figsize=(6,8))
@@ -296,11 +300,4 @@ if __name__ == "__main__":
         num +=1
     except:
         pass
-    #plt.tight_layout()
-    
-    #plt.plot(myshot.core.rho[-1,:],myshot.core.rho[-1,:],lw=2,color='black')
-    
-    #ax1.plot(myshot.ntrl.sol_lim_pts[:,0],myshot.ntrl.sol_lim_pts[:,1],'o',color='red')
-    #ax1.plot(sep[:,0],sep[:,1], color='green',lw=3)
-     #plot something calculated by miller
-    #plt.colorbar(CS)
+    plt.tight_layout()

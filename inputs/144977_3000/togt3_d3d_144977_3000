@@ -11,9 +11,9 @@ BT0 = 2.11
 
 #MAIN MESH PARAMETERS
 thetapts_approx = 50
-rhopts = 100
-#edge_rho = 0.8
-#rhopts_edge = 50
+rhopts = 200
+#edge_rho = 0.6
+#rhopts_edge = 100
 #rhopts_core = 10
 
 #NEUTRALS PARAMETERS
@@ -48,8 +48,8 @@ pfr_Ti_val = 0.002
 pfr_Te_val = 0.002
 
 #1D PROFILE INPUT FILES
-ne_file         = /144977_3000/gt3_144977_3000_ne.dat
-ni_file         = /144977_3000/gt3_144977_3000_ni.dat
+ne_file         = /144977_3000/gt3_144977_3000_ne2.dat
+ni_file         = /144977_3000/gt3_144977_3000_ne2.dat
 Te_file         = /144977_3000/gt3_144977_3000_Te.dat
 Ti_file         = /144977_3000/gt3_144977_3000_Ti.dat
 er_file         = /144977_3000/gt3_144977_3000_er.dat

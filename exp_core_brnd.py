@@ -9,7 +9,7 @@ from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib._cntr as cntr
-from scipy.interpolate import griddata, UnivariateSpline
+from scipy.interpolate import griddata, UnivariateSpline, interp2d
 from scipy.constants import elementary_charge
 from shapely.geometry import Point, LineString
 from shapely.ops import polygonize,linemerge
@@ -77,10 +77,18 @@ class exp_core_brnd():
         if ntrl_switch==2:
             self.core_lines_ntrl(inp,R_psi,Z_psi,psi)
             self.core_nT_ntrl(inp,R_psi,Z_psi,psi)
-        #self.comp_mesh(inp,R,Z,psi)
+        self.xsec(inp)
 
     
     def update_ntrl_data(self,n_n_slow,n_n_thermal,izn_rate_slow,izn_rate_thermal):
+        self.n_n_slow = n_n_slow
+        self.n_n_thermal = n_n_thermal
+        self.n_n_total = n_n_slow + n_n_thermal
+        self.izn_rate_slow = izn_rate_slow
+        self.izn_rate_thermal = izn_rate_thermal
+        self.izn_rate_total = izn_rate_slow + izn_rate_thermal
+
+    def update_imprad_data(self,n_n_slow,n_n_thermal,izn_rate_slow,izn_rate_thermal):
         self.n_n_slow = n_n_slow
         self.n_n_thermal = n_n_thermal
         self.n_n_total = n_n_slow + n_n_thermal
@@ -333,15 +341,15 @@ class exp_core_brnd():
         
         self.thetapts = len(theta1d)
         self.theta,self.rho = np.meshgrid(theta1d,rho1d)
-        
+        self.r = self.rho * self.a #TODO: revisit what 'r' means in 2D.      
         #fill in parameters that are only functions of rho
         try:
-            self.ni = UnivariateSpline(inp.ni_data[:,0],inp.ni_data[:,1],k=5,s=2.0)(self.rho)
+            self.ni = UnivariateSpline(inp.ni_data[:,0],inp.ni_data[:,1],k=3,s=2.0)(self.rho)
         except AttributeError:
             pass
         
         try:
-            self.ne = UnivariateSpline(inp.ne_data[:,0],inp.ne_data[:,1],k=5,s=2.0)(self.rho)
+            self.ne = UnivariateSpline(inp.ne_data[:,0],inp.ne_data[:,1],k=3,s=2.0)(self.rho)
         except AttributeError:
             pass
         
@@ -353,10 +361,7 @@ class exp_core_brnd():
         try:
             self.Te_kev = UnivariateSpline(inp.Te_data[:,0],inp.Te_data[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
-            pass
-        
-        self.Te_J = self.Te_kev * 1.6021E-16
-        self.Ti_J = self.Ti_kev * 1.6021E-16
+            pass        
         
         try:
             E_r_fit    = UnivariateSpline(inp.er_data[:,0],inp.er_data[:,1],k=5,s=2.0)
@@ -372,7 +377,8 @@ class exp_core_brnd():
         except AttributeError:
             self.fracz = np.zeros(self.rho.shape) + 0.025            
         self.nC = self.ne * self.fracz        
-
+        self.z_0 = self.nC*6.0**2 / self.ni
+        self.z_eff = (self.ni*1.0**2 + self.nC*6.0**2) / self.ne
         try:
             self.fz1      = UnivariateSpline(inp.fz1_data[:,0],inp.fz1_data[:,1],k=5,s=2.0)(self.rho)
         except AttributeError:
@@ -470,6 +476,71 @@ class exp_core_brnd():
         #plt.axis('equal')
         #for i,(Rvals,Zvals) in enumerate(zip(self.R,self.Z)):
         #    plt.plot(Rvals,Zvals,lw=0.5)
+
+        #calculate gradients and gradient scale lengths
+        #get quantities on a fairly fine R,Z grid for the purpose of taking gradients, etc.
+        R_temp,Z_temp = np.meshgrid(np.linspace(0.98*self.ibmp_pt[0],1.02*self.obmp_pt[0],500),
+                                    np.linspace(1.02*self.top_pt[1],1.02*self.bot_pt[1],500))
+
+        ni_grid = griddata(np.column_stack((self.R.flatten(),self.Z.flatten())),
+                           self.ni.flatten(),
+                           (R_temp,Z_temp),
+                           method='cubic',
+                           fill_value = self.ni[-1,0])
+        ne_grid = griddata(np.column_stack((self.R.flatten(),self.Z.flatten())),
+                           self.ne.flatten(),
+                           (R_temp,Z_temp),
+                           method='cubic',
+                           fill_value = self.ne[-1,0])
+        Ti_kev_grid = griddata(np.column_stack((self.R.flatten(),self.Z.flatten())),
+                           self.Ti_kev.flatten(),
+                           (R_temp,Z_temp),
+                           method='cubic',
+                           fill_value = self.Ti_kev[-1,0])
+        Te_kev_grid = griddata(np.column_stack((self.R.flatten(),self.Z.flatten())),
+                           self.Te_kev.flatten(),
+                           (R_temp,Z_temp),
+                           method='cubic',
+                           fill_value = self.Te_kev[-1,0])
+        
+        dnidr_temp = -1.0*(np.abs(np.gradient(ni_grid,Z_temp[:,0],axis=1)) + np.abs(np.gradient(ni_grid,R_temp[0,:],axis=0)))
+        dnedr_temp = -1.0*(np.abs(np.gradient(ne_grid,Z_temp[:,0],axis=1)) + np.abs(np.gradient(ne_grid,R_temp[0,:],axis=0)))
+        dTidr_temp = -1.0*(np.abs(np.gradient(Ti_kev_grid,Z_temp[:,0],axis=1)) + np.abs(np.gradient(Ti_kev_grid,R_temp[0,:],axis=0)))
+        dTedr_temp = -1.0*(np.abs(np.gradient(Te_kev_grid,Z_temp[:,0],axis=1)) + np.abs(np.gradient(Te_kev_grid,R_temp[0,:],axis=0)))
+        
+        self.dni_dr = griddata(np.column_stack((R_temp.flatten(),Z_temp.flatten())),
+                              dnidr_temp.flatten(),
+                              (self.R,self.Z),
+                              method='cubic')
+        self.dne_dr = griddata(np.column_stack((R_temp.flatten(),Z_temp.flatten())),
+                              dnedr_temp.flatten(),
+                              (self.R,self.Z),
+                              method='cubic')
+        self.dTi_kev_dr = griddata(np.column_stack((R_temp.flatten(),Z_temp.flatten())),
+                              dTidr_temp.flatten(),
+                              (self.R,self.Z),
+                              method='cubic')
+        self.dTe_kev_dr = griddata(np.column_stack((R_temp.flatten(),Z_temp.flatten())),
+                              dTedr_temp.flatten(),
+                              (self.R,self.Z),
+                              method='cubic')
+
+        self.Ti_J  = self.Ti_kev * 1.6021E-16
+        self.Ti_ev = self.Ti_kev * 1E3
+        self.Te_J  = self.Te_kev * 1.6021E-16
+        self.Te_ev = self.Te_kev * 1E3
+        self.dTi_J_dr  = self.dTi_kev_dr * 1.6021E-16
+        self.dTi_ev_dr = self.dTi_kev_dr * 1E3
+        self.dTe_J_dr  = self.dTe_kev_dr * 1.6021E-16
+        self.dTe_ev_dr = self.dTe_kev_dr * 1E3
+        self.L_ni = -self.dni_dr / self.ni
+        self.L_ne = -self.dne_dr / self.ne
+        self.L_Ti_J = -self.dTi_J_dr / self.Ti_J
+        self.L_Te_J = -self.dTe_J_dr / self.Te_J
+        #plt.axis('equal')
+        #plt.contourf(self.R,self.Z,self.dnidr,500)
+        #plt.colorbar()
+        #sys.exit()
             
         #create neutrals variables. These will remain zero unless set by exp_neutpy_prep or read_ntrl_data modules
         self.n_n_slow       = np.zeros(self.rho.shape)
@@ -558,3 +629,199 @@ class exp_core_brnd():
             self.ne_pts = np.vstack((self.ne_pts,np.append(pt,self.ne_sep_val)))
             self.Ti_kev_pts = np.vstack((self.Ti_kev_pts,np.append(pt,self.Ti_kev_sep_val)))
             self.Te_kev_pts = np.vstack((self.Te_kev_pts,np.append(pt,self.Te_kev_sep_val)))
+
+    def xsec(self,inp):
+        #Fusion Reactivity calculation  
+        def calc_sigv_fus(mode='dd'):   
+            def sigv(Ti,mode): #function takes T in kev
+                if mode=='dt':
+                    B_G = 34.3827    
+                    m_rc2 = 1124656
+                    
+                    C1 = 1.17302E-9
+                    C2 = 1.51361E-2
+                    C3 = 7.51886E-2
+                    C4 = 4.60643E-3
+                    C5 = 1.35000E-2
+                    C6 = -1.06750E-4
+                    C7 = 1.36600E-5
+                
+                    theta = Ti/(1.0-(Ti*(C2+Ti*(C4+Ti*C6)))/(1.0+Ti*(C3+Ti*(C5+Ti*C7))))
+                    xi = (B_G**2.0/(4.0*theta))**(1.0/3.0)
+                    sigv = C1 * theta * np.sqrt(xi/(m_rc2 * Ti**3.0)) * np.exp(-3.0*xi)
+                    sigv = sigv/1.0E6 #convert from cm^3/s to m^3/s
+                    
+                elif mode=='dd':
+                    
+                    B_G = 31.3970 
+                    m_rc2 = 937814
+                    
+                    #first for the D(d,p)T reaction
+                    C1_1 = 5.65718E-12
+                    C2_1 = 3.41267E-3
+                    C3_1 = 1.99167E-3
+                    C4_1 = 0.0
+                    C5_1 = 1.05060E-5
+                    C6_1 = 0.0
+                    C7_1 = 0.0
+                
+                    theta_1 = Ti/(1.0-(Ti*(C2_1+Ti*(C4_1+Ti*C6_1)))/(1.0+Ti*(C3_1+Ti*(C5_1+Ti*C7_1))))
+                    xi_1 = (B_G**2.0/(4.0*theta_1))**(1.0/3.0)
+                    sigv_1 = C1_1 * theta_1 * np.sqrt(xi_1/(m_rc2 * Ti**3.0)) * np.exp(-3.0*xi_1)
+                    
+                    #then for the D(d,n)He3 reaction
+                    
+                    C1_2 = 5.43360E-12
+                    C2_2 = 5.85778E-3
+                    C3_2 = 7.68222E-3
+                    C4_2 = 0.0
+                    C5_2 = -2.96400E-6
+                    C6_2 = 0.0
+                    C7_2 = 0.0
+                
+                    theta_2 = Ti/(1.0-(Ti*(C2_2+Ti*(C4_2+Ti*C6_2)))/(1.0+Ti*(C3_2+Ti*(C5_2+Ti*C7_2))))
+                    xi_2 = (B_G**2.0/(4.0*theta_2))**(1.0/3.0)
+                    sigv_2 = C1_2 * theta_2 * np.sqrt(xi_2/(m_rc2 * Ti**3.0)) * np.exp(-3.0*xi_2)                
+                    
+                    sigv = (0.5*sigv_1 + 0.5*sigv_2) / 1.0E6 #convert from cm^3/s to m^3/s                
+                return sigv
+            
+            #create logspace over the relevant temperature range
+            #(bosch hale technically only valid over 0.2 - 100 kev)
+            Ti_range            = np.logspace(-1,2,1000) #values in kev
+            sigv_fus_range      = sigv(Ti_range,mode='dd') #in m^3/s
+            sigv_fus_interp     = UnivariateSpline(Ti_range*1.0E3*1.6021E-19,sigv_fus_range,s=0) #converted to Joules
+            self.sv_fus       = sigv_fus_interp(self.Ti_J)
+            self.dsv_fus_dT   = sigv_fus_interp.derivative()(self.Ti_J)
+            self.dsv_fus_dT_eq9   = sigv_fus_interp.derivative()(5.0E2*1.6021E-19)
+        
+        def calc_sigv_ion():
+            #TODO: configure so it can use any of the cross section libraries
+            #currently using the Stacey-Thomas cross sections
+            T_exps_fit          = np.array([-1,0,1,2,3,4,5])
+            sigv_exps_fit       = np.array([-2.8523E+01,-1.7745E+01,-1.3620E+01,
+                                            -1.3097E+01,-1.3301E+01,-1.3301E+01,-1.3301E+01])
+            interp1             = UnivariateSpline(T_exps_fit,sigv_exps_fit,s=0)
+            
+            T_exps_range        = np.linspace(-1,5,1000)
+            sigv_vals_range     = 10.0**interp1(T_exps_range) #in m^3/s
+            
+            T_vals_range        = np.logspace(-1,5,1000)*1.6021E-19 #in joules
+            interp2             = UnivariateSpline(T_vals_range,sigv_vals_range,s=0)
+            
+            self.sv_ion       = interp2(self.Ti_J)
+            self.dsv_ion_dT   = interp2.derivative()(self.Ti_J)
+
+        def calc_svel():
+        
+            tint = np.array([-1,0,1,2,3])
+            tnnt = np.array([0,1,2])
+
+            elast = np.array([[-1.3569E+01, -1.3337E+01, -1.3036E+01, -1.3569E+01, -1.3337E+01],
+                              [-1.3036E+01, -1.3337E+01, -1.3167E+01, -1.3046E+01, -1.3036E+01],
+                              [-1.3046E+01, -1.2796E+01, -1.3036E+01, -1.3046E+01, -1.2796E+01]])
+                
+            interp1 = interp2d(tint,tnnt,elast)
+            
+            Ti_exps   = np.linspace(-1,3,100)
+            Tn_exps   = np.linspace( 0,2,100)
+            svel_vals = 10.0**(interp1(Ti_exps,Tn_exps)) #in m^3/s
+            
+            Ti_vals   = np.logspace(-1,3,100)*1.6021E-19 #in joules
+            Tn_vals   = np.logspace( 0,2,100)*1.6021E-19 #in joules
+
+            dsvel_dTi_vals  = np.gradient(svel_vals,Ti_vals,axis=0)
+
+            Ti_vals2d, Tn_vals2d = np.meshgrid(Ti_vals,Tn_vals)
+            
+            Ti_mod = np.where(self.Ti_ev>1E3, 1E3 * 1.6021E-19, self.Ti_ev*1.6021E-19)
+            Tn_mod = np.zeros(Ti_mod.shape) + 2.0*1.6021E-19
+
+            self.sv_el       = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+                                       svel_vals.flatten(), 
+                                       (Ti_mod,Tn_mod),
+                                       method='linear', rescale=False)
+            self.dsv_el_dT   = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+                                       dsvel_dTi_vals.flatten(), 
+                                       (Ti_mod,Tn_mod), 
+                                       method='linear', rescale=False)
+         
+        def calc_svcxi_st():
+            
+            tint = np.array([-1,0,1,2,3])
+            tnnt = np.array([0,1,2])
+            
+            cx = np.array([[-1.4097E+01, -1.3921E+01, -1.3553E+01, -1.4097E+01, -1.3921E+01],
+                           [-1.3553E+01, -1.3921E+01, -1.3824E+01, -1.3538E+01, -1.3553E+01],
+                           [-1.3538E+01, -1.3432E+01, -1.3553E+01, -1.3538E+01, -1.3432E+01]])
+                
+            interp1 = interp2d(tint,tnnt,cx)
+            
+            Ti_exps   = np.linspace(-1,3,100)
+            Tn_exps   = np.linspace( 0,2,100)
+            svcx_vals = 10.0**(interp1(Ti_exps,Tn_exps)) #in m^3/s
+            
+            Ti_vals   = np.logspace(-1,3,100)*1.6021E-19 #in joules
+            Tn_vals   = np.logspace( 0,2,100)*1.6021E-19 #in joules
+
+            dsvcx_dTi_vals  = np.gradient(svcx_vals,Ti_vals,axis=0)
+
+            Ti_vals2d, Tn_vals2d = np.meshgrid(Ti_vals,Tn_vals)
+            
+            Ti_mod = np.where(self.Ti_ev>1E3, 1E3 * 1.6021E-19, self.Ti_ev*1.6021E-19)
+            Tn_mod = np.zeros(Ti_mod.shape) + 2.0*1.6021E-19
+
+            self.sv_cx       = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+                                       svcx_vals.flatten(), 
+                                       (Ti_mod,Tn_mod),
+                                       method='linear', rescale=False)
+            
+            self.dsv_cx_dT   = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+                                       dsvcx_dTi_vals.flatten(), 
+                                       (Ti_mod,Tn_mod), 
+                                       method='linear', rescale=False)
+
+        def calc_svrec_st(): 
+            #TODO: check this calculation. -MH
+            znint = np.array([16,18,20,21,22])
+            Tint  = np.array([-1,0,1,2,3])
+        
+            rec = np.array([[-1.7523E+01, -1.6745E+01, -1.5155E+01, -1.4222E+01, -1.3301E+01],
+                            [-1.8409E+01, -1.8398E+01, -1.8398E+01, -1.7886E+01, -1.7000E+01],
+                            [-1.9398E+01, -1.9398E+01, -1.9398E+01, -1.9398E+01, -1.9398E+01],
+                            [-2.0155E+01, -2.0155E+01, -2.0155E+01, -2.0155E+01, -2.0155E+01],
+                            [-2.1000E+01, -2.1000E+01, -2.1000E+01, -2.1000E+01, -2.1000E+01]])
+            
+            interp1 = interp2d(znint,Tint,rec)
+            
+            zni_exps   = np.linspace(16,22,100)
+            Ti_exps    = np.linspace(-1, 3,100)
+            svrec_vals = 10.0**(interp1(zni_exps,Ti_exps)) #in m^3/s
+            
+            zni_vals   = np.logspace(16,22,100)
+            Ti_vals    = np.logspace(-1, 3,100)*1.6021E-19 #in joules
+            
+            dsvrec_dTi_vals  = np.gradient(svrec_vals,Ti_vals,axis=0)
+                
+            zni_vals2d, Ti_vals2d = np.meshgrid(zni_vals,Ti_vals)
+            
+            zni_mod = np.where(self.ni>1E22, 1E22, self.ni)
+            zni_mod = np.where(self.ni<1E16, 1E16, zni_mod)
+            Ti_mod  = np.where(self.Ti_ev>1E3,   1E3 * 1.6021E-19, self.Ti_ev*1.6021E-19)
+            Ti_mod  = np.where(self.Ti_ev<1E-1, 1E-1 * 1.6021E-19, Ti_mod)
+                
+            self.sv_rec     = griddata(np.column_stack((zni_vals2d.flatten(), Ti_vals2d.flatten())), 
+                                       svrec_vals.flatten(), 
+                                       (zni_mod,Ti_mod),
+                                       method='linear', rescale=False)
+            
+            self.dsv_rec_dT = griddata(np.column_stack((zni_vals2d.flatten(), Ti_vals2d.flatten())), 
+                                       dsvrec_dTi_vals.flatten(), 
+                                       (zni_mod,Ti_mod), 
+                                       method='linear', rescale=False)
+
+        calc_sigv_fus()
+        calc_sigv_ion()
+        calc_svel()
+        calc_svcxi_st()
+        #calc_svrec_st()
