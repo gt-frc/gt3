@@ -20,7 +20,7 @@ class marfe():
         """
         """
         #specified quantities
-        chi_r       = 1.0
+        chi_r       = 2.0
         nu          = 5.0/2.0
         sv_ion      = core.sv_ion
         sv_cx       = core.sv_cx
@@ -49,37 +49,38 @@ class marfe():
         t4 = f0c * (3.0/2.0*(sv_cx + sv_el) * (nu-1.0-T*dsv_cxel_dT/(sv_cx + sv_el)))
 
         n_marfe = t1 / (t2 + t3 + t4)
-
-
+        n_marfe_average = np.nanmean(n_marfe)
+        print 'n_marfe_average = ',n_marfe_average
+        n_marfe_edge = np.where(core.psi_norm>0.5,n_marfe,np.nan)
+        n_marfe_met = np.where((core.ni>n_marfe)&(n_marfe>0)&(core.psi_norm>0.5),core.ni-n_marfe,np.nan)
         
-        n_marfe_met = np.where((core.ni>n_marfe)&(n_marfe>0),core.ni-n_marfe,np.nan)
-        marfe_fig1 = plt.figure(figsize=(4,6))
-        ax1 = marfe_fig1.add_subplot(1,1,1)
+        marfe_fig1 = plt.figure(figsize=(13,6))
+        ax1 = marfe_fig1.add_subplot(1,3,1)
         ax1.axis('equal')
-        ax1.set_title('n_marfe')
-        cs = ax1.contourf(core.R,core.Z,np.log10(n_marfe),500)
+        ax1.set_title(r'$n_{MARFE}$')
+        cs1 = ax1.contourf(core.R,core.Z,np.log10(n_marfe_edge),500)
         ax1.plot(core.R[-1,:],core.Z[-1,:],lw=1,color='red')
         ax1.plot(inp.wall_exp[:,0],inp.wall_exp[:,1],lw=1,color='black')
-        marfe_fig1.colorbar(cs)
+        marfe_fig1.colorbar(cs1,ax=ax1)
         
-        marfe_fig2 = plt.figure(figsize=(4,6))
-        ax1 = marfe_fig2.add_subplot(1,1,1)
-        ax1.axis('equal')
-        ax1.set_title('ni')
-        cs = ax1.contourf(core.R,core.Z,core.ni,500)
+        #marfe_fig2 = plt.figure(figsize=(13,6))
+        ax2 = marfe_fig1.add_subplot(1,3,2)
+        ax2.axis('equal')
+        ax2.set_title(r'$n_i$')
+        cs2 = ax2.contourf(core.R,core.Z,np.log10(core.ni),500)
         #ax1.plot(core.R[-1,:],core.Z[-1,:],lw=1,color='red')
-        ax1.plot(inp.wall_exp[:,0],inp.wall_exp[:,1],lw=1,color='black')
-        marfe_fig2.colorbar(cs)
+        ax2.plot(inp.wall_exp[:,0],inp.wall_exp[:,1],lw=1,color='black')
+        marfe_fig1.colorbar(cs2,ax=ax2)
         
-        marfe_fig3 = plt.figure(figsize=(4,6))
-        ax1 = marfe_fig3.add_subplot(1,1,1)
-        ax1.axis('equal')
-        ax1.set_title('ni-n_marfe where greater')
-        cs = ax1.contourf(core.R,core.Z,n_marfe_met,500)
-        ax1.plot(core.R[-1,:],core.Z[-1,:],lw=1,color='red')
-        ax1.plot(inp.wall_exp[:,0],inp.wall_exp[:,1],lw=1,color='black')
-        marfe_fig3.colorbar(cs)
-        
+        #marfe_fig3 = plt.figure(figsize=(4,6))
+        ax3 = marfe_fig1.add_subplot(1,3,3)
+        ax3.axis('equal')
+        ax3.set_title('$n_i-n_{MARFE}$ where greater')
+        cs3 = ax3.contourf(core.R,core.Z,n_marfe_met,500)
+        ax3.plot(core.R[-1,:],core.Z[-1,:],lw=1,color='red')
+        ax3.plot(inp.wall_exp[:,0],inp.wall_exp[:,1],lw=1,color='black')
+        marfe_fig1.colorbar(cs3,ax=ax3)
+        plt.tight_layout()
 
         
         #marfe_fig2 = plt.figure(figsize=(6,4))
