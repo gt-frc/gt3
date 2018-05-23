@@ -7,39 +7,39 @@ Created on Fri May 18 15:03:04 2018
 """
 
 class mil_sol_brnd():
-    def __init__(self,inp,brnd):
-        self.solmesh(inp,brnd)
-        self.solnT(inp,brnd)
+    def __init__(self, inp, brnd):
+        self.solmesh(inp, brnd)
+        self.solnT(inp, brnd)
     
-    def solmesh(self,inp,brnd):
+    def solmesh(self, inp, brnd):
         #for now, all this does is calculate the strike point locations
-        self.in_strike  = np.asarray(makeline(inp.xpt,10.0,inp.xtheta1)[1].intersection(inp.lim_line).xy)
-        self.out_strike = np.asarray(makeline(inp.xpt,10.0,inp.xtheta4)[1].intersection(inp.lim_line).xy)
+        self.in_strike  = np.asarray(makeline(inp.xpt, 10.0, inp.xtheta1)[1].intersection(inp.lim_line).xy)
+        self.out_strike = np.asarray(makeline(inp.xpt, 10.0, inp.xtheta4)[1].intersection(inp.lim_line).xy)
         
         #add inner strike point
-        union = inp.lim_line.union(makeline(inp.xpt,10.0,inp.xtheta1)[1])
+        union = inp.lim_line.union(makeline(inp.xpt, 10.0, inp.xtheta1)[1])
         result = [geom for geom in polygonize(union)][0]
         
         #add outer strike point
-        union = result.union(makeline(inp.xpt,10.0,inp.xtheta4)[1])
+        union = result.union(makeline(inp.xpt, 10.0, inp.xtheta4)[1])
         result = [geom for geom in polygonize(union)][0]
         
         self.wall_x, self.wall_y = result.exterior.coords.xy
         
         #delete the repeated point. It causes problems for FiPy
-        self.wall_x = np.delete(self.wall_x,-1)
-        self.wall_y = np.delete(self.wall_y,-1)
+        self.wall_x = np.delete(self.wall_x, -1)
+        self.wall_y = np.delete(self.wall_y, -1)
 
-        self.wall_pts = np.column_stack((self.wall_x,self.wall_y))
+        self.wall_pts = np.column_stack((self.wall_x, self.wall_y))
         self.wall_line = LineString(self.wall_pts)
         self.wall_ring = LinearRing(self.wall_pts)
         #create wall segments for triangulation later
         self.wall_segs = np.column_stack((
-                                        np.arange(len( self.wall_pts )),
-                                        np.roll(np.arange(len( self.wall_pts )),-1)
+                                        np.arange(len( self.wall_pts )), 
+                                        np.roll(np.arange(len( self.wall_pts )), -1)
                                         ))
 
-    def solnT(self,inp,brnd):         
+    def solnT(self, inp, brnd):         
         #####################################################################       
         ## POPULATE DENSITY AND TEMPERATURE VALUES FOR THE SOL AND HALO REGIONS  
         ##################################################################### 
@@ -54,41 +54,41 @@ class mil_sol_brnd():
     
         sepx, sepy = self.sep_line.coords.xy
         xpt_pos = int(len(sepx) - (inp.ntrl_thetapts-1)/4)
-        self.sep_pts = np.roll(np.column_stack((sepx,sepy)),-xpt_pos,axis=0)
+        self.sep_pts = np.roll(np.column_stack((sepx, sepy)), -xpt_pos, axis=0)
 
         #make new sep_line with x-point repeated for use in the bdry condition
-        sep_line2 = LineString(np.vstack((self.sep_pts,self.sep_pts[0])))
+        sep_line2 = LineString(np.vstack((self.sep_pts, self.sep_pts[0])))
         
         #rotate wall points to start at inner strike point
-        in_str_loc = np.where((self.wall_pts[:,0] == self.in_strike[0]) & 
-                             (self.wall_pts[:,1] == self.in_strike[1]))[0][0]
-        wall_pts_rot = np.roll(self.wall_pts,-in_str_loc,axis=0)
+        in_str_loc = np.where((self.wall_pts[:, 0] == self.in_strike[0]) & 
+                             (self.wall_pts[:, 1] == self.in_strike[1]))[0][0]
+        wall_pts_rot = np.roll(self.wall_pts, -in_str_loc, axis=0)
 
         #make new wall_line for use in the bdry condition
         wall_line = LineString(wall_pts_rot)
         
         #cut the new wall line at the outboard strike point
-        dist = wall_line.project(Point(self.out_strike[0],self.out_strike[1]),normalized=True)
-        wall_line_cut = cut(wall_line,dist)[0]
+        dist = wall_line.project(Point(self.out_strike[0], self.out_strike[1]), normalized=True)
+        wall_line_cut = cut(wall_line, dist)[0]
         
         #get the final wall points for creating the FiPy input string
         wallx, wally = wall_line_cut.coords.xy
-        wall_pts = np.column_stack((wallx,wally))
+        wall_pts = np.column_stack((wallx, wally))
         
         #start making mesh. Start with points
         mesh_info = ""
         pt_count = 1
-        for i, (xval, yval) in enumerate(zip(self.sep_pts[:,0],self.sep_pts[:,1])):
+        for i, (xval, yval) in enumerate(zip(self.sep_pts[:, 0], self.sep_pts[:, 1])):
             mesh_info = mesh_info + ('Point(' + str(pt_count) + ') = {' + str(xval) + ', ' + str(yval) + ', 0, 1/10};')
             pt_count+=1
             
-        for i, (xval, yval) in enumerate(zip(wall_pts[:,0],wall_pts[:,1])):
+        for i, (xval, yval) in enumerate(zip(wall_pts[:, 0], wall_pts[:, 1])):
             mesh_info = mesh_info + ('Point(' + str(pt_count) + ') = {' + str(xval) + ', ' + str(yval) + ', 0, 1/10};')
             pt_count+=1
 
         #define lines for the mesh. Start with the seperatrix
         line_count = 1
-        for i in np.linspace(1,len(sepx)-1,len(sepx)-1):
+        for i in np.linspace(1, len(sepx)-1, len(sepx)-1):
             mesh_info = mesh_info + ('Line(' + str(line_count) + ') = {' + str(int(i)) + ', ' + str(int(i+1)) + '};')
             line_count+=1
 
@@ -101,7 +101,7 @@ class mil_sol_brnd():
         line_count+=1
         
         #lines around the first wall to the outboard strike point
-        for i in np.linspace(int(len(sepx)+1),int(len(sepx)+1) + len(wallx)-2,len(wallx)-1):
+        for i in np.linspace(int(len(sepx)+1), int(len(sepx)+1) + len(wallx)-2, len(wallx)-1):
             mesh_info = mesh_info + ('Line(' + str(line_count) + ') = {' + str(int(i)) + ', ' + str(int(i+1)) + '};')
             line_count+=1
         
@@ -110,7 +110,7 @@ class mil_sol_brnd():
        
         #create lineloop and plane surface
         lineloop = "Line Loop(1) = {1"
-        for i in np.linspace(2,line_count,line_count-1):
+        for i in np.linspace(2, line_count, line_count-1):
             lineloop = lineloop + ", " + str(int(i))
         lineloop = lineloop + "};"
         mesh_info = mesh_info + lineloop
@@ -124,30 +124,30 @@ class mil_sol_brnd():
         ####################################################################
         #already made lines for sep and first wall
         #now make them for inner and outer divertor legs
-        idiv_line = LineString([self.sep_pts[0],self.in_strike])
-        odiv_line = LineString([self.sep_pts[0],self.out_strike])
+        idiv_line = LineString([self.sep_pts[0], self.in_strike])
+        odiv_line = LineString([self.sep_pts[0], self.out_strike])
         
         var = CellVariable(mesh=m)
 
         ####################################################################
         ## LOOP OVER QUANTITIES TO CALCULATE (ni, ne, Ti, Te)
         ####################################################################
-        self.sol_param = np.column_stack((m.cellCenters.value[0],m.cellCenters.value[1]))
-        for j in [0,1,2,3]:
+        self.sol_param = np.column_stack((m.cellCenters.value[0], m.cellCenters.value[1]))
+        for j in [0, 1, 2, 3]:
             mask_array  = np.zeros(m.numberOfCells)
             bcval       = np.zeros(m.numberOfCells)
-            for i,val in enumerate(mask_array):
-                face1num = m.cellFaceIDs.data[0,i]
-                face2num = m.cellFaceIDs.data[1,i]
-                face3num = m.cellFaceIDs.data[2,i]
+            for i, val in enumerate(mask_array):
+                face1num = m.cellFaceIDs.data[0, i]
+                face2num = m.cellFaceIDs.data[1, i]
+                face3num = m.cellFaceIDs.data[2, i]
                 
-                face1x = m.faceCenters.value[0,face1num]
-                face2x = m.faceCenters.value[0,face2num]
-                face3x = m.faceCenters.value[0,face3num]
+                face1x = m.faceCenters.value[0, face1num]
+                face2x = m.faceCenters.value[0, face2num]
+                face3x = m.faceCenters.value[0, face3num]
                 
-                face1y = m.faceCenters.value[1,face1num]
-                face2y = m.faceCenters.value[1,face2num]
-                face3y = m.faceCenters.value[1,face3num]
+                face1y = m.faceCenters.value[1, face1num]
+                face2y = m.faceCenters.value[1, face2num]
+                face3y = m.faceCenters.value[1, face3num]
                 
                 p1 = Point(face1x, face1y)
                 p2 = Point(face2x, face2y)
@@ -162,13 +162,13 @@ class mil_sol_brnd():
                     mask_array[i] = 1
                 
                 if j==0:
-                    solbc = brnd.ni[-1,0]*1E-19
+                    solbc = brnd.ni[-1, 0]*1E-19
                 elif j==1:
-                    solbc = brnd.ne[-1,0]*1E-19
+                    solbc = brnd.ne[-1, 0]*1E-19
                 elif j==2:
-                    solbc = brnd.Te_kev[-1,0]
+                    solbc = brnd.Te_kev[-1, 0]
                 else:
-                    solbc = brnd.Te_kev[-1,0]
+                    solbc = brnd.Te_kev[-1, 0]
                 
                 if ptinsol:
                     bcval[i] = solbc
@@ -179,12 +179,12 @@ class mil_sol_brnd():
                 if ptinwall:
                     bcval[i] = solbc/100.0
                     
-            mask = (CellVariable(mesh=m,value=mask_array)==1)
+            mask = (CellVariable(mesh=m, value=mask_array)==1)
             
             largeValue = 1e+10
-            value = CellVariable(mesh=m,value=bcval)
+            value = CellVariable(mesh=m, value=bcval)
             eqn = DiffusionTerm(coeff=1.0) - ImplicitSourceTerm(largeValue * mask) + largeValue * mask * value - 200.0*(var - 0.06)*var 
-            print ("solving for quantity: ",j)
+            print ("solving for quantity: ", j)
             eqn.solve(var)
             
             if j==0 or j == 1:
@@ -192,17 +192,17 @@ class mil_sol_brnd():
             else:
                 var_final = var.value
     
-            self.sol_param = np.column_stack((self.sol_param,var_final))
+            self.sol_param = np.column_stack((self.sol_param, var_final))
     
         #ADD DENSITIES AND TEMPERATURES ALONG THE BOUNDARY TO sol_param
         #FOR INCLUSION IN THE 2D INTERPOLATION
-        nibc = np.asarray(wallx)*0 + brnd.ni[-1,0]
-        nebc = np.asarray(wallx)*0 + brnd.ne[-1,0]
-        Tibc = np.asarray(wallx)*0 + brnd.Ti_kev[-1,0]
-        Tebc = np.asarray(wallx)*0 + brnd.Te_kev[-1,0]
+        nibc = np.asarray(wallx)*0 + brnd.ni[-1, 0]
+        nebc = np.asarray(wallx)*0 + brnd.ne[-1, 0]
+        Tibc = np.asarray(wallx)*0 + brnd.Ti_kev[-1, 0]
+        Tebc = np.asarray(wallx)*0 + brnd.Te_kev[-1, 0]
         
-        solbc_array = np.column_stack((wallx,wally,nibc,nebc,Tibc,Tebc))
-        self.sol_param = np.vstack((self.sol_param,solbc_array))
+        solbc_array = np.column_stack((wallx, wally, nibc, nebc, Tibc, Tebc))
+        self.sol_param = np.vstack((self.sol_param, solbc_array))
         
             
         viewer = Viewer(vars=var, datamin=0., datamax=np.amax(var_final))

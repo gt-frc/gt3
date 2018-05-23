@@ -13,7 +13,7 @@ import re
 import sys
 from scipy.interpolate import interp1d
 
-class beamdep():
+class beamdep:
     """
     Methods:
     prep_nbi_infile
@@ -73,9 +73,9 @@ class beamdep():
     
     """
     
-    def __init__(self,inp,core):
+    def __init__(self, inp, core):
         sys.dont_write_bytecode = True 
-        self.prep_nbi_infile(inp,core)
+        self.prep_nbi_infile(inp, core)
         #call nbeams. Note to those familiar with the old nbeams, I modified
         #the source code to take the input file as a commandline argument. - MH
         try:
@@ -86,12 +86,12 @@ class beamdep():
             except:
                 print 'Unable to find nbeams executable. Stopping.'
                 sys.exit()
-        self.read_nbi_outfile(inp,core)
+        self.read_nbi_outfile(inp, core)
         pass
     
-    def prep_nbi_infile(self,inp,core):
-        #f1=open(inp.nbeams_loc+"inbeams.dat","w")
-        f=open("inbeams.dat","w")
+    def prep_nbi_infile(self, inp, core):
+        #f1=open(inp.nbeams_loc+"inbeams.dat", "w")
+        f=open("inbeams.dat", "w")
         f.write("$nbin\n")
         f.write("nbeams = 1\n")
         f.write("inbfus = 1\n")
@@ -108,7 +108,7 @@ class beamdep():
         f.write("bzpos = 0.0\n")
         f.write("nbptype = 1\n")
         f.write("maxiter = 2\n")
-        f.write("pwrfrac(1,1) = "+str(inp.pwrfrac1)+"   "+str(inp.pwrfrac2)+"   "+str(inp.pwrfrac3)+"\n")
+        f.write("pwrfrac(1, 1) = "+str(inp.pwrfrac1)+"   "+str(inp.pwrfrac2)+"   "+str(inp.pwrfrac3)+"\n")
         f.write("a = "+str(core.a)+"\n")
         f.write("r0 = "+str(core.R0_a)+"\n")
         f.write("b0 = "+str(inp.bknot)+"\n")
@@ -120,50 +120,50 @@ class beamdep():
         f.write("aion = 2.0 12.0\n")
         f.write("zion = 1.0 6.0\n")
         
-        rho_nbi = np.linspace(0,1,51)
+        rho_nbi = np.linspace(0, 1, 51)
         
-        ni_nbi = interp1d(core.rho[:,0],core.ni[:,0])(rho_nbi)
-        ne_nbi = interp1d(core.rho[:,0],core.ne[:,0])(rho_nbi)
-        Ti_nbi = interp1d(core.rho[:,0],core.Ti_kev[:,0])(rho_nbi)
-        Te_nbi = interp1d(core.rho[:,0],core.Te_kev[:,0])(rho_nbi)
+        ni_nbi = interp1d(core.rho[:, 0], core.ni[:, 0])(rho_nbi)
+        ne_nbi = interp1d(core.rho[:, 0], core.ne[:, 0])(rho_nbi)
+        Ti_nbi = interp1d(core.rho[:, 0], core.Ti_kev[:, 0])(rho_nbi)
+        Te_nbi = interp1d(core.rho[:, 0], core.Te_kev[:, 0])(rho_nbi)
         
-        for i,v in enumerate(rho_nbi):
-            f.write('ni20('+str(i+1)+',1) = '+str(ni_nbi[i]*1E-20)+'\n')
-        for i,v in enumerate(rho_nbi):
+        for i, v in enumerate(rho_nbi):
+            f.write('ni20('+str(i+1)+', 1) = '+str(ni_nbi[i]*1E-20)+'\n')
+        for i, v in enumerate(rho_nbi):
             f.write('ne20('+str(i+1)+') = '+str(ne_nbi[i]*1E-20)+'\n')
-        for i,v in enumerate(rho_nbi):
+        for i, v in enumerate(rho_nbi):
             f.write('tikev('+str(i+1)+') = '+str(Ti_nbi[i])+'\n')
-        for i,v in enumerate(rho_nbi):
+        for i, v in enumerate(rho_nbi):
             f.write('tekev('+str(i+1)+') = '+str(Te_nbi[i])+'\n')
         f.write("$end\n")
         f.close()
     
-    def read_nbi_outfile(self,inp,brnd):
+    def read_nbi_outfile(self, inp, brnd):
         with open(os.getcwd() + '/outbeams.dat', 'r') as f:
             for count, line in enumerate(f):
                 if line.startswith(" Total Absorbed Power"):
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.P_abs_tot = float(result)
                     except:
                         self.P_abs_tot = np.NaN
 
                 if line.startswith(" Total Lost Power"):
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.P_lst_tot = float(result)
                     except:
                         self.P_lst_tot = np.NaN
 
                 if line.startswith(" Total NB Driven Current"):
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.I_nbi_tot = float(result)
                     except:
                         self.I_nbi_tot = np.NaN
                         
                 if line.startswith(" Total NBCD Efficiency"):
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.I_nbi_eff = float(result)
                     except:
@@ -171,21 +171,21 @@ class beamdep():
                         
 
                 if line.startswith(" Total Beam Beta"):
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.Beta_nbi_tot = float(result)
                     except:
                         self.Beta_nbi_tot = np.NaN
                         
                 if line.startswith(" Taus"):
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.Taus_nbi = float(result)
                     except:
                         self.Taus_nbi = np.NaN
                         
                 if line.startswith(" Volp"):
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.Volp_nbi = float(result)
                     except:
@@ -193,8 +193,8 @@ class beamdep():
 
                 if line.startswith(" Absorbed Power"):
                     #this will need to be modified for multiple beams
-                    print 'line = ',line
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    print 'line = ', line
+                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.P_abs_1 = float(result)
                     except:
@@ -203,7 +203,7 @@ class beamdep():
                 if line.startswith(" Lost Power"):                   
                     #this will need to be modified for multiple beams
                     
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.P_lst_1 = float(result)
                     except:
@@ -211,7 +211,7 @@ class beamdep():
                         
                 if line.startswith(" NB driven current"):
                     #this will need to be modified for multiple beams
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.I_nbi_1 = float(result)
                     except:
@@ -219,7 +219,7 @@ class beamdep():
                         
                 if line.startswith(" NBCD efficiency"):
                     #this will need to be modified for multiple beams
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.I_nbi_eff_1 = float(result)
                     except:
@@ -227,7 +227,7 @@ class beamdep():
                         
                 if line.startswith(" NBCD gamma"):
                     #this will need to be modified for multiple beams
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.I_nbi_gam_1 = float(result)
                     except:
@@ -235,7 +235,7 @@ class beamdep():
                         
                 if line.startswith("    energy group 1"):
                     #this will need to be modified for multiple beams
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.st_en1_1 = float(result)
                     except:
@@ -243,7 +243,7 @@ class beamdep():
                         
                 if line.startswith("    energy group 2"):
                     #this will need to be modified for multiple beams
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.st_en2_1 = float(result)
                     except:
@@ -251,7 +251,7 @@ class beamdep():
                         
                 if line.startswith("    energy group 3"):
                     #this will need to be modified for multiple beams
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.st_en3_1 = float(result)
                     except:
@@ -259,7 +259,7 @@ class beamdep():
                         
                 if line.startswith(" Total Beam-Target Fusion Power"):
                     #this will need to be modified for multiple beams
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.fus_pwr_bt = float(result)
                     except:
@@ -267,7 +267,7 @@ class beamdep():
                         
                 if line.startswith(" Total Power to Charged Particles"):
                     #this will need to be modified for multiple beams
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.cp_pwr_tot = float(result)
                     except:
@@ -275,7 +275,7 @@ class beamdep():
                         
                 if line.startswith(" Total DT Neutron Rate"):
                     #this will need to be modified for multiple beams
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.rate_dt_n = float(result)
                     except:
@@ -283,38 +283,38 @@ class beamdep():
                         
                 if line.startswith(" Total DD Neutron Rate"):
                     #this will need to be modified for multiple beams
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*',line).group(1)
+                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.rate_dd_n = float(result)
                     except:
                         self.rate_dd_n = np.NaN
                         
         with open(os.getcwd() + '/outbeams.dat', 'r') as f:
-            data = f.read().replace('\n',' ')
+            data = f.read().replace('\n', ' ')
             #print data
-            result = re.match(r'.*hofr_3 *((?:(?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)? +)|(?:NaN +))+) +Pitch.*',data).group(1)
-            array = np.reshape(np.asarray(result.split(),dtype=float),(-1,4))
-            self.dep_prof1  = interp1d(array[:,0],array[:,1])(brnd.rho)
-            self.dep_prof2  = interp1d(array[:,0],array[:,2])(brnd.rho)
-            self.dep_prof3  = interp1d(array[:,0],array[:,3])(brnd.rho)
+            result = re.match(r'.*hofr_3 *((?:(?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)? +)|(?:NaN +))+) +Pitch.*', data).group(1)
+            array = np.reshape(np.asarray(result.split(), dtype=float), (-1, 4))
+            self.dep_prof1  = interp1d(array[:, 0], array[:, 1])(brnd.rho)
+            self.dep_prof2  = interp1d(array[:, 0], array[:, 2])(brnd.rho)
+            self.dep_prof3  = interp1d(array[:, 0], array[:, 3])(brnd.rho)
 
-            result = re.match(r'.*zeta_3 *((?:(?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)? +)|(?:NaN +))+) +rho.*',data).group(1)
-            array = np.reshape(np.asarray(result.split(),dtype=float),(-1,4))
-            self.ptch_angl1 = interp1d(array[:,0],array[:,1])(brnd.rho)
-            self.ptch_angl2 = interp1d(array[:,0],array[:,2])(brnd.rho)
-            self.ptch_angl3 = interp1d(array[:,0],array[:,3])(brnd.rho)
+            result = re.match(r'.*zeta_3 *((?:(?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)? +)|(?:NaN +))+) +rho.*', data).group(1)
+            array = np.reshape(np.asarray(result.split(), dtype=float), (-1, 4))
+            self.ptch_angl1 = interp1d(array[:, 0], array[:, 1])(brnd.rho)
+            self.ptch_angl2 = interp1d(array[:, 0], array[:, 2])(brnd.rho)
+            self.ptch_angl3 = interp1d(array[:, 0], array[:, 3])(brnd.rho)
             
-            result = re.match(r'.*dA *((?:(?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)? +)|(?:NaN +))+) *',data).group(1)
-            array = np.reshape(np.asarray(result.split(),dtype=float),(-1,9))
-            self.jnbtot     = interp1d(array[:,0],array[:,1])(brnd.rho)
-            self.pNBe       = interp1d(array[:,0],array[:,2])(brnd.rho) # in MW/m^3
-            self.pNBi       = interp1d(array[:,0],array[:,3])(brnd.rho) # in MW/m^3
+            result = re.match(r'.*dA *((?:(?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)? +)|(?:NaN +))+) *', data).group(1)
+            array = np.reshape(np.asarray(result.split(), dtype=float), (-1, 9))
+            self.jnbtot     = interp1d(array[:, 0], array[:, 1])(brnd.rho)
+            self.pNBe       = interp1d(array[:, 0], array[:, 2])(brnd.rho) # in MW/m^3
+            self.pNBi       = interp1d(array[:, 0], array[:, 3])(brnd.rho) # in MW/m^3
             self.pNB_tot    = self.pNBe + self.pNBi
-            self.pNBe_dvol  = interp1d(array[:,0],array[:,2] * array[:,7])(brnd.rho) #in MW
-            self.pNBi_dvol  = interp1d(array[:,0],array[:,3] * array[:,7])(brnd.rho) #in MW
-            self.nbfast     = interp1d(array[:,0],array[:,4])(brnd.rho)
-            self.pressb     = interp1d(array[:,0],array[:,5])(brnd.rho)
-            self.pfusb      = interp1d(array[:,0],array[:,6])(brnd.rho)
-            self.dvol       = interp1d(array[:,0],array[:,7])(brnd.rho)
-            self.dA         = interp1d(array[:,0],array[:,8])(brnd.rho)
+            self.pNBe_dvol  = interp1d(array[:, 0], array[:, 2] * array[:, 7])(brnd.rho) #in MW
+            self.pNBi_dvol  = interp1d(array[:, 0], array[:, 3] * array[:, 7])(brnd.rho) #in MW
+            self.nbfast     = interp1d(array[:, 0], array[:, 4])(brnd.rho)
+            self.pressb     = interp1d(array[:, 0], array[:, 5])(brnd.rho)
+            self.pfusb      = interp1d(array[:, 0], array[:, 6])(brnd.rho)
+            self.dvol       = interp1d(array[:, 0], array[:, 7])(brnd.rho)
+            self.dA         = interp1d(array[:, 0], array[:, 8])(brnd.rho)
             

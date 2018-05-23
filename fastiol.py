@@ -9,7 +9,7 @@ import sys
 import numpy as np
 
 class fastiol():
-    def __init__(self,inp,brnd):
+    def __init__(self, inp, brnd):
         sys.dont_write_bytecode = True 
         self.F_orb = 0
         self.M_orb = 0
