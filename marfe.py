@@ -14,14 +14,14 @@ import sys
 class marfe:
     """
     """
-    def __init__(self, inp, core, nbi, imp, ntrl):
-        self.calc_marfe_denlim(inp, core, nbi, imp)
+    def __init__(self, inp, core, imp):
+        self.calc_marfe_denlim(inp, core, imp)
     
-    def calc_marfe_denlim(self, inp, core, nbi, imp):
+    def calc_marfe_denlim(self, inp, core, imp):
         """
         """
         # specified quantities
-        chi_r = 2.0
+        chi_r = 5.0
         nu = 5.0/2.0
         sv_ion = core.sv_ion
         sv_cx = core.sv_cx
@@ -39,19 +39,21 @@ class marfe:
         dsv_cxel_dT = core.dsv_cx_dT + core.dsv_el_dT
         
         # TODO: Generalize this to non carbon impurities. Refer to equations 14.39 in Stacey's book.
-        Ci2 = 1.56*(1.0+np.sqrt(2)*core.z_0)*(1.0+0.52*core.z_0) / \
-            ((1.0+2.65*core.z_0)*(1.0+0.285*core.z_0)*(core.z_0 + np.sqrt(0.5*(1.0+(1.0/6.0)))))
-        Ce2 = 1.5*(1.0 - 0.6934/1.3167**core.z_eff)
+        Ci2 = 1.56 * (1.0 + np.sqrt(2) * core.z_0) * (1.0 + 0.52 * core.z_0) / \
+            ((1 + 2.65 * core.z_0) * (1 + 0.285 * core.z_0) * (core.z_0 + np.sqrt(0.5 * (1 + (1/6)))))
+        Ce2 = 1.5 * (1 - 0.6934/1.3167**core.z_eff)
         C2 = Ce2 - core.z_0 * Ci2
         
         t1 = chi_r * (nu * L_T**-2 - (1.0 - C2) * L_T**-1 * L_n**-1)
-        t2 = fz*((nu + 1 - C2)*Lz/T - dLzdT)
+        t2 = fz * ((nu + 1 - C2) * Lz/T - dLzdT)
         t3 = f0 * (E_ion * sv_ion / T * (nu - T / sv_ion * dsv_ion_dT))
-        t4 = f0c * (3.0/2.0*(sv_cx + sv_el) * (nu-1.0-T*dsv_cxel_dT/(sv_cx + sv_el)))
+        t4 = f0c * (3.0/2.0 * (sv_cx + sv_el) * (nu-1.0-T*dsv_cxel_dT/(sv_cx + sv_el)))
 
         n_marfe = t1 / (t2 + t3 + t4)
         n_marfe_average = np.nanmean(n_marfe)
+
         print 'n_marfe_average = ', n_marfe_average
+
         n_marfe_edge = np.where(core.psi_norm > 0.5, n_marfe, np.nan)
         n_marfe_met = np.where((core.ni > n_marfe) & (n_marfe > 0) & (core.psi_norm > 0.5), core.ni-n_marfe, np.nan)
         
@@ -68,7 +70,6 @@ class marfe:
         ax2.axis('equal')
         ax2.set_title(r'$n_i$')
         cs2 = ax2.contourf(core.R, core.Z, np.log10(core.ni), 500)
-        # ax1.plot(core.R[-1, :], core.Z[-1, :], lw=1, color='red')
         ax2.plot(inp.wall_exp[:, 0], inp.wall_exp[:, 1], lw=1, color='black')
         marfe_fig1.colorbar(cs2, ax=ax2)
 
