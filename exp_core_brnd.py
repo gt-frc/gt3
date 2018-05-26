@@ -91,10 +91,10 @@ class exp_core_brnd():
         self.izn_rate_total = izn_rate_slow + izn_rate_thermal
 
     def update_Lz_data(self, Lz_slow, dLzdT_slow, Lz_thermal, dLzdT_thermal):
-        self.Lz_slow = np.zeros(self.rho.shape)
-        self.dLzdT_slow = np.zeros(self.rho.shape)
-        self.Lz_thermal = np.zeros(self.rho.shape)
-        self.dLzdT_thermal = np.zeros(self.rho.shape)
+        self.Lz_slow = Lz_slow
+        self.dLzdT_slow = dLzdT_slow
+        self.Lz_thermal = Lz_thermal
+        self.dLzdT_thermal = dLzdT_thermal
 
     def update_imprad_data(self, n_n_slow, n_n_thermal, izn_rate_slow, izn_rate_thermal):
         self.n_n_slow = n_n_slow
