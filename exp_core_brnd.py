@@ -23,6 +23,7 @@ def draw_contour_line(R, Z, array, val, pathnum):
     y = res[:, 1]
     return x, y
 
+
 def cut(line, distance):
     # Cuts a line in two at a distance from its starting point
     if distance <= 0.0 or distance >= 1.0:
@@ -88,6 +89,12 @@ class exp_core_brnd():
         self.izn_rate_slow = izn_rate_slow
         self.izn_rate_thermal = izn_rate_thermal
         self.izn_rate_total = izn_rate_slow + izn_rate_thermal
+
+    def update_Lz_data(self, Lz_slow, dLzdT_slow, Lz_thermal, dLzdT_thermal):
+        self.Lz_slow = np.zeros(self.rho.shape)
+        self.dLzdT_slow = np.zeros(self.rho.shape)
+        self.Lz_thermal = np.zeros(self.rho.shape)
+        self.dLzdT_thermal = np.zeros(self.rho.shape)
 
     def update_imprad_data(self, n_n_slow, n_n_thermal, izn_rate_slow, izn_rate_thermal):
         self.n_n_slow = n_n_slow
@@ -298,7 +305,6 @@ class exp_core_brnd():
                         self.core_ntrl_lines.append(LineString(np.column_stack((x[:-1], y[:-1]))))
                         break
 
-
     def core_main(self, inp, R_psi, Z_psi, psi, B_pol_raw):
         #define rho points
         try:
@@ -363,8 +369,8 @@ class exp_core_brnd():
             pass        
         
         try:
-            E_r_fit    = UnivariateSpline(inp.er_data[:, 0], inp.er_data[:, 1], k=5, s=2.0)
-            self.E_r   = E_r_fit(self.rho)
+            E_r_fit = UnivariateSpline(inp.er_data[:, 0], inp.er_data[:, 1], k=5, s=2.0)
+            self.E_r = E_r_fit(self.rho)
             self.E_pot = np.zeros(self.rho.shape)
             for i, rhoval in enumerate(rho1d):
                 self.E_pot[i] = E_r_fit.integral(rhoval, 1.0)
@@ -372,51 +378,51 @@ class exp_core_brnd():
             pass
         
         try:
-            self.fracz    = UnivariateSpline(inp.fracz_data[:, 0], inp.fracz_data[:, 1], k=5, s=2.0)(self.rho)
+            self.fracz = UnivariateSpline(inp.fracz_data[:, 0], inp.fracz_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
             self.fracz = np.zeros(self.rho.shape) + 0.025            
         self.nC = self.ne * self.fracz        
         self.z_0 = self.nC*6.0**2 / self.ni
         self.z_eff = (self.ni*1.0**2 + self.nC*6.0**2) / self.ne
         try:
-            self.fz1      = UnivariateSpline(inp.fz1_data[:, 0], inp.fz1_data[:, 1], k=5, s=2.0)(self.rho)
+            self.fz1 = UnivariateSpline(inp.fz1_data[:, 0], inp.fz1_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
             pass
         
         try:
-            self.q        = UnivariateSpline(inp.q_data[:, 0], inp.q_data[:, 1], k=5, s=2.0)(self.rho)
+            self.q = UnivariateSpline(inp.q_data[:, 0], inp.q_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
             pass
         
         try:
-            self.vpolC    = UnivariateSpline(inp.vpolC_data[:, 0], inp.vpolC_data[:, 1], k=5, s=2.0)(self.rho)
+            self.vpolC = UnivariateSpline(inp.vpolC_data[:, 0], inp.vpolC_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
             pass
         
         try:
-            self.vpolD    = UnivariateSpline(inp.vpolD_data[:, 0], inp.vpolD_data[:, 1], k=5, s=2.0)(self.rho)
+            self.vpolD = UnivariateSpline(inp.vpolD_data[:, 0], inp.vpolD_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
             pass
         
         try:
-            self.vtorC    = UnivariateSpline(inp.vtorC_data[:, 0], inp.vtorC_data[:, 1], k=5, s=2.0)(self.rho)
+            self.vtorC = UnivariateSpline(inp.vtorC_data[:, 0], inp.vtorC_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
             pass
         
         try:
-            self.vtorD    = UnivariateSpline(inp.vtorD_data[:, 0], inp.vtorD_data[:, 1], k=5, s=2.0)(self.rho)
+            self.vtorD = UnivariateSpline(inp.vtorD_data[:, 0], inp.vtorD_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
             pass
         
         try:
-            self.zbar2    = UnivariateSpline(inp.zbar2_data[:, 0], inp.zbar2_data[:, 1], k=5, s=2.0)(self.rho)
+            self.zbar2 = UnivariateSpline(inp.zbar2_data[:, 0], inp.zbar2_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
             pass
 
         #get parameters that depend on both rho and theta
-        self.R        = np.zeros(self.rho.shape)
-        self.Z        = np.zeros(self.rho.shape)
-        self.psi      = np.zeros(self.rho.shape)
+        self.R = np.zeros(self.rho.shape)
+        self.Z = np.zeros(self.rho.shape)
+        self.psi = np.zeros(self.rho.shape)
         self.psi_norm = np.zeros(self.rho.shape)
         
         #move along line between m_axis and obmp and define psi values corresponding to rho values
@@ -426,7 +432,7 @@ class exp_core_brnd():
             pt_coords = np.asarray(rho_line.interpolate(rhoval, normalized=True).coords)[0]
             init_coords = np.vstack((init_coords, pt_coords))
 
-        psi_vals      = griddata(np.column_stack((R_psi.flatten(), Z_psi.flatten())), 
+        psi_vals = griddata(np.column_stack((R_psi.flatten(), Z_psi.flatten())), 
                             psi.flatten(), 
                             init_coords, 
                             method='linear')
@@ -458,13 +464,13 @@ class exp_core_brnd():
                                                        3.0*sin(thetaval)+self.geo_axis[1]])])
                         int_pt = self.main_sep_line_closed.intersection(thetaline)
 
-                self.R[i, j]   = int_pt.x
-                self.Z[i, j]   = int_pt.y               
+                self.R[i, j] = int_pt.x
+                self.Z[i, j] = int_pt.y               
 
-        self.R[0]        = self.m_axis[0]        
-        self.Z[0]        = self.m_axis[1]     
+        self.R[0] = self.m_axis[0]        
+        self.Z[0] = self.m_axis[1]     
         self.psi_norm[0] = 0
-        self.B_p         = griddata(np.column_stack((R_psi.flatten(), Z_psi.flatten())), 
+        self.B_p = griddata(np.column_stack((R_psi.flatten(), Z_psi.flatten())), 
                                     B_pol_raw.flatten(), 
                                     (self.R, self.Z), 
                                     method='linear') 
@@ -524,13 +530,13 @@ class exp_core_brnd():
                               (self.R, self.Z), 
                               method='cubic')
 
-        self.Ti_J  = self.Ti_kev * 1.6021E-16
+        self.Ti_J = self.Ti_kev * 1.6021E-16
         self.Ti_ev = self.Ti_kev * 1E3
-        self.Te_J  = self.Te_kev * 1.6021E-16
+        self.Te_J = self.Te_kev * 1.6021E-16
         self.Te_ev = self.Te_kev * 1E3
-        self.dTi_J_dr  = self.dTi_kev_dr * 1.6021E-16
+        self.dTi_J_dr = self.dTi_kev_dr * 1.6021E-16
         self.dTi_ev_dr = self.dTi_kev_dr * 1E3
-        self.dTe_J_dr  = self.dTe_kev_dr * 1.6021E-16
+        self.dTe_J_dr = self.dTe_kev_dr * 1.6021E-16
         self.dTe_ev_dr = self.dTe_kev_dr * 1E3
         self.L_ni = -self.dni_dr / self.ni
         self.L_ne = -self.dne_dr / self.ne
@@ -541,14 +547,23 @@ class exp_core_brnd():
         #plt.colorbar()
         #sys.exit()
             
-        #create neutrals variables. These will remain zero unless set by exp_neutpy_prep or read_ntrl_data modules
-        self.n_n_slow       = np.zeros(self.rho.shape)
-        self.n_n_thermal      = np.zeros(self.rho.shape)
-        self.n_n_total      = np.zeros(self.rho.shape)
+        #create neutrals-related variables. These will remain zero unless set by exp_neutpy_prep or read_ntrl_data modules
+        self.n_n_slow = np.zeros(self.rho.shape)
+        self.n_n_thermal = np.zeros(self.rho.shape)
+        self.n_n_total = np.zeros(self.rho.shape)
         
-        self.izn_rate_slow  = np.zeros(self.rho.shape)
-        self.izn_rate_thermal  = np.zeros(self.rho.shape)
-        self.izn_rate_total    = np.zeros(self.rho.shape)
+        self.izn_rate_slow = np.zeros(self.rho.shape)
+        self.izn_rate_thermal = np.zeros(self.rho.shape)
+        self.izn_rate_total = np.zeros(self.rho.shape)
+
+        self.T_n_slow = np.full(self.rho.shape, 0.002)
+        self.T_n_thermal = self.Ti_kev
+
+        # create Lz-related variables. These will remain zero unless set by the ImpRad module
+        self.Lz_slow = np.zeros(self.rho.shape)
+        self.dLzdT_slow = np.zeros(self.rho.shape)
+        self.Lz_thermal = np.zeros(self.rho.shape)
+        self.dLzdT_thermal = np.zeros(self.rho.shape)
 
     def core_nT_ntrl(self, inp, R, Z, psi):
         #CREATE ARRAYS OF POINTS, DENSITIES AND TEMPERATURES FOR THE NEUTRALS CALCULATION
@@ -562,8 +577,8 @@ class exp_core_brnd():
         
         ##########################################
         #Calculate n, T throughout the core plasma using radial profile input files, uniform on flux surface
-        ni     = UnivariateSpline(inp.ni_data[:, 0], inp.ni_data[:, 1], k=5, s=2.0)
-        ne     = UnivariateSpline(inp.ne_data[:, 0], inp.ne_data[:, 1], k=5, s=2.0)
+        ni = UnivariateSpline(inp.ni_data[:, 0], inp.ni_data[:, 1], k=5, s=2.0)
+        ne = UnivariateSpline(inp.ne_data[:, 0], inp.ne_data[:, 1], k=5, s=2.0)
         Ti_kev = UnivariateSpline(inp.Ti_data[:, 0], inp.Ti_data[:, 1], k=5, s=2.0)
         Te_kev = UnivariateSpline(inp.Te_data[:, 0], inp.Te_data[:, 1], k=5, s=2.0)
         
@@ -682,34 +697,34 @@ class exp_core_brnd():
                     xi_2 = (B_G**2.0/(4.0*theta_2))**(1.0/3.0)
                     sigv_2 = C1_2 * theta_2 * np.sqrt(xi_2/(m_rc2 * Ti**3.0)) * np.exp(-3.0*xi_2)                
                     
-                    sigv = (0.5*sigv_1 + 0.5*sigv_2) / 1.0E6 #convert from cm^3/s to m^3/s                
+                    sigv = (0.5*sigv_1 + 0.5*sigv_2) / 1.0E6  # convert from cm^3/s to m^3/s
                 return sigv
             
-            #create logspace over the relevant temperature range
-            #(bosch hale technically only valid over 0.2 - 100 kev)
-            Ti_range            = np.logspace(-1, 2, 1000) #values in kev
-            sigv_fus_range      = sigv(Ti_range, mode='dd') #in m^3/s
-            sigv_fus_interp     = UnivariateSpline(Ti_range*1.0E3*1.6021E-19, sigv_fus_range, s=0) #converted to Joules
-            self.sv_fus       = sigv_fus_interp(self.Ti_J)
-            self.dsv_fus_dT   = sigv_fus_interp.derivative()(self.Ti_J)
-            self.dsv_fus_dT_eq9   = sigv_fus_interp.derivative()(5.0E2*1.6021E-19)
+            # create logspace over the relevant temperature range
+            # (bosch hale technically only valid over 0.2 - 100 kev)
+            Ti_range = np.logspace(-1, 2, 1000)  # values in kev
+            sigv_fus_range = sigv(Ti_range, mode='dd')  # in m^3/s
+            sigv_fus_interp = UnivariateSpline(Ti_range*1.0E3*1.6021E-19, sigv_fus_range, s=0)  # converted to Joules
+            self.sv_fus = sigv_fus_interp(self.Ti_J)
+            self.dsv_fus_dT = sigv_fus_interp.derivative()(self.Ti_J)
+            self.dsv_fus_dT_eq9 = sigv_fus_interp.derivative()(5.0E2*1.6021E-19)
         
         def calc_sigv_ion():
-            #TODO: configure so it can use any of the cross section libraries
-            #currently using the Stacey-Thomas cross sections
-            T_exps_fit          = np.array([-1, 0, 1, 2, 3, 4, 5])
-            sigv_exps_fit       = np.array([-2.8523E+01, -1.7745E+01, -1.3620E+01, 
+            # TODO: configure so it can use any of the cross section libraries
+            # currently using the Stacey-Thomas cross sections
+            T_exps_fit = np.array([-1, 0, 1, 2, 3, 4, 5])
+            sigv_exps_fit = np.array([-2.8523E+01, -1.7745E+01, -1.3620E+01, 
                                             -1.3097E+01, -1.3301E+01, -1.3301E+01, -1.3301E+01])
-            interp1             = UnivariateSpline(T_exps_fit, sigv_exps_fit, s=0)
+            interp1 = UnivariateSpline(T_exps_fit, sigv_exps_fit, s=0)
             
-            T_exps_range        = np.linspace(-1, 5, 1000)
-            sigv_vals_range     = 10.0**interp1(T_exps_range) #in m^3/s
+            T_exps_range = np.linspace(-1, 5, 1000)
+            sigv_vals_range = 10.0**interp1(T_exps_range) # in m^3/s
             
-            T_vals_range        = np.logspace(-1, 5, 1000)*1.6021E-19 #in joules
-            interp2             = UnivariateSpline(T_vals_range, sigv_vals_range, s=0)
+            T_vals_range = np.logspace(-1, 5, 1000)*1.6021E-19 # in joules
+            interp2 = UnivariateSpline(T_vals_range, sigv_vals_range, s=0)
             
-            self.sv_ion       = interp2(self.Ti_J)
-            self.dsv_ion_dT   = interp2.derivative()(self.Ti_J)
+            self.sv_ion = interp2(self.Ti_J)
+            self.dsv_ion_dT = interp2.derivative()(self.Ti_J)
 
         def calc_svel():
         
@@ -722,25 +737,25 @@ class exp_core_brnd():
                 
             interp1 = interp2d(tint, tnnt, elast)
             
-            Ti_exps   = np.linspace(-1, 3, 100)
-            Tn_exps   = np.linspace( 0, 2, 100)
-            svel_vals = 10.0**(interp1(Ti_exps, Tn_exps)) #in m^3/s
+            Ti_exps = np.linspace(-1, 3, 100)
+            Tn_exps = np.linspace( 0, 2, 100)
+            svel_vals = 10.0**(interp1(Ti_exps, Tn_exps)) # in m^3/s
             
-            Ti_vals   = np.logspace(-1, 3, 100)*1.6021E-19 #in joules
-            Tn_vals   = np.logspace( 0, 2, 100)*1.6021E-19 #in joules
+            Ti_vals = np.logspace(-1, 3, 100)*1.6021E-19 # in joules
+            Tn_vals = np.logspace( 0, 2, 100)*1.6021E-19 # in joules
 
-            dsvel_dTi_vals  = np.gradient(svel_vals, Ti_vals, axis=0)
+            dsvel_dTi_vals = np.gradient(svel_vals, Ti_vals, axis=0)
 
             Ti_vals2d, Tn_vals2d = np.meshgrid(Ti_vals, Tn_vals)
             
             Ti_mod = np.where(self.Ti_ev>1E3, 1E3 * 1.6021E-19, self.Ti_ev*1.6021E-19)
             Tn_mod = np.zeros(Ti_mod.shape) + 2.0*1.6021E-19
 
-            self.sv_el       = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+            self.sv_el = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
                                        svel_vals.flatten(), 
                                        (Ti_mod, Tn_mod), 
                                        method='linear', rescale=False)
-            self.dsv_el_dT   = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+            self.dsv_el_dT = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
                                        dsvel_dTi_vals.flatten(), 
                                        (Ti_mod, Tn_mod), 
                                        method='linear', rescale=False)
@@ -756,34 +771,34 @@ class exp_core_brnd():
                 
             interp1 = interp2d(tint, tnnt, cx)
             
-            Ti_exps   = np.linspace(-1, 3, 100)
-            Tn_exps   = np.linspace( 0, 2, 100)
-            svcx_vals = 10.0**(interp1(Ti_exps, Tn_exps)) #in m^3/s
+            Ti_exps = np.linspace(-1, 3, 100)
+            Tn_exps = np.linspace( 0, 2, 100)
+            svcx_vals = 10.0**(interp1(Ti_exps, Tn_exps)) # in m^3/s
             
-            Ti_vals   = np.logspace(-1, 3, 100)*1.6021E-19 #in joules
-            Tn_vals   = np.logspace( 0, 2, 100)*1.6021E-19 #in joules
+            Ti_vals = np.logspace(-1, 3, 100)*1.6021E-19 # in joules
+            Tn_vals = np.logspace( 0, 2, 100)*1.6021E-19 # in joules
 
-            dsvcx_dTi_vals  = np.gradient(svcx_vals, Ti_vals, axis=0)
+            dsvcx_dTi_vals = np.gradient(svcx_vals, Ti_vals, axis=0)
 
             Ti_vals2d, Tn_vals2d = np.meshgrid(Ti_vals, Tn_vals)
             
             Ti_mod = np.where(self.Ti_ev>1E3, 1E3 * 1.6021E-19, self.Ti_ev*1.6021E-19)
             Tn_mod = np.zeros(Ti_mod.shape) + 2.0*1.6021E-19
 
-            self.sv_cx       = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+            self.sv_cx = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
                                        svcx_vals.flatten(), 
                                        (Ti_mod, Tn_mod), 
                                        method='linear', rescale=False)
             
-            self.dsv_cx_dT   = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
+            self.dsv_cx_dT = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())), 
                                        dsvcx_dTi_vals.flatten(), 
                                        (Ti_mod, Tn_mod), 
                                        method='linear', rescale=False)
 
         def calc_svrec_st(): 
-            #TODO: check this calculation. -MH
+            # TODO: check this calculation. -MH
             znint = np.array([16, 18, 20, 21, 22])
-            Tint  = np.array([-1, 0, 1, 2, 3])
+            Tint = np.array([-1, 0, 1, 2, 3])
         
             rec = np.array([[-1.7523E+01, -1.6745E+01, -1.5155E+01, -1.4222E+01, -1.3301E+01], 
                             [-1.8409E+01, -1.8398E+01, -1.8398E+01, -1.7886E+01, -1.7000E+01], 
@@ -793,23 +808,23 @@ class exp_core_brnd():
             
             interp1 = interp2d(znint, Tint, rec)
             
-            zni_exps   = np.linspace(16, 22, 100)
-            Ti_exps    = np.linspace(-1, 3, 100)
+            zni_exps = np.linspace(16, 22, 100)
+            Ti_exps = np.linspace(-1, 3, 100)
             svrec_vals = 10.0**(interp1(zni_exps, Ti_exps)) #in m^3/s
             
-            zni_vals   = np.logspace(16, 22, 100)
-            Ti_vals    = np.logspace(-1, 3, 100)*1.6021E-19 #in joules
+            zni_vals = np.logspace(16, 22, 100)
+            Ti_vals = np.logspace(-1, 3, 100)*1.6021E-19 #in joules
             
-            dsvrec_dTi_vals  = np.gradient(svrec_vals, Ti_vals, axis=0)
+            dsvrec_dTi_vals = np.gradient(svrec_vals, Ti_vals, axis=0)
                 
             zni_vals2d, Ti_vals2d = np.meshgrid(zni_vals, Ti_vals)
             
             zni_mod = np.where(self.ni>1E22, 1E22, self.ni)
             zni_mod = np.where(self.ni<1E16, 1E16, zni_mod)
-            Ti_mod  = np.where(self.Ti_ev>1E3, 1E3 * 1.6021E-19, self.Ti_ev*1.6021E-19)
-            Ti_mod  = np.where(self.Ti_ev<1E-1, 1E-1 * 1.6021E-19, Ti_mod)
+            Ti_mod = np.where(self.Ti_ev>1E3, 1E3 * 1.6021E-19, self.Ti_ev*1.6021E-19)
+            Ti_mod = np.where(self.Ti_ev<1E-1, 1E-1 * 1.6021E-19, Ti_mod)
                 
-            self.sv_rec     = griddata(np.column_stack((zni_vals2d.flatten(), Ti_vals2d.flatten())), 
+            self.sv_rec = griddata(np.column_stack((zni_vals2d.flatten(), Ti_vals2d.flatten())), 
                                        svrec_vals.flatten(), 
                                        (zni_mod, Ti_mod), 
                                        method='linear', rescale=False)

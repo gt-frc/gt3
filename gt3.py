@@ -10,7 +10,7 @@ from exp_neutpy_prep import exp_neutpy_prep
 from thermaliol import thermaliol
 from read_infile import read_infile
 from fastiol import fastiol
-from imp_rad import imp_rad
+from imp_rad import ImpRad
 from exp_core_brnd import exp_core_brnd
 from exp_sol_brnd import exp_sol_brnd
 from exp_pfr_brnd import exp_pfr_brnd
@@ -62,7 +62,8 @@ class gt3:
     def coreandimp(self):
         ntrl_switch = 0
         self.core = exp_core_brnd(self.inp, ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp, ntrl_switch)
-        self.imp = imp_rad(self.inp, self.core)
+        print 'starting impurity calculations'
+        self.imp = ImpRad(self.inp, self.core)
         
     def ntrlsonly(self):
         ntrl_switch = self.ntrl_switch
@@ -91,11 +92,11 @@ class gt3:
             self.pfr = exp_pfr_brnd(self.inp, self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
             self.ntrl = exp_neutpy_prep(self.inp, self.core, self.sol, self.pfr)
         self.nbi = beamdep(self.inp, self.core)
-        self.imp = imp_rad(self.inp, self.core)
+        self.imp = ImpRad(self.inp, self.core)
         # self.rtrn = rad_trans(self.inp, self.core, self.tiol, self.fiol, self.ntrl, self.nbi)
         # self.ti = thermal_inst(self.inp, self.core, self.nbi, self.imp, self.ntrl)
         self.dl = dens_lim(self.inp, self.core, self.nbi, self.imp, self.ntrl)
-        self.mar = marfe(self.inp, self.core, self.nbi, self.imp, self.ntrl)
+        self.mar = marfe(self.inp, self.core, self.imp)
 
     def allthethings(self):
         ntrl_switch = 1
@@ -103,7 +104,7 @@ class gt3:
         self.sol = exp_sol_brnd(self.inp, self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
         self.pfr = exp_pfr_brnd(self.inp, self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
         self.ntrl = exp_neutpy_prep(self.inp, self.core, self.sol, self.pfr)
-        self.imp = imp_rad(self.inp, self.core)
+        self.imp = ImpRad(self.inp, self.core)
         self.tiol = thermaliol(self.inp, self.core)
         self.fiol = fastiol(self.inp, self.core)
         self.nbi = beamdep(self.inp, self.core)
@@ -152,8 +153,9 @@ if __name__ == "__main__":
     myshot = gt3('144977_3000/togt3_d3d_144977_3000')
     # myshot.coreonly()
     # myshot.coreandiol()
-    myshot.therm_instab()
+    #myshot.therm_instab()
     # myshot.ntrlsonly()
+    myshot.coreandimp()
     # plt.axis('equal')
     # plt.contourf(myshot.core.R, myshot.core.Z, np.log10(myshot.core.n_n_total), 500)
     # plt.colorbar()

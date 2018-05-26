@@ -95,8 +95,6 @@ class read_infile():
         self.invars = {}
         self.invars["exp_inp"]          = ["bool", r0di]
 
-        
-
         #EXPERIMENTAL BACKGROUND PARAMETERS
         self.invars["rhopts"]           = ["int", r0di]
         self.invars["edge_rho"]         = ["float", r0df]
@@ -211,7 +209,17 @@ class read_infile():
         self.invars["epsknot"]          = ["float", r0df]
         self.invars["eps_sep"]          = ["float", r0df]
         self.invars["shftknot"]         = ["float", r0df]
-    
+
+        #ADPAK PARAMETERS
+        self.invars["z_imp"]         = ["int", r0di]
+        self.invars["laden"]         = ["int", r0di]
+        self.invars["ladtip"]         = ["int", r0di]
+        self.invars["leci"]         = ["int", r0di]
+        self.invars["ldrmlt"]         = ["int", r0di]
+        self.invars["ncxopt"]         = ["int", r0di]
+        self.invars["anneut"]         = ["float", r0df]
+        self.invars["vneut"]         = ["float", r0df]
+
         self.in_prof = {}
         self.in_prof["er_file"]         = ["str", r0ds, 'er_data']
         self.in_prof["jr_file"]         = ["str", r0ds, 'jr_data']
