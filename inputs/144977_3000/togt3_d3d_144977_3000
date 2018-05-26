@@ -127,6 +127,16 @@ delma = .005
 xnuioni = 0.0
 xnuati = 0.0
 
+# ADPAK PARAMETERS
+z_imp = 6
+laden = 1
+ladtip = 1
+leci = 1
+ldrmlt = 2
+ncxopt = 1
+anneut = 1.0E9
+vneut = 0.001
+
 #NEUTRAL BEAM DEPOSITION
 #nbeams_loc = /home/max/Nextcloud/Max/max_phd/Codes/nbeams/bin/Release/
 ebeam = 76.91 
