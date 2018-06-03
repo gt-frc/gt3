@@ -9,7 +9,6 @@ import numpy as np
 from math import pi, cos
 import sys
 import matplotlib.pyplot as plt
-#from math import sqrt
 class rad_trans():
     """
     

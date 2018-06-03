@@ -151,15 +151,15 @@ class read_ntrl_data():
 
 if __name__ == "__main__":
     myshot = gt3('144977_3000/togt3_d3d_144977_3000')
-    # myshot.coreonly()
+    myshot.coreonly()
     # myshot.coreandiol()
-    #myshot.therm_instab()
+    # myshot.therm_instab()
     # myshot.ntrlsonly()
-    myshot.coreandimp()
+    # myshot.coreandimp()
     # plt.axis('equal')
     # plt.contourf(myshot.core.R, myshot.core.Z, np.log10(myshot.core.n_n_total), 500)
     # plt.colorbar()
-    # sys.exit()
+    # sys.exi#t()
     
     # fig1 = plt.figure(figsize=(6, 8))
     # ax1 = fig1.add_subplot(1, 1, 1)
