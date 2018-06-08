@@ -4,10 +4,11 @@
 """
 import sys
 import numpy as np
+from collections import namedtuple
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 from exp_neutpy_prep import exp_neutpy_prep
-from thermaliol import thermaliol
+from thermaliol import iol_calc
 from read_infile import read_infile
 from fastiol import fastiol
 from imp_rad import ImpRad
@@ -56,8 +57,7 @@ class gt3:
     def coreandiol(self):
         ntrl_switch = 0
         self.core = exp_core_brnd(self.inp, ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp, ntrl_switch)
-        self.tiol = thermaliol(self.inp, self.core)
-        self.fiol = fastiol(self.inp, self.core)
+        self.iol = iol_calc(self.inp, self.core)
         
     def coreandimp(self):
         ntrl_switch = 0
@@ -69,7 +69,7 @@ class gt3:
         ntrl_switch = self.ntrl_switch
         if ntrl_switch == 1:  # neutrals output file already exists. Read it in. No need to run neutpy.
             self.core = exp_core_brnd(self.inp, ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp, ntrl_switch)
-            self.ntrl = read_ntrl_data(self.inp, self.core)
+            self.ntrl = ReadNtrlData(self.inp, self.core)
         elif ntrl_switch == 2:  # need to run neutpy
             self.core = exp_core_brnd(self.inp, ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp, ntrl_switch)
             self.sol = exp_sol_brnd(self.inp, self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
@@ -85,7 +85,7 @@ class gt3:
         ntrl_switch = 1
         if ntrl_switch == 1:  # neutrals output file already exists. Read it in. No need to run neutpy.
             self.core = exp_core_brnd(self.inp, ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp, ntrl_switch)
-            self.ntrl = read_ntrl_data(self.inp, self.core)
+            self.ntrl = ReadNtrlData(self.inp, self.core)
         elif ntrl_switch == 2:  # need to run neutpy
             self.core = exp_core_brnd(self.inp, ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp, ntrl_switch)
             self.sol = exp_sol_brnd(self.inp, self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
@@ -105,8 +105,7 @@ class gt3:
         self.pfr = exp_pfr_brnd(self.inp, self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
         self.ntrl = exp_neutpy_prep(self.inp, self.core, self.sol, self.pfr)
         self.imp = ImpRad(self.inp, self.core)
-        self.tiol = thermaliol(self.inp, self.core)
-        self.fiol = fastiol(self.inp, self.core)
+        self.iol = iol_calc(self.inp, self.core)
         self.nbi = beamdep(self.inp, self.core)
         self.rtrn = rad_trans(self.inp, self.core, self.tiol, self.fiol, self.ntrl, self.nbi)
         # self.ti = thermal_inst(self.inp, self.core, self.nbi, self.imp, self.rtrn)
@@ -116,43 +115,29 @@ class gt3:
         pass
 
 
-class read_ntrl_data():
+class ReadNtrlData:
     def __init__(self, inp, core):
         print 'reading ntrl data'
         ntrl_data = np.loadtxt(inp.neutfile_loc, skiprows=1)
-        self.ntrl_R = ntrl_data[:, 0]
-        self.ntrl_Z = ntrl_data[:, 1]
-        self.n_n_slow = ntrl_data[:, 2]
-        self.n_n_thermal = ntrl_data[:, 3]
-        self.n_n_total = ntrl_data[:, 4]
-        self.izn_rate_slow = ntrl_data[:, 5]
-        self.izn_rate_thermal = ntrl_data[:, 6]
-        self.izn_rate_total = ntrl_data[:, 7]
-        
-        n_n_slow = griddata(np.column_stack((self.ntrl_R, self.ntrl_Z)), 
-                            self.n_n_slow, 
-                            (core.R, core.Z), 
-                            method='linear')
-        n_n_thermal = griddata(np.column_stack((self.ntrl_R, self.ntrl_Z)), 
-                               self.n_n_thermal, 
-                               (core.R, core.Z), 
-                               method='linear')
-        izn_rate_slow = griddata(np.column_stack((self.ntrl_R, self.ntrl_Z)), 
-                                 self.izn_rate_slow, 
-                                 (core.R, core.Z), 
-                                 method='linear')
-        izn_rate_thermal = griddata(np.column_stack((self.ntrl_R, self.ntrl_Z)), 
-                                    self.izn_rate_thermal, 
-                                    (core.R, core.Z), 
-                                    method='linear')
-        
-        core.update_ntrl_data(n_n_slow, n_n_thermal, izn_rate_slow, izn_rate_thermal)
+
+        dict = {}
+        dict['R'] = ntrl_data[:, 0]
+        dict['Z'] = ntrl_data[:, 1]
+        dict['n_n_slow'] = ntrl_data[:, 2]
+        dict['n_n_thermal'] = ntrl_data[:, 3]
+        dict['izn_rate_slow'] = ntrl_data[:, 5]
+        dict['izn_rate_thermal'] = ntrl_data[:, 6]
+
+        data = namedtuple('data', dict.keys())(*dict.values())
+        core.update_ntrl_data(data)
 
 
 if __name__ == "__main__":
-    myshot = gt3('144977_3000/togt3_d3d_144977_3000')
-    myshot.coreonly()
-    # myshot.coreandiol()
+    d3d_144977_3000 = gt3('144977_3000/togt3_d3d_144977_3000_mil')
+    iter_shot = gt3('iter/togt3_iter_mil')
+    # myshot.coreonly()
+    d3d_144977_3000.coreandiol()
+    iter_shot.coreandiol()
     # myshot.therm_instab()
     # myshot.ntrlsonly()
     # myshot.coreandimp()
@@ -168,7 +153,9 @@ if __name__ == "__main__":
     # ax1.plot(myshot.core.R[-1, :], myshot.core.Z[-1, :])
     # ax1.plot(myshot.inp.lim_vertex_closed[:, 0], myshot.inp.lim_vertex_closed[:, 1])
     # ax1.plot(myshot.inp.sep_exp_closed[:, 0], myshot.inp.sep_exp_closed[:, 1])
-    
+
+    myshot = iter_shot
+
     fontsize = 12
     fig2 = plt.figure(figsize=(7, 10))
     rows = 4
@@ -250,7 +237,7 @@ if __name__ == "__main__":
         ax10 = fig2.add_subplot(rows, cols, num)
         ax10.set_title(r'$F_{orb}$', fontsize=fontsize)
         ax10.set_xlim(0.9, 1.0)
-        ax10.plot(myshot.core.rho[:, 0], myshot.tiol.F_orb_1D, lw=2, color='black')
+        ax10.plot(myshot.core.rho[:, 0], myshot.iol.F_orb_1D, lw=2, color='black')
         num += 1
     except:
         pass
@@ -259,7 +246,7 @@ if __name__ == "__main__":
         ax11 = fig2.add_subplot(rows, cols, num)
         ax11.set_title(r'$M_{orb}$', fontsize=fontsize)
         ax11.set_xlim(0.9, 1.0)
-        ax11.plot(myshot.core.rho[:, 0], myshot.tiol.M_orb_1D, lw=2, color='black')
+        ax11.plot(myshot.core.rho[:, 0], myshot.iol.M_orb_1D, lw=2, color='black')
         num += 1
     except:
         pass
@@ -268,7 +255,7 @@ if __name__ == "__main__":
         ax12 = fig2.add_subplot(rows, cols, num)
         ax12.set_title(r'$E_{orb}$', fontsize=fontsize)
         ax12.set_xlim(0.9, 1.0)
-        ax12.plot(myshot.core.rho[:, 0], myshot.tiol.E_orb_1D, lw=2, color='black')
+        ax12.plot(myshot.core.rho[:, 0], myshot.iol.E_orb_1D, lw=2, color='black')
         num += 1
     except:
         pass
@@ -297,4 +284,160 @@ if __name__ == "__main__":
     except:
         pass
     plt.tight_layout()
+
+
+    fontsize = 12
+    fig3 = plt.figure(figsize=(6, 4))
+    num = 1
+    try:
+        ax1 = fig3.add_subplot(1, 1, 1)
+        ax1.set_title(r'$\psi(\rho)$', fontsize=fontsize)
+        ax1.plot(myshot.core.rho[:, 0], myshot.core.psi[:, 0], lw=2, color='black')
+        num += 1
+    except:
+        pass
+
+
+    fontsize = 12
+    fiol_d3d_v_iter = plt.figure(figsize=(6, 6))
+    try:
+        ax1 = fiol_d3d_v_iter.add_subplot(1, 1, 1)
+        ax1.set_title(r'$F_{orb}$ DIII-D vs ITER', fontsize=fontsize)
+        ax1.set_xlim(0.8,1.0)
+        ax1.set_xlabel(r'normalized radius ($\rho$)')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.forb_d_therm[:, 0], lw=2, color='black',label='DIII-D')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.forb_d_therm[:, 0], lw=2, color='red',label='ITER')
+        ax1.legend()
+    except:
+       pass
+
+    miol_d3d_v_iter = plt.figure(figsize=(6, 6))
+    try:
+        ax1 = miol_d3d_v_iter.add_subplot(1, 1, 1)
+        ax1.set_title(r'$M_{orb}$ DIII-D vs ITER', fontsize=fontsize)
+        ax1.set_xlim(0.8,1.0)
+        ax1.set_xlabel(r'normalized radius ($\rho$)')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.morb_d_therm[:, 0], lw=2, color='black',label='DIII-D')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.morb_d_therm[:, 0], lw=2, color='red',label='ITER')
+        ax1.legend()
+    except:
+        pass
+
+    eiol_d3d_v_iter = plt.figure(figsize=(6, 6))
+    try:
+        ax1 = eiol_d3d_v_iter.add_subplot(1, 1, 1)
+        ax1.set_title(r'$E_{orb}$ DIII-D vs ITER', fontsize=fontsize)
+        ax1.set_xlim(0.8,1.0)
+        ax1.set_xlabel(r'normalized radius ($\rho$)')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.eorb_d_therm[:, 0], lw=2, color='black',label='DIII-D')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.eorb_d_therm[:, 0], lw=2, color='red',label='ITER')
+        ax1.legend()
+    except:
+        pass
+
+
+    forb_species_d3d = plt.figure(figsize=(6, 6))
+    try:
+        ax1 = forb_species_d3d.add_subplot(1, 1, 1)
+        ax1.set_title(r'$F_{orb}$ on DIII-D for various species', fontsize=fontsize)
+        ax1.set_xlim(0, 1.0)
+        ax1.set_xlabel(r'normalized radius ($\rho$)')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.forb_d_therm[:, 0], lw=2, label='Thermal Deuterium')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.forb_t_therm[:, 0], lw=2, label='Thermal Tritium')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.forb_c_therm[:, 0], lw=2, label='Thermal Carbon')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.forb_a_therm[:, 0], lw=2, label='Thermal Alphas')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.forb_a_fast[:, 0], lw=2, label='Fast Alphas')
+        ax1.legend()
+    except:
+        pass
+
+    morb_species_d3d = plt.figure(figsize=(6, 6))
+    try:
+        ax1 = morb_species_d3d.add_subplot(1, 1, 1)
+        ax1.set_title(r'$M_{orb}$ on DIII-D for various species', fontsize=fontsize)
+        ax1.set_xlim(0, 1.0)
+        ax1.set_xlabel(r'normalized radius ($\rho$)')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.morb_d_therm[:, 0], lw=2, label='Thermal Deuterium')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.morb_t_therm[:, 0], lw=2, label='Thermal Tritium')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.morb_c_therm[:, 0], lw=2, label='Thermal Carbon')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.morb_a_therm[:, 0], lw=2, label='Thermal Alphas')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.morb_a_fast[:, 0], lw=2, label='Fast Alphas')
+        ax1.legend()
+    except:
+        pass
+
+    eorb_species_d3d = plt.figure(figsize=(6, 6))
+    try:
+        ax1 = eorb_species_d3d.add_subplot(1, 1, 1)
+        ax1.set_title(r'$E_{orb}$ on DIII-D for various species', fontsize=fontsize)
+        ax1.set_xlim(0, 1.0)
+        ax1.set_xlabel(r'normalized radius ($\rho$)')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.eorb_d_therm[:, 0], lw=2, label='Thermal Deuterium')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.eorb_t_therm[:, 0], lw=2, label='Thermal Tritium')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.eorb_c_therm[:, 0], lw=2, label='Thermal Carbon')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.eorb_a_therm[:, 0], lw=2, label='Thermal Alphas')
+        ax1.plot(d3d_144977_3000.core.rho[:, 0], d3d_144977_3000.iol.eorb_a_fast[:, 0], lw=2, label='Fast Alphas')
+        ax1.legend()
+    except:
+        pass
+
+    forb_species_iter = plt.figure(figsize=(6, 6))
+    try:
+        ax1 = forb_species_iter.add_subplot(1, 1, 1)
+        ax1.set_title(r'$F_{orb}$ on ITER for various species', fontsize=fontsize)
+        ax1.set_xlim(0, 1.0)
+        ax1.set_xlabel(r'normalized radius ($\rho$)')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.forb_d_therm[:, 0], lw=2, label='Thermal Deuterium')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.forb_t_therm[:, 0], lw=2, label='Thermal Tritium')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.forb_c_therm[:, 0], lw=2, label='Thermal Carbon')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.forb_a_therm[:, 0], lw=2, label='Thermal Alphas')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.forb_a_fast[:, 0], lw=2, label='Fast Alphas')
+        ax1.legend()
+    except:
+        pass
+
+    morb_species_iter = plt.figure(figsize=(6, 6))
+    try:
+        ax1 = morb_species_iter.add_subplot(1, 1, 1)
+        ax1.set_title(r'$M_{orb}$ on ITER for various species', fontsize=fontsize)
+        ax1.set_xlim(0, 1.0)
+        ax1.set_xlabel(r'normalized radius ($\rho$)')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.morb_d_therm[:, 0], lw=2, label='Thermal Deuterium')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.morb_t_therm[:, 0], lw=2, label='Thermal Tritium')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.morb_c_therm[:, 0], lw=2, label='Thermal Carbon')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.morb_a_therm[:, 0], lw=2, label='Thermal Alphas')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.morb_a_fast[:, 0], lw=2, label='Fast Alphas')
+        ax1.legend()
+    except:
+        pass
+
+    eorb_species_iter = plt.figure(figsize=(6, 6))
+    try:
+        ax1 = eorb_species_iter.add_subplot(1, 1, 1)
+        ax1.set_title(r'$E_{orb}$ on ITER for various species', fontsize=fontsize)
+        ax1.set_xlim(0, 1.0)
+        ax1.set_xlabel(r'normalized radius ($\rho$)')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.eorb_d_therm[:, 0], lw=2, label='Thermal Deuterium')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.eorb_t_therm[:, 0], lw=2, label='Thermal Tritium')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.eorb_c_therm[:, 0], lw=2, label='Thermal Carbon')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.eorb_a_therm[:, 0], lw=2, label='Thermal Alphas')
+        ax1.plot(iter_shot.core.rho[:, 0], iter_shot.iol.eorb_a_fast[:, 0], lw=2, label='Fast Alphas')
+        ax1.legend()
+    except:
+        pass
+
+    #plt.xlim(0.8,1.0)
+    # plt.plot(brnd.rho[:,0],self.fiol_d_therm[:,0],label='Deuterium')
+    # plt.plot(brnd.rho[:,0],self.fiol_t_therm[:,0],label='Tritium')
+    # plt.plot(brnd.rho[:,0],self.fiol_c_therm[:,0],label='Carbon')
+    # plt.plot(brnd.rho[:,0],self.fiol_a_therm[:,0],label='Thermal Alphas')
+    # plt.plot(brnd.rho[:,0],self.fiol_a_fast[:,0],label='Fast Alphas')
+    # plt.plot(brnd.rho[:,0],self.miol_d_therm[:,0],label='Deuterium')
+    # plt.plot(brnd.rho[:,0],self.miol_t_therm[:,0],label='Tritium')
+    # plt.plot(brnd.rho[:,0],self.miol_c_therm[:,0],label='Carbon')
+    # plt.plot(brnd.rho[:,0],self.miol_a_therm[:,0],label='Thermal Alphas')
+    # plt.plot(brnd.rho[:,0],self.miol_a_fast[:,0],label='Fast Alphas')
+    # plt.legend()
+    # plt.show()
+    # sys.exit()
     plt.show()
