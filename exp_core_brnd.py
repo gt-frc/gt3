@@ -82,27 +82,54 @@ class exp_core_brnd():
             self.core_nT_ntrl(inp, R_psi, Z_psi, psi)
         self.xsec(inp)
     
-    def update_ntrl_data(self, n_n_slow, n_n_thermal, izn_rate_slow, izn_rate_thermal):
-        self.n_n_slow = n_n_slow
-        self.n_n_thermal = n_n_thermal
-        self.n_n_total = n_n_slow + n_n_thermal
-        self.izn_rate_slow = izn_rate_slow
-        self.izn_rate_thermal = izn_rate_thermal
-        self.izn_rate_total = izn_rate_slow + izn_rate_thermal
+    def update_ntrl_data(self, data):
+        try:
+            self.n_n_slow = griddata(np.column_stack((data.R, data.Z)),
+                                     data.n_n_slow,
+                                     (self.R, self.Z),
+                                     method='linear')
+        except:
+            pass
 
-    def update_Lz_data(self, Lz_slow, dLzdT_slow, Lz_thermal, dLzdT_thermal):
-        self.Lz_slow = Lz_slow
-        self.dLzdT_slow = dLzdT_slow
-        self.Lz_thermal = Lz_thermal
-        self.dLzdT_thermal = dLzdT_thermal
+        try:
+            self.n_n_thermal = griddata(np.column_stack((data.R, data.Z)),
+                                        data.n_n_thermal,
+                                        (self.R, self.Z),
+                                        method='linear')
+        except:
+            pass
 
-    def update_imprad_data(self, n_n_slow, n_n_thermal, izn_rate_slow, izn_rate_thermal):
-        self.n_n_slow = n_n_slow
-        self.n_n_thermal = n_n_thermal
-        self.n_n_total = n_n_slow + n_n_thermal
-        self.izn_rate_slow = izn_rate_slow
-        self.izn_rate_thermal = izn_rate_thermal
-        self.izn_rate_total = izn_rate_slow + izn_rate_thermal
+        try:
+            self.izn_rate_slow = griddata(np.column_stack((data.R, data.Z)),
+                                          data.izn_rate_slow,
+                                          (self.R, self.Z),
+                                          method='linear')
+        except:
+            pass
+
+        try:
+            self.izn_rate_thermal = griddata(np.column_stack((data.R, data.Z)),
+                                             data.izn_rate_thermal,
+                                             (self.R, self.Z),
+                                             method='linear')
+        except:
+            pass
+
+        self.n_n_total = self.n_n_slow + self.n_n_thermal
+        self.izn_rate_total = self.izn_rate_slow + self.izn_rate_thermal
+
+    def update_Lz_data(self, z, Lz):
+
+        self.Lz_slow = Lz(np.log10(self.T_n_slow),
+                          self.np.log10(self.n_n_slow / self.n_e),
+                          np.log10(self.Te_kev))
+
+        self.dLzdT_slow = 0
+        self.Lz_thermal = Lz(np.log10(self.T_n_thermal),
+                          self.np.log10(self.n_n_thermal / self.n_e),
+                          np.log10(self.Te_kev))
+
+        self.dLzdT_thermal = 0
     
     def sep_lines(self, inp, R, Z, psi):
         # find x-point location  
@@ -260,25 +287,25 @@ class exp_core_brnd():
             #TODO: 
 
     def core_lines_main(self, inp, R, Z, psi):                    
-        #define lines to be used for the main computational grid                    
+        # define lines to be used for the main computational grid
         self.core_main_lines = []
         psi_pts_main = np.concatenate((np.linspace(0, 0.8, 20, endpoint=False), np.linspace(0.8, 1.0, 20, endpoint=False)))
         for i, v in enumerate(psi_pts_main):
             num_lines = int(len(cntr.Cntr(R, Z, self.psi_norm_raw).trace(v))/2)
             if num_lines==1:
-                #then we're definitely dealing with a surface inside the seperatrix
+                # then we're definitely dealing with a surface inside the seperatrix
                 x, y = draw_contour_line(R, Z, self.psi_norm_raw, v, 0)
                 self.core_main_lines.append(LineString(np.column_stack((x[:-1], y[:-1]))))
             else:
-                #we need to find which of the surfaces is inside the seperatrix
+                # we need to find which of the surfaces is inside the seperatrix
                 for j, line in enumerate(cntr.Cntr(R, Z, self.psi_norm_raw).trace(v)[:num_lines]):
-                #for j, line in enumerate(cntr.Cntr(R, Z, self.psi_norm_raw).trace(v)):
+                # for j, line in enumerate(cntr.Cntr(R, Z, self.psi_norm_raw).trace(v)):
                     x, y = draw_contour_line(R, Z, self.psi_norm_raw, v, j)
-                    if (np.amax(x) < np.amax(self.main_sep_pts[:, 0]) and \
-                        np.amin(x) > np.amin(self.main_sep_pts[:, 0]) and \
-                        np.amax(y) < np.amax(self.main_sep_pts[:, 1]) and \
+                    if (np.amax(x) < np.amax(self.main_sep_pts[:, 0]) and
+                        np.amin(x) > np.amin(self.main_sep_pts[:, 0]) and
+                        np.amax(y) < np.amax(self.main_sep_pts[:, 1]) and
                         np.amin(y) > np.amin(self.main_sep_pts[:, 1])):
-                        #then it's an internal flux surface
+                        # then it's an internal flux surface
                         self.core_main_lines.append(LineString(np.column_stack((x[:-1], y[:-1]))))
                         break
 
@@ -291,7 +318,7 @@ class exp_core_brnd():
             if num_lines==1:
                 #then we're definitely dealing with a surface inside the seperatrix
                 x, y = draw_contour_line(R, Z, self.psi_norm_raw, v, 0)
-                self.core_lines.append(LineString(np.column_stack((x[:-1], y[:-1]))))
+                self.core_ntrl_lines.append(LineString(np.column_stack((x[:-1], y[:-1]))))
             else:
                 #we need to find which of the surfaces is inside the seperatrix
                 for j, line in enumerate(cntr.Cntr(R, Z, self.psi_norm_raw).trace(v)[:num_lines]):
@@ -375,7 +402,8 @@ class exp_core_brnd():
             for i, rhoval in enumerate(rho1d):
                 self.E_pot[i] = E_r_fit.integral(rhoval, 1.0)
         except AttributeError:
-            pass
+            raise AttributeError("You need E_r data")
+            sys.exit()
         
         try:
             self.fracz = UnivariateSpline(inp.fracz_data[:, 0], inp.fracz_data[:, 1], k=5, s=2.0)(self.rho)
@@ -585,10 +613,10 @@ class exp_core_brnd():
         #get approximate rho values associated with the psi values we're using
         #draw line between magnetic axis and the seperatrix at the outboard midplane
         rho_line = LineString([Point(self.m_axis), Point(self.obmp_pt)])
-        rho_pts = np.concatenate((np.linspace(0, 0.95, 20, endpoint=False), 
-                                 np.linspace(0.95, 1, 50, endpoint=False)), axis=0)
-        
+
+        rho_pts = np.linspace(0.7, 1, 5, endpoint=False)
         thetapts = np.linspace(0, 1, 100, endpoint=False)
+
         for i, rho in enumerate(rho_pts): 
             #get n, T information at the point by interpolating the rho-based input file data
             ni_val = ni(rho)
@@ -795,7 +823,7 @@ class exp_core_brnd():
                                        (Ti_mod, Tn_mod), 
                                        method='linear', rescale=False)
 
-        def calc_svrec_st(): 
+        def calc_svrec_st():
             # TODO: check this calculation. -MH
             znint = np.array([16, 18, 20, 21, 22])
             Tint = np.array([-1, 0, 1, 2, 3])
