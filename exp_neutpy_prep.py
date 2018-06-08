@@ -11,6 +11,7 @@ from shapely.geometry import LinearRing, Point, LineString
 from neutpy import neutpy, neutpyplot
 from math import degrees, sqrt, acos, pi
 from scipy.interpolate import griddata
+from collections import namedtuple
 import sys
 import os
 import re
@@ -627,31 +628,19 @@ class exp_neutpy_prep():
                                         self.midpts[i, 0], 
                                         self.midpts[i, 1], 
                                         self.n_n_slow[i], 
-                                        self.n_n_thermal[i], 
-                                        self.n_n_total[i], 
+                                        self.n_n_thermal[i],
                                         self.izn_rate_slow[i], 
-                                        self.izn_rate_thermal[i], 
-                                        self.izn_rate_total[i]))
+                                        self.izn_rate_thermal[i]))
         f.close()
-        
-        #interpolate results onto core grid
-        core.n_n_slow = griddata(np.column_stack((self.midpts[:, 0], self.midpts[:, 1])), 
-                                 self.n_n_slow, 
-                                 (core.R, core.Z), 
-                                 method='linear')
-        core.n_n_thermal = griddata(np.column_stack((self.midpts[:, 0], self.midpts[:, 1])), 
-                                 self.n_n_thermal, 
-                                 (core.R, core.Z), 
-                                 method='linear')
-        core.izn_rate_slow = griddata(np.column_stack((self.midpts[:, 0], self.midpts[:, 1])), 
-                                 self.izn_rate_slow, 
-                                 (core.R, core.Z), 
-                                 method='linear')
-        core.izn_rate_thermal = griddata(np.column_stack((self.midpts[:, 0], self.midpts[:, 1])), 
-                                 self.izn_rate_thermal, 
-                                 (core.R, core.Z), 
-                                 method='linear')
 
-        core.n_n_total = core.n_n_slow + core.n_n_thermal
-        core.izn_rate_total = core.izn_rate_slow + core.izn_rate_thermal        
-        
+        # update neutral data in core instance
+        dict = {}
+        dict['R'] = self.midpts[:, 0]
+        dict['Z'] = self.midpts[:, 1]
+        dict['n_n_slow'] = self.n_n_slow,
+        dict['n_n_thermal'] = self.n_n_thermal
+        dict['izn_rate_slow'] = self.izn_rate_slow
+        dict['izn_rate_thermal'] = self.izn_rate_thermal
+
+        data = namedtuple('data', dict.keys())(*dict.values())
+        core.update_ntrl_data(data)
