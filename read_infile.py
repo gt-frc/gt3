@@ -93,7 +93,7 @@ class read_infile():
         r2df = "r'%s\( *(\d*)\) *= *((?:[+\-]?\d*\.?\d*(?:[eE]?[+\-]?\d+)?, ?)*) *'%(v)"
 
         self.invars = {}
-        self.invars["exp_inp"]          = ["bool", r0di]
+        self.invars["exp_inp"]          = ["int", r0di]
 
         #EXPERIMENTAL BACKGROUND PARAMETERS
         self.invars["rhopts"]           = ["int", r0di]
@@ -275,6 +275,7 @@ class read_infile():
                         exec("result = re.match(%s, line)"%(self.in_line2d[v][1]))
                         if result:
                             exec("self.%s = %s(result.group(1))"%(v, self.in_line2d[v][0])) 
+        self.exp_inp = bool(self.exp_inp)
 
         #adjust thetapts so there are lines at theta = 0, pi/2, pi, and 3pi/2
         #this is critical for x-miller mode, but could be nice for the experimental input mode as well
