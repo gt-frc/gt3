@@ -6,7 +6,7 @@ Created on Sat Aug  5 16:05:08 2017
 @author: max
 """
 from __future__ import division
-from math import pi, sin, acos
+from math import pi, sin, acos, ceil
 import numpy as np
 from scipy.constants import mu_0, elementary_charge, k
 from scipy.interpolate import UnivariateSpline, interp1d, interp2d, griddata
@@ -48,13 +48,13 @@ class mil_core_brnd():
         diff_vol
         IP
         B_phi
-        Psi
-        Psi_norm
+        psi
+        psi_norm
         B_p
         B_tot
         f_phi
     """
-    def __init__(self, inp):
+    def __init__(self, inp, ntrl_switch):
         sys.dont_write_bytecode = True 
         self.miller(inp)
         self.xsec(inp)
@@ -68,102 +68,103 @@ class mil_core_brnd():
         """
         ## CREATE MAIN r AND theta MATRICES
         try:
-            r1d = np.concatenate((np.linspace(0, p.edge_rho*p.a, p.rpts_core, endpoint=False), 
+            rho1d = np.concatenate((np.linspace(0, p.edge_rho*p.a, p.rpts_core, endpoint=False),
                                  np.linspace(p.edge_rho*p.a, p.a, p.rpts_edge)), axis=0)
         except AttributeError:
             try:
-                r1d = np.linspace(0, p.a, p.rpts)
+                rho1d = np.linspace(0, 1, p.rhopts)
             except AttributeError:
                 raise AttributeError("You haven't specified the number of radial points.")
 
-        theta1d = np.linspace(0, 2*pi, p.thetapts)
-        self.theta, self.r = np.meshgrid(theta1d, r1d)
-        self.rho = self.r/self.r[-1, 0]
+        # define thetapts and xpt
+        self.thetapts = int(4 * ceil(float(p.thetapts_approx)/4))+1
+
+        theta1d = np.linspace(0, 2*pi, self.thetapts)
+        self.theta, self.rho = np.meshgrid(theta1d, rho1d)
+        self.r = self.rho * p.a
 
         ped_loc = 1.0
         ##########################################################################################
-        ## CREATE DENSITY, TEMPERATURE, PRESSURE, AND CURRENT DENSITY ARRAYS
+        # CREATE DENSITY, TEMPERATURE, PRESSURE, AND CURRENT DENSITY ARRAYS
         ##########################################################################################
         try:
-            self.ni = UnivariateSpline(p.ni_rho[:, 0], p.ni_rho[:, 1], k=5, s=2.0)(self.rho)
-            #self.ni = interp1d(p.ni_rho[:, 0], p.ni_rho[:, 1])(self.rho)
+            self.ni = UnivariateSpline(p.ni_data[:, 0], p.ni_data[:, 1], k=3, s=2.0)(self.rho)
         except AttributeError:
-            self.ni = np.where(self.r<ped_loc*p.a, 
+            self.ni = np.where(self.r < ped_loc*p.a,
                                (p.ni0-p.ni9)*(1-self.rho**2)**p.nu_ni + p.ni9, 
                                (p.ni_sep-p.ni9)/(0.1*p.a)*(self.r-ped_loc*p.a)+p.ni9)
         #gradient scale length
-        self.dni_dr  = np.gradient(self.ni, self.r[:, 0], axis=0)
-        self.L_ni = -self.dni_dr / self.ni   
+        # self.dni_dr  = np.gradient(self.ni, self.r[:, 0], axis=0)
+        # self.L_ni = -self.dni_dr / self.ni
         #############################################
 
         try:
-            self.ne = UnivariateSpline(p.ne_rho[:, 0], p.ne_rho[:, 1], k=5, s=2.0)(self.rho)
+            self.ne = UnivariateSpline(p.ne_data[:, 0], p.ne_data[:, 1], k=3, s=2.0)(self.rho)
         except AttributeError:
-            self.ne = np.where(self.r<ped_loc*p.a, 
+            self.ne = np.where(self.r < ped_loc*p.a,
                                (p.ne0-p.ne9)*(1-self.rho**2)**p.nu_ne + p.ne9, 
                                (p.ne_sep-p.ne9)/(0.1*p.a)*(self.r-ped_loc*p.a)+p.ne9)
 
         #gradient scale length
-        self.dne_dr  = np.gradient(self.ne, self.r[:, 0], axis=0)
-        self.L_ne = -self.dne_dr / self.ne   
+        # TODO: Redo gradient scale length calculation to be in 2d, possibly with scipy.interpolate.SmoothBivariateSpline
+        # self.dne_dr  = np.gradient(self.ne, self.r[:, 0], axis=0)
+        # self.L_ne = -self.dne_dr / self.ne
         #############################################
 
         try:
-            #TODO: verify that this is how fracz is defined
-            self.fracz = UnivariateSpline(p.fracz_rho[:, 0], p.fracz_rho[:, 1], k=5, s=2.0)(self.rho)
+            self.fracz = UnivariateSpline(p.fracz_data[:, 0], p.fracz_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
-            self.fracz = np.zeros(self.rho.shape) + 0.025     
+            self.fracz = np.zeros(self.rho.shape) + 0.025
             
         self.nC = self.ne * self.fracz
         
         #gradient scale length
-        self.dnC_dr  = np.gradient(self.nC, self.r[:, 0], axis=0)
-        self.L_nC = -self.dnC_dr / self.nC
+        # self.dnC_dr  = np.gradient(self.nC, self.r[:, 0], axis=0)
+        # self.L_nC = -self.dnC_dr / self.nC
         
         self.z_eff = (self.ni*1.0**2 + self.nC*6.0**2) / self.ne
         
-        #TODO: calculate z_0 over all charge states from imp_rad.
-        #Might need to move this calculation there.
+        # TODO: calculate z_0 over all charge states from imp_rad.
+        # Might need to move this calculation there.
         self.z_0 = self.nC*6.0**2 / self.ni
         #############################################
 
         try:
-            self.Ti_kev = UnivariateSpline(p.Ti_rho[:, 0], p.Ti_rho[:, 1], k=5, s=2.0)(self.rho)
+            self.Ti_kev = UnivariateSpline(p.Ti_data[:, 0], p.Ti_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
-            self.Ti_kev = np.where(self.r<ped_loc*p.a, 
+            self.Ti_kev = np.where(self.rho<ped_loc,
                              (p.Ti0-p.Ti9)*(1-self.rho**2)**p.nu_Ti + p.Ti9, 
-                             (p.Ti_sep-p.Ti9)/(0.1*p.a)*(self.r-ped_loc*p.a)+p.Ti9)
+                             (p.Ti_sep-p.Ti9)/(0.1*p.a)*(self.rho-ped_loc)+p.Ti9)
         self.Ti_K  = self.Ti_kev * 1.159E7
         self.Ti_ev = self.Ti_kev * 1000
         self.Ti_J  = self.Ti_ev  * elementary_charge
 
         #gradient scale length
-        self.dTi_J_dr  = np.gradient(self.Ti_J, self.r[:, 0], axis=0)
-        self.L_Ti_J = -self.dTi_J_dr / self.Ti_J
+        # self.dTi_J_dr  = np.gradient(self.Ti_J, self.r[:, 0], axis=0)
+        # self.L_Ti_J = -self.dTi_J_dr / self.Ti_J
         #############################################
 
         try:
-            self.Te_kev = UnivariateSpline(p.Te_rho[:, 0], p.Te_rho[:, 1], k=5, s=2.0)(self.rho)
+            self.Te_kev = UnivariateSpline(p.Te_data[:, 0], p.Te_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
-            self.Te_kev = np.where(self.r<ped_loc*p.a, 
+            self.Te_kev = np.where(self.rho<ped_loc,
                              (p.Te0-p.Te9)*(1-self.rho**2)**p.nu_Te + p.Te9, 
-                             (p.Te_sep-p.Te9)/(0.1*p.a)*(self.r-ped_loc*p.a)+p.Te9) 
+                             (p.Te_sep-p.Te9)/(0.1*p.a)*(self.rho-ped_loc)+p.Te9)
         self.Te_K  = self.Te_kev * 1.159E7
         self.Te_ev = self.Te_kev * 1000
         self.Te_J  = self.Te_ev  * elementary_charge
         
         #gradient scale length
-        self.dTe_J_dr  = np.gradient(self.Te_J, self.r[:, 0], axis=0)
-        self.L_Te_J = -self.dTe_J_dr / self.Te_J        
+        # self.dTe_J_dr  = np.gradient(self.Te_J, self.r[:, 0], axis=0)
+        # self.L_Te_J = -self.dTe_J_dr / self.Te_J
         #############################################
 
         try:
-            E_r_fit = UnivariateSpline(p.er_rho[:, 0], p.er_rho[:, 1], k=5, s=2.0)
+            E_r_fit = UnivariateSpline(p.er_data[:, 0], p.er_data[:, 1], k=5, s=2.0)
             self.E_r = E_r_fit(self.rho)
-            
-            self.E_pot = np.zeros(self.r.shape)
-            for (i, j), rval in np.ndenumerate(self.r):
-                self.E_pot[i, j] = E_r_fit.integral(rval/p.a, 1.0)
+            self.E_pot = np.zeros(self.rho.shape)
+            for i, rhoval in enumerate(rho1d):
+                self.E_pot[i] = E_r_fit.integral(rhoval, 1.0)
         except AttributeError:
             raise AttributeError("You need E_r data")
             sys.exit()
@@ -171,83 +172,55 @@ class mil_core_brnd():
         #############################################
 
         try:
-            self.j_r = p.j0*(1-(self.r/p.a)**2)**p.nu_j  
+            self.j_r = p.j0*(1-(self.rho)**2)**p.nu_j
         except AttributeError:
             raise AttributeError("You haven't specified a current distribution.")  
 
         #############################################
 
         try:
-            self.fz1 = UnivariateSpline(p.fz1_rho[:, 0], p.fz1_rho[:, 1], k=5, s=2.0)(self.rho)
+            self.fz1 = UnivariateSpline(p.fz1_data[:, 0], p.fz1_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
             self.fz1 = 0.025*self.ne
 
         #############################################
 
         try:
-            self.fracz = UnivariateSpline(p.fracz_rho[:, 0], p.fracz_rho[:, 1], k=5, s=2.0)(self.rho)
-        except AttributeError:
-            self.fracz = np.zeros(self.rho)+0.025
-
-        #############################################
-
-        try:
-            self.exlti = UnivariateSpline(p.exlti_rho[:, 0], p.exlti_rho[:, 1], k=5, s=2.0)(self.rho)
-        except AttributeError:
-            self.exlti = 0.0
-
-        #############################################
-
-        try:
-            self.exlte = UnivariateSpline(p.exlte_rho[:, 0], p.exlte_rho[:, 1], k=5, s=2.0)(self.rho)
-        except AttributeError:
-            self.exlte = 0.0
-
-        #############################################
-
-        try:
-            self.exlni = UnivariateSpline(p.exlni_rho[:, 0], p.exlni_rho[:, 1], k=5, s=2.0)(self.rho)
-        except AttributeError:
-            self.exlni = 0.0
-
-        #############################################
-
-        try:
-            self.vpolC = UnivariateSpline(p.vpolC_rho[:, 0], p.vpolC_rho[:, 1], k=5, s=2.0)(self.rho)
+            self.vpolC = UnivariateSpline(p.vpolC_data[:, 0], p.vpolC_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
             self.vpolC = 0.0
 
         #############################################
 
         try:
-            self.vtorC = UnivariateSpline(p.vtorC_rho[:, 0], p.vtorC_rho[:, 1], k=5, s=2.0)(self.rho)
+            self.vtorC = UnivariateSpline(p.vtorC_data[:, 0], p.vtorC_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
             self.vtorC = 0.0
 
         #############################################
 
         try:
-            self.vpolD = UnivariateSpline(p.vpolD_rho[:, 0], p.vpolD_rho[:, 1], k=5, s=2.0)(self.rho)
+            self.vpolD = UnivariateSpline(p.vpolD_data[:, 0], p.vpolD_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
             self.vpolD = 0.0
 
         #############################################
 
         try:
-            self.vtorD = UnivariateSpline(p.vtorD_rho[:, 0], p.vtorD_rho[:, 1], k=5, s=2.0)(self.rho)
+            self.vtorD = UnivariateSpline(p.vtorD_data[:, 0], p.vtorD_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
             self.vtorD = 0.0
         #############################################
 
         try:
-            self.q = UnivariateSpline(p.q_rho[:, 0], p.q_rho[:, 1], k=5, s=2.0)(self.rho)
+            self.q = UnivariateSpline(p.q_data[:, 0], p.q_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
             self.q = np.zeros(self.rho.shape) #will calculated later with the other miller stuff
 
         #############################################
 
         try:
-            self.zbar2 = UnivariateSpline(p.zbar2_rho[:, 0], p.zbar2_rho[:, 1], k=5, s=2.0)(self.rho)
+            self.zbar2 = UnivariateSpline(p.zbar2_data[:, 0], p.zbar2_data[:, 1], k=5, s=2.0)(self.rho)
         except AttributeError:
             self.zbar2 = np.zeros(self.rho.shape) + 0.025
 
@@ -257,8 +230,8 @@ class mil_core_brnd():
         ##########################################################################################
         ## CREATE kappa, tri AND RELATED MATRICES
         ##########################################################################################
-        upperhalf   = (self.theta>=0)&(self.theta<pi)
-        self.kappa  = np.where(upperhalf, 
+        upperhalf = (self.theta >= 0)&(self.theta < pi)
+        self.kappa = np.where(upperhalf,
                          p.kappa_up / (p.a**p.s_k_up) * self.r**p.s_k_up, 
                          p.kappa_lo / (p.a**p.s_k_lo) * self.r**p.s_k_lo)
         
@@ -277,26 +250,27 @@ class mil_core_brnd():
         #        * np.tanh(B_kappa*np.sin(self.theta))
         #        + ((p.kappa_up / (p.a**p.s_k_up) * self.r**p.s_k_up) + (p.kappa_lo / (p.a**p.s_k_lo) * self.r**p.s_k_lo))/2.0)
          
-        if p.xmil==1:               
+        if p.xmil==1:
+            self.xpt = np.array([p.xpt_R, p.xpt_Z])
             self.kappa = self.xmiller(self.kappa, p)
-            tri_lo = sin(3*pi/2 - acos((p.xpt[0]-p.R0_a)/p.a))
+            tri_lo = sin(3*pi/2 - acos((self.xpt[0]-p.R0_a)/p.a))
             tri_up = p.tri_up
         else:
             tri_lo = p.tri_lo
             tri_up = p.tri_up
             
 
-        tri    = np.where(upperhalf, 
-                         tri_up * (self.r/p.a)**1, 
-                         tri_lo * (self.r/p.a)**1)
+        tri = np.where(upperhalf,
+                         tri_up * (self.rho)**1,
+                         tri_lo * (self.rho)**1)
 
-        s_tri  = np.where(upperhalf, 
-                         self.r*p.tri_up/(p.a*np.sqrt(1-tri)), 
-                         self.r*tri_lo/(p.a*np.sqrt(1-tri)))
+        # s_tri = np.where(upperhalf,
+        #                 self.r*p.tri_up/(p.a*np.sqrt(1-tri)),
+        #                 self.r*tri_lo/(p.a*np.sqrt(1-tri)))
         
         ## CALCULATE INITIAL R, Z WITH NO SHAFRANOV SHIFT
         ## (NECESSARY TO GET ESTIMATES OF L_r WHEN CALCULATING SHAFRANOV SHIFT)
-        R0 = np.ones(self.r.shape) * p.R0_a 
+        R0 = np.ones(self.rho.shape) * p.R0_a
         self.R = R0 + self.r * np.cos(self.theta+np.arcsin(tri*np.sin(self.theta)))
         self.Z = self.kappa*self.r*np.sin(self.theta)
         
@@ -305,12 +279,12 @@ class mil_core_brnd():
         # SURFACE (VALUE OF r).
         self.L_seg = np.sqrt((self.Z-np.roll(self.Z, -1, axis=1))**2 + (self.R-np.roll(self.R, -1, axis=1))**2)
         self.L_seg [:, -1] = 0        
-        self.L_r = np.tile(np.sum(self.L_seg, axis=1), (p.thetapts, 1)).T
+        self.L_r = np.tile(np.sum(self.L_seg, axis=1), (self.thetapts, 1)).T
         
         #CALCULATE CROSS-SECTIONAL AREA CORRESPONDING TO EACH r AND ASSOCIATED
         #DIFFERENTIAL AREAS
-        area = np.zeros(self.r.shape)
-        for i in range(0, len(self.r)):
+        area = np.zeros(self.rho.shape)
+        for i in range(0, len(self.rho)):
             area[i, :] = PolyArea(self.R[i, :], self.Z[i, :])
     
         diff_area = area - np.roll(area, 1, axis=0)
@@ -325,7 +299,7 @@ class mil_core_brnd():
         diff_I = diff_area * j_r_ave
         self.I = np.cumsum(diff_I, axis=0)
         self.IP = self.I[-1, 0]  
-
+        print 'IP = ',self.IP
         #Calculate B_p_bar
         B_p_bar = mu_0 * self.I / self.L_r
         B_p_bar[0, :]=0
@@ -338,8 +312,8 @@ class mil_core_brnd():
         beta_p = 2*mu_0*(np.cumsum(self.pressure*self.diff_vol, axis=0)/vol-self.pressure) / B_p_bar**2
     
         #Calculate dR0dr
-        self.dR0dr = np.zeros(self.r.shape)
-        self.R0 = np.zeros(self.r.shape)
+        self.dR0dr = np.zeros(self.rho.shape)
+        self.R0 = np.zeros(self.rho.shape)
     
         f = 2*(self.kappa**2+1)/(3*self.kappa**2+1)*(beta_p+li/2)+1/2*(self.kappa**2-1)/(3*self.kappa**2+1)
         f[0, :] = f[1, :] ############ NEED TO REVISIT, SHOULD EXTRAPOLATE SOMEHOW
@@ -347,7 +321,7 @@ class mil_core_brnd():
         self.dR0dr[-1, :] = -2.0*p.a*f[-1, :]/p.R0_a
         self.R0[-1, :] = p.R0_a
         
-        for i in range(len(self.r)-2, -1, -1):
+        for i in range(len(self.rho)-2, -1, -1):
             self.R0[i, :] = self.dR0dr[i+1, :] * (self.r[i, :]-self.r[i+1, :]) + R0[i+1, :]
             self.dR0dr[i, :] = -2.0*self.r[i, :]*f[i, :]/R0[i, :]
         
@@ -358,45 +332,45 @@ class mil_core_brnd():
         #RECALCULATE L_seg and L_r
         self.L_seg = np.sqrt((self.Z-np.roll(self.Z, -1, axis=1))**2 + (self.R-np.roll(self.R, -1, axis=1))**2)
         self.L_seg [:, -1] = 0        
-        self.L_r = np.tile(np.sum(self.L_seg, axis=1), (p.thetapts, 1)).T
+        self.L_r = np.tile(np.sum(self.L_seg, axis=1), (self.thetapts, 1)).T
         
         ## RECALCULATE GRAD-r
-        dkappa_dtheta   = np.gradient(self.kappa, edge_order=1)[1] * p.thetapts/(2*pi)
-        dkappa_dr       = np.gradient(self.kappa, edge_order=1)[0] * p.rpts/p.a
+        dkappa_dtheta = np.gradient(self.kappa, edge_order=1)[1] * self.thetapts/(2*pi)
+        dkappa_dr = np.gradient(self.kappa, edge_order=1)[0] * p.rhopts/p.a
     
         dkappa_dtheta[-1] = dkappa_dtheta[-2]
         dkappa_dr[-1] = dkappa_dr[-2]
     
-        dZ_dtheta       = np.gradient(self.Z, edge_order=2)[1] * p.thetapts/(2*pi) #self.r*(self.kappa*np.cos(self.theta)+dkappa_dtheta*np.sin(self.theta))
-        dZ_dr           = np.gradient(self.Z, edge_order=2)[0] * p.rpts/p.a #np.sin(self.theta)*(self.r*dkappa_dr + self.kappa)
-        dR_dr           = np.gradient(self.R, edge_order=2)[0] * p.rpts/p.a #dR0dr - np.sin(self.theta + np.sin(self.theta)*np.arcsin(tri))*(np.sin(self.theta)*s_tri) + np.cos(self.theta+np.sin(self.theta)*np.arcsin(tri))
-        dR_dtheta       = np.gradient(self.R, edge_order=2)[1] * p.thetapts/(2*pi) #-self.r*np.sin(self.theta+np.sin(self.theta)*np.arcsin(tri))*(1+np.cos(self.theta)*np.arcsin(tri))
+        dZ_dtheta = np.gradient(self.Z, edge_order=2)[1] * self.thetapts/(2*pi)  # self.r*(self.kappa*np.cos(self.theta)+dkappa_dtheta*np.sin(self.theta))
+        dZ_dr = np.gradient(self.Z, edge_order=2)[0] * p.rhopts/p.a  # np.sin(self.theta)*(self.r*dkappa_dr + self.kappa)
+        dR_dr = np.gradient(self.R, edge_order=2)[0] * p.rhopts/p.a  # dR0dr - np.sin(self.theta + np.sin(self.theta)*np.arcsin(tri))*(np.sin(self.theta)*s_tri) + np.cos(self.theta+np.sin(self.theta)*np.arcsin(tri))
+        dR_dtheta = np.gradient(self.R, edge_order=2)[1] * self.thetapts/(2*pi)  # -self.r*np.sin(self.theta+np.sin(self.theta)*np.arcsin(tri))*(1+np.cos(self.theta)*np.arcsin(tri))
     
         abs_grad_r = np.sqrt(dZ_dtheta**2 + dR_dtheta**2) / np.abs(dR_dr*dZ_dtheta - dR_dtheta*dZ_dr)
         
-        ## WE WANT TO CALCULATE THE POLOIDAL FIELD STRENGTH EVERYWHERE
-        ## THE PROBLEM IS THAT WE'VE GOT 2 EQUATIONS IN 3 UNKNOWNS. HOWEVER, IF WE ASSUME THAT THE POLOIDAL
-        ## INTEGRAL OF THE FLUX SURFACE AVERAGE OF THE POLOIDAL MAGNETIC FIELD IS APPROX. THE SAME AS THE
-        ## POLOIDAL INTEGRAL OF THE ACTUAL POLOIDAL MAGNETIC FIELD, THEN WE CAN CALCULATE THE Q PROFILE
-        self.B_t = p.B_phi_0 * self.R[0, 0] / self.R
+        # WE WANT TO CALCULATE THE POLOIDAL FIELD STRENGTH EVERYWHERE
+        # THE PROBLEM IS THAT WE'VE GOT 2 EQUATIONS IN 3 UNKNOWNS. HOWEVER, IF WE ASSUME THAT THE POLOIDAL
+        # INTEGRAL OF THE FLUX SURFACE AVERAGE OF THE POLOIDAL MAGNETIC FIELD IS APPROX. THE SAME AS THE
+        # POLOIDAL INTEGRAL OF THE ACTUAL POLOIDAL MAGNETIC FIELD, THEN WE CAN CALCULATE THE Q PROFILE
+        self.BT = p.BT0 * self.R[0, 0] / self.R
         
-        #Calculate initial crappy guess on q
-        q_mil = p.B_phi_0*self.R[0, 0] / (2*pi*B_p_bar) * np.tile(np.sum(self.L_seg/self.R**2, axis=1), (p.thetapts, 1)).T #Equation 16 in the miller paper. The last term is how I'm doing a flux surface average
-        q_mil[0, :]=q_mil[1, :]
+        # Calculate initial crappy guess on q
+        q_mil = p.BT0*self.R[0, 0] / (2*pi*B_p_bar) * np.tile(np.sum(self.L_seg/self.R**2, axis=1), (self.thetapts, 1)).T #Equation 16 in the miller paper. The last term is how I'm doing a flux surface average
+        q_mil[0, :] = q_mil[1, :]
         
-        dPsidr = (p.B_phi_0 * self.R[0, 0]) / (2*pi*q_mil)*np.tile(np.sum(self.L_seg/(self.R*abs_grad_r), axis=1), (p.thetapts, 1)).T
+        dpsidr = (p.BT0 * self.R[0, 0]) / (2*pi*q_mil)*np.tile(np.sum(self.L_seg/(self.R*abs_grad_r), axis=1), (self.thetapts, 1)).T
         
-        self.Psi = np.zeros(self.r.shape)
+        self.psi = np.zeros(self.r.shape)
         for index, row in enumerate(self.r):
             if index >= 1:
-                self.Psi[index] = dPsidr[index]*(self.r[index, 0]-self.r[index-1, 0]) + self.Psi[index-1]
-        self.Psi_norm = self.Psi / self.Psi[-1, 0]
+                self.psi[index] = dpsidr[index]*(self.r[index, 0]-self.r[index-1, 0]) + self.psi[index-1]
+        self.psi_norm = self.psi / self.psi[-1, 0]
         
-        self.B_p = dPsidr * 1/self.R * abs_grad_r
+        self.B_p = dpsidr * 1/self.R * abs_grad_r
         self.B_p[0, :] = 0
         
         
-        self.B_t = p.B_phi_0 * self.R[0, 0] / self.R
+        self.B_t = p.BT0 * self.R[0, 0] / self.R
         self.B_tot = np.sqrt(self.B_p**2 + self.B_t**2)
         self.f_phi = self.B_t/self.B_tot
         #######################################################################
@@ -498,10 +472,10 @@ class mil_core_brnd():
         k_sep = kappa_sep(np.linspace(pi, 2*pi, xnum), gamma1, gamma2)    
     
         #For each flux surface (i.e. r value)
-        for i, rval in enumerate(self.r.T[0]):
-            if rval < p.a:
+        for i, rhoval in enumerate(self.rho.T[0]):
+            if rhoval < 1:
                 #Calculate epsilon
-                epsilon = calc_eps(rval, p.a)
+                epsilon = calc_eps(rhoval, p.a)
                 #OPTIONALLY - modify domain to ensure a constant domain of compact support based on current epsilon
                 scale_theta=0
                 if scale_theta==1:
@@ -511,7 +485,7 @@ class mil_core_brnd():
                 eta = bump(np.linspace(-1, 1, xnum), epsilon)
                 
                 #scale eta. The convolution operation doesn't 
-                scaled_eta = eta * yscale(rval, p.a)
+                scaled_eta = eta * yscale(rhoval, p.a)
                 
                 #convolve seperatrix function and bump function
                 kappa_tilda_pre = np.convolve(k_sep, scaled_eta, 'same')/((xnum-1)/2) #Still don't understand why we need to divide by this, but we definitely need to.
