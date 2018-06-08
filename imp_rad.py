@@ -162,6 +162,8 @@ class ImpRad:
                 inp['anneut'] = nf * 1*10**13 #inp['nmin_n']
                 inp['vneut'] = Tn
 
+                inp2 = namedtuple('inp2', inp.keys())(*inp.values())
+
                 # prepare input file
                 f = open('./toadpak', 'w')
                 f.write(' &inp')
@@ -262,7 +264,7 @@ class ImpRad:
         Lz = LinearNDInterpolator(points, Lz_complete.flatten(), rescale=False)
 
         #pickle the interpolation object to save time in the future
-        filename = imp_names[z]+'_Lz.pkl'
+        filename = os.getcwd() + '/Lz_interpolators/' + imp_names[z] + '_Lz.pkl'
         outfile = open(filename,'wb')
         pickle.dump(Lz, outfile)
         outfile.close()
@@ -391,9 +393,9 @@ if __name__ == '__main__':
     ncxopt = 1      # Selects cross sections to be used   1 --> OSAS   2 --> GJ    3 --> OSCT
 
     # Helium
-    He_2 = ImpRad(z=2)
+    #He_2 = ImpRad(z=2)
     # Carbon
-    C_6 = ImpRad(z=6)
+    #C_6 = ImpRad(z=6)
     #
     # #Neon
     # Ne_10 = ImpRad(10)
@@ -406,6 +408,9 @@ if __name__ == '__main__':
     #
     # #Xenon
     # Xe_54 = ImpRad(54)
+    #
+    # #Tungsten
+    W_74 = ImpRad(74)
 
     def element_plot(inst, element):
         # specify density and temperature parameters at which you want to
@@ -428,13 +433,14 @@ if __name__ == '__main__':
             ax1.loglog(Te_kev, inst.Lz(np.log10(0.002), np.log10(nf), np.log10(Te_kev)))
         # clean up and show plot
         plt.tight_layout()
-        #fig.savefig('/home/max/Documents/{}_Lz.png'.format(element))
+        fig.savefig('/home/max/Documents/{}_Lz.png'.format(element))
         plt.show()
 
 
-    element_plot(He_2,'Helium')
-    element_plot(C_6,'Carbon')
+    #element_plot(He_2,'Helium')
+    #element_plot(C_6,'Carbon')
     # element_plot(Ne_10,'Neon')
     # element_plot(Ar_18,'Argon')
     # element_plot(Kr_36,'Krypton')
     # element_plot(Xe_54,'Xenon')
+    element_plot(W_74,'Tungsten')
