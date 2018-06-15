@@ -109,16 +109,18 @@ class exp_pfr_brnd():
         pfr_ne = np.zeros(len(pfr_pts)) + inp.pfr_ne_val
         pfr_Ti = np.zeros(len(pfr_pts)) + inp.pfr_Ti_val
         pfr_Te = np.zeros(len(pfr_pts)) + inp.pfr_Te_val
-        
+
+        # TODO: May need to convert these temperatures to keV
         pts_ni_pfr = np.column_stack((pfr_pts, pfr_ni))
         pts_ne_pfr = np.column_stack((pfr_pts, pfr_ne))
         pts_Ti_pfr = np.column_stack((pfr_pts, pfr_Ti))
         pts_Te_pfr = np.column_stack((pfr_pts, pfr_Te))
-        
-        core.ni_pts     = np.vstack((core.ni_pts, pts_ni_pfr))
-        core.ne_pts     = np.vstack((core.ne_pts, pts_ne_pfr))
-        core.Ti_kev_pts = np.vstack((core.Ti_kev_pts, pts_Ti_pfr))
-        core.Te_kev_pts = np.vstack((core.Te_kev_pts, pts_Te_pfr))
+
+        brnd_pfr_dict = {}
+        brnd_pfr_dict['ni'] = pts_ni_pfr
+        brnd_pfr_dict['ne'] = pts_ne_pfr
+        brnd_pfr_dict['Ti'] = pts_Ti_pfr
+        brnd_pfr_dict['Te'] = pts_Te_pfr
         
         #grid_x, grid_y = np.mgrid[1:2.5:500j, -1.5:1.5:500j]
         #ni_for_plot = griddata(self.ni_pts[:, :-1], self.ni_pts[:, -1], (grid_x, grid_y))
