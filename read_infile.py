@@ -359,7 +359,7 @@ class read_infile():
         #need to add in an additional criteria to also remove points that are extremely close to other points, even if they create a sufficiently large angle
         self.wall_vertex_closed = np.vstack((self.wall_vertex, self.wall_vertex[0]))
         self.wall_line = LineString(self.wall_vertex_closed)
-
+        #self.wall_ring = LinearRing(wall_pts)
         #self.wall_line = LineString(self.wall_vertex)
  
 
