@@ -7,7 +7,7 @@ import numpy as np
 from collections import namedtuple
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
-from exp_neutpy_prep import exp_neutpy_prep
+from exp_neutpy_prep import Neutrals
 from thermaliol import iol_calc
 from read_infile import read_infile
 from fastiol import fastiol
@@ -33,118 +33,63 @@ class gt3:
         plotstuff
 
     Attributes:
-        
+
     External Dependencies:
         Triangle:       Used to create the triangular mesh for neutpy. Source
-                        code and documentation can be found at 
+                        code and documentation can be found at
                         https://www.cs.cmu.edu/~quake/triangle.html. Can be
                         installed from Ubuntu repositories as well.
-        Neutpy:         
+        Neutpy:
         nbeams:
         adpack:
     """
-    def __init__(self, shotlabel=None):
+    def __init__(self, shotlabel=None, mode='coreonly'):
         sys.dont_write_bytecode = True 
         # Create shotlabel as an attribute of plasma class
         self.shotlabel = shotlabel
         self.inp = read_infile(self.shotlabel)
-        self.ntrl_switch = self.inp.ntrl_switch
+        self.core = exp_core_brnd(self.inp) if self.inp.exp_inp else mil_core_brnd(self.inp)
 
-    def coreonly(self):
-        ntrl_switch = 0
-        self.core = exp_core_brnd(self.inp, ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp, ntrl_switch)
-
-    def coreandiol(self):
-        ntrl_switch = 0
-        self.core = exp_core_brnd(self.inp, ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp, ntrl_switch)
-        self.iol = iol_calc(self.inp, self.core)
-        
-    def coreandimp(self):
-        ntrl_switch = 0
-        self.core = exp_core_brnd(self.inp, ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp, ntrl_switch)
-        print 'starting impurity calculations'
-        self.imp = ImpRad(self.inp, self.core)
-        
-    def ntrlsonly(self):
-        ntrl_switch = self.ntrl_switch
-        if ntrl_switch == 1:  # neutrals output file already exists. Read it in. No need to run neutpy.
-            self.core = exp_core_brnd(self.inp, ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp, ntrl_switch)
-            self.ntrl = ReadNtrlData(self.inp, self.core)
-        elif ntrl_switch == 2:  # need to run neutpy
-            self.core = exp_core_brnd(self.inp, ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp, ntrl_switch)
-            self.sol = exp_sol_brnd(self.inp, self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
-            self.pfr = exp_pfr_brnd(self.inp, self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
-            self.ntrl = exp_neutpy_prep(self.inp, self.core, self.sol, self.pfr)
-        
-    def coreandnbi(self):
-        ntrl_switch = 0
-        self.core = exp_core_brnd(self.inp, ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp, ntrl_switch)
-        self.nbi = beamdep(self.inp, self.core)
-        
-    def therm_instab(self):
-        ntrl_switch = 1
-        if ntrl_switch == 1:  # neutrals output file already exists. Read it in. No need to run neutpy.
-            self.core = exp_core_brnd(self.inp, ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp, ntrl_switch)
-            self.ntrl = ReadNtrlData(self.inp, self.core)
-        elif ntrl_switch == 2:  # need to run neutpy
-            self.core = exp_core_brnd(self.inp, ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp, ntrl_switch)
-            self.sol = exp_sol_brnd(self.inp, self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
-            self.pfr = exp_pfr_brnd(self.inp, self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
-            self.ntrl = exp_neutpy_prep(self.inp, self.core, self.sol, self.pfr)
-        self.nbi = beamdep(self.inp, self.core)
-        self.imp = ImpRad(self.inp, self.core)
-        # self.rtrn = rad_trans(self.inp, self.core, self.tiol, self.fiol, self.ntrl, self.nbi)
-        # self.ti = thermal_inst(self.inp, self.core, self.nbi, self.imp, self.ntrl)
-        self.dl = dens_lim(self.inp, self.core, self.nbi, self.imp, self.ntrl)
-        self.mar = marfe(self.inp, self.core, self.imp)
-
-    def allthethings(self):
-        ntrl_switch = 1
-        self.core = exp_core_brnd(self.inp, ntrl_switch) if self.inp.exp_inp else mil_core_brnd(self.inp, ntrl_switch)
-        self.sol = exp_sol_brnd(self.inp, self.core) if self.inp.exp_inp else mil_sol_brnd(self.inp)
-        self.pfr = exp_pfr_brnd(self.inp, self.core) if self.inp.exp_inp else mil_pfr_brnd(self.inp)
-        self.ntrl = exp_neutpy_prep(self.inp, self.core, self.sol, self.pfr)
-        self.imp = ImpRad(self.inp, self.core)
-        self.iol = iol_calc(self.inp, self.core)
-        self.nbi = beamdep(self.inp, self.core)
-        self.rtrn = rad_trans(self.inp, self.core, self.tiol, self.fiol, self.ntrl, self.nbi)
-        # self.ti = thermal_inst(self.inp, self.core, self.nbi, self.imp, self.rtrn)
-
-    def plotstuff(self):
-        # self.plots = gt3plots(self)
-        pass
-
-
-class ReadNtrlData:
-    def __init__(self, inp, core):
-        print 'reading ntrl data'
-        ntrl_data = np.loadtxt(inp.neutfile_loc, skiprows=1)
-
-        dict = {}
-        dict['R'] = ntrl_data[:, 0]
-        dict['Z'] = ntrl_data[:, 1]
-        dict['n_n_slow'] = ntrl_data[:, 2]
-        dict['n_n_thermal'] = ntrl_data[:, 3]
-        dict['izn_rate_slow'] = ntrl_data[:, 5]
-        dict['izn_rate_thermal'] = ntrl_data[:, 6]
-
-        data = namedtuple('data', dict.keys())(*dict.values())
-        core.update_ntrl_data(data)
-
+        if mode == 'coreonly':
+            pass
+        elif mode == 'thermaliol':
+            self.iol = iol_calc(self.inp, self.core)
+        elif mode == 'fulliol':
+            self.nbi = beamdep(self.inp, self.core)
+            self.iol = iol_calc(self.inp, self.core)
+        elif mode == 'imp':
+            self.imp = ImpRad(self.inp, self.core)
+        elif mode == 'ntrls':
+            self.ntrl = Neutrals(self.inp, self.core)
+        elif mode == 'nbi':
+            self.nbi = beamdep(self.inp, self.core)
+        elif mode == 'therm_instab':
+            self.nbi = beamdep(self.inp, self.core)
+            self.ntrl = Neutrals(self.inp, self.core)
+            self.imp = ImpRad(self.inp, self.core)
+            self.dl = dens_lim(self.inp, self.core, self.nbi, self.imp, self.ntrl)
+            self.mar = marfe(self.inp, self.core, self.imp)
+        elif mode == 'allthethings':
+            self.nbi = beamdep(self.inp, self.core)
+            self.iol = iol_calc(self.inp, self.core)
+            self.ntrl = Neutrals(self.inp, self.core)
+            self.imp = ImpRad(self.inp, self.core)
+            self.dl = dens_lim(self.inp, self.core, self.nbi, self.imp, self.ntrl)
+            self.mar = marfe(self.inp, self.core, self.imp)
 
 if __name__ == "__main__":
-    d3d_144977_3000 = gt3('144977_3000/togt3_d3d_144977_3000_mil')
-    iter_shot = gt3('iter/togt3_iter_mil')
+    #d3d_144977_3000 = gt3('144977_3000/togt3_d3d_144977_3000_mil')
+    d3d_144977_3000 = gt3('144977_3000/togt3_d3d_144977_3000', mode='ntrls')
+    #iter_shot = gt3('iter/togt3_iter_mil')
     # myshot.coreonly()
-    d3d_144977_3000.coreandiol()
-    iter_shot.coreandiol()
+    #iter_shot.coreandiol()
     # myshot.therm_instab()
     # myshot.ntrlsonly()
     # myshot.coreandimp()
     # plt.axis('equal')
     # plt.contourf(myshot.core.R, myshot.core.Z, np.log10(myshot.core.n_n_total), 500)
     # plt.colorbar()
-    # sys.exi#t()
+    # sys.exit()
     
     # fig1 = plt.figure(figsize=(6, 8))
     # ax1 = fig1.add_subplot(1, 1, 1)
@@ -154,7 +99,7 @@ if __name__ == "__main__":
     # ax1.plot(myshot.inp.lim_vertex_closed[:, 0], myshot.inp.lim_vertex_closed[:, 1])
     # ax1.plot(myshot.inp.sep_exp_closed[:, 0], myshot.inp.sep_exp_closed[:, 1])
 
-    myshot = iter_shot
+    myshot = d3d_144977_3000
 
     fontsize = 12
     fig2 = plt.figure(figsize=(7, 10))
