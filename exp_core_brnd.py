@@ -9,7 +9,7 @@ from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib._cntr as cntr
-from scipy.interpolate import griddata, UnivariateSpline, interp2d
+from scipy.interpolate import griddata, UnivariateSpline, interp1d, interp2d
 from scipy.constants import elementary_charge
 from shapely.geometry import Point, LineString
 from shapely.ops import polygonize, linemerge
@@ -68,18 +68,15 @@ def draw_core_line(R, Z, psi, psi_val, sep_pts):
 
 
 class exp_core_brnd():
-    def __init__(self, inp, ntrl_switch):
+    def __init__(self, inp):
         
-        R_psi = inp.psirz_exp[:, 0].reshape(-1, 65)
-        Z_psi = inp.psirz_exp[:, 1].reshape(-1, 65)
+        self.R_psi = inp.psirz_exp[:, 0].reshape(-1, 65)
+        self.Z_psi = inp.psirz_exp[:, 1].reshape(-1, 65)
         psi = inp.psirz_exp[:, 2].reshape(-1, 65)
-        B_pol_raw = np.sqrt((np.gradient(psi, axis=1)/R_psi)**2 + (-np.gradient(psi, axis=0)/R_psi)**2)
-        self.sep_lines(inp, R_psi, Z_psi, psi)
+        B_pol_raw = np.sqrt((np.gradient(psi, axis=1)/self.R_psi)**2 + (-np.gradient(psi, axis=0)/self.R_psi)**2)
+        self.sep_lines(inp, self.R_psi, self.Z_psi, psi)
         # self.core_lines_main(inp, R_psi, Z_psi, psi)
-        self.core_main(inp, R_psi, Z_psi, psi, B_pol_raw)
-        if ntrl_switch == 2:
-            self.core_lines_ntrl(inp, R_psi, Z_psi, psi)
-            self.core_nT_ntrl(inp, R_psi, Z_psi, psi)
+        self.core_main(inp, self.R_psi, self.Z_psi, psi, B_pol_raw)
         self.xsec(inp)
     
     def update_ntrl_data(self, data):
@@ -233,18 +230,6 @@ class exp_core_brnd():
             
             entire_sep_pts = np.vstack((ib_div_pts, sep_pts[1:, :], ob_div_pts))
             self.entire_sep_line = LineString(entire_sep_pts)
-
-            # these are useful later
-            self.obmp_pt = self.main_sep_pts[np.argmax(self.main_sep_pts, axis=0)[0]]
-            self.ibmp_pt = self.main_sep_pts[np.argmin(self.main_sep_pts, axis=0)[0]]
-            self.top_pt = self.main_sep_pts[np.argmax(self.main_sep_pts, axis=0)[1]]
-            self.bot_pt = self.main_sep_pts[np.argmin(self.main_sep_pts, axis=0)[1]]
-            self.geo_axis = [(self.obmp_pt[0] + self.ibmp_pt[0])/2, (self.obmp_pt[1] + self.ibmp_pt[1])/2]
-            self.R0_a = self.geo_axis[0]
-            # TODO: Is this how a is actually defined?
-            # a is used by nbeams. I'm not sure it's used anywhere else.
-            self.a = self.obmp_pt[0] - self.R0_a
-            # TODO: add point to wall line
                 
         elif num_lines==2:
             # in this case, we have a lower seperatrix trace (line 0), and a main
@@ -283,8 +268,36 @@ class exp_core_brnd():
             entire_sep_pts = np.vstack((ib_div_pts, sep_pts[1:, :], ob_div_pts))
             self.entire_sep_line = LineString(entire_sep_pts)
             #now clean up the lines by removing any points that are extremely close
-            #to the x-point 
-            #TODO: 
+            #to the x-point
+
+        # these are useful later
+        self.obmp_pt = self.main_sep_pts[np.argmax(self.main_sep_pts, axis=0)[0]]
+        self.ibmp_pt = self.main_sep_pts[np.argmin(self.main_sep_pts, axis=0)[0]]
+        self.top_pt = self.main_sep_pts[np.argmax(self.main_sep_pts, axis=0)[1]]
+        self.bot_pt = self.main_sep_pts[np.argmin(self.main_sep_pts, axis=0)[1]]
+        self.geo_axis = [(self.obmp_pt[0] + self.ibmp_pt[0]) / 2, (self.obmp_pt[1] + self.ibmp_pt[1]) / 2]
+        self.R0_a = self.geo_axis[0]
+
+        # TODO: Is this how a is actually defined?
+        # a is used by nbeams. I'm not sure it's used anywhere else.
+        self.a = self.obmp_pt[0] - self.R0_a
+        # TODO: add point to wall line
+
+        # map rho onto psi. Useful later
+        obmp_line= LineString([Point(self.m_axis), Point(self.obmp_pt)])
+        psi_vals_R = np.zeros(inp.ni_data[:,0].shape)
+        psi_vals_Z = np.zeros(inp.ni_data[:,0].shape)
+        psi_vals = np.zeros(inp.ni_data[:,0].shape)
+        for i,rho in enumerate(inp.ni_data[:,0]):
+            pt = np.asarray(obmp_line.interpolate(rho,normalized=True).coords)[0]
+            psi_vals_R[i] = pt[0]
+            psi_vals_Z[i] = pt[1]
+        psi_vals = griddata(np.column_stack((R.flatten(), Z.flatten())),
+                            self.psi_norm_raw.flatten(),
+                            (psi_vals_R, psi_vals_Z),
+                            method='linear')
+        self.rho2psi = interp1d(inp.ni_data[:,0], psi_vals)
+        self.psi2rho = interp1d(psi_vals, inp.ni_data[:,0])
 
     def core_lines_main(self, inp, R, Z, psi):                    
         # define lines to be used for the main computational grid
@@ -307,29 +320,6 @@ class exp_core_brnd():
                         np.amin(y) > np.amin(self.main_sep_pts[:, 1])):
                         # then it's an internal flux surface
                         self.core_main_lines.append(LineString(np.column_stack((x[:-1], y[:-1]))))
-                        break
-
-    def core_lines_ntrl(self, inp, R, Z, psi):
-        #define lines to be used in the neutrals calculation
-        self.core_ntrl_lines = []
-        psi_pts_ntrl = np.linspace(inp.edge_rho_ntrl, 1, inp.rhopts_edge_ntrl, endpoint=False)
-        for i, v in enumerate(psi_pts_ntrl):
-            num_lines = int(len(cntr.Cntr(R, Z, self.psi_norm_raw).trace(v))/2)
-            if num_lines==1:
-                #then we're definitely dealing with a surface inside the seperatrix
-                x, y = draw_contour_line(R, Z, self.psi_norm_raw, v, 0)
-                self.core_ntrl_lines.append(LineString(np.column_stack((x[:-1], y[:-1]))))
-            else:
-                #we need to find which of the surfaces is inside the seperatrix
-                for j, line in enumerate(cntr.Cntr(R, Z, self.psi_norm_raw).trace(v)[:num_lines]):
-                #for j, line in enumerate(cntr.Cntr(R, Z, self.psi_norm_raw).trace(v)):
-                    x, y = draw_contour_line(R, Z, self.psi_norm_raw, v, j)
-                    if (np.amax(x) < np.amax(self.main_sep_pts[:, 0]) and \
-                        np.amin(x) > np.amin(self.main_sep_pts[:, 0]) and \
-                        np.amax(y) < np.amax(self.main_sep_pts[:, 1]) and \
-                        np.amin(y) > np.amin(self.main_sep_pts[:, 1])):
-                        #then it's an internal flux surface
-                        self.core_ntrl_lines.append(LineString(np.column_stack((x[:-1], y[:-1]))))
                         break
 
     def core_main(self, inp, R_psi, Z_psi, psi, B_pol_raw):
