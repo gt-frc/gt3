@@ -272,7 +272,7 @@ class ImpRad:
         # self.dLzdT = interpn((Tn_vals*1E3*1.6021E-19, nf_vals, Te_vals*1E3*1.6021E-19), dLzdT_complete, brnd_vals, method='linear')
 
         # cleanup
-        files = ['toadpak', 'outplt.txt', 'outblk.dat', 'adfits.txt']
+        files = ['toadpak', 'outplt.txt', 'outblk.dat', 'adfits.txt', 'outadpk.txt']
         for f in files:
             try:
                 os.remove(f)
