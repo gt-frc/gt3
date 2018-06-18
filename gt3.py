@@ -10,7 +10,6 @@ from scipy.interpolate import griddata
 from exp_neutpy_prep import Neutrals
 from thermaliol import iol_calc
 from read_infile import read_infile
-from fastiol import fastiol
 from imp_rad import ImpRad
 from exp_core_brnd import exp_core_brnd
 from exp_sol_brnd import exp_sol_brnd
@@ -61,6 +60,9 @@ class gt3:
             self.imp = ImpRad(self.inp, self.core)
         elif mode == 'ntrls':
             self.ntrl = Neutrals(self.inp, self.core)
+        elif mode == 'ntrlsandiol':
+            self.ntrl = Neutrals(self.inp, self.core)
+            self.iol = iol_calc(self.inp, self.core)
         elif mode == 'nbi':
             self.nbi = beamdep(self.inp, self.core)
         elif mode == 'therm_instab':
@@ -76,10 +78,12 @@ class gt3:
             self.imp = ImpRad(self.inp, self.core)
             self.dl = dens_lim(self.inp, self.core, self.nbi, self.imp, self.ntrl)
             self.mar = marfe(self.inp, self.core, self.imp)
+        elif mode == 'radialtrans':
+            self.rtrans = rad_trans(self.inp,self.core,self.iol,self.ntrl,self.nbi)
 
 if __name__ == "__main__":
     #d3d_144977_3000 = gt3('144977_3000/togt3_d3d_144977_3000_mil')
-    d3d_144977_3000 = gt3('144977_3000/togt3_d3d_144977_3000', mode='ntrls')
+    d3d_144977_3000 = gt3('144977_3000/togt3_d3d_144977_3000', mode='ntrlsandiol')
     #iter_shot = gt3('iter/togt3_iter_mil')
     # myshot.coreonly()
     #iter_shot.coreandiol()
