@@ -11,16 +11,16 @@ BT0 = 2.11
 
 #MAIN MESH PARAMETERS
 thetapts_approx = 50
-rhopts = 200
+rhopts = 10
 #edge_rho = 0.6
 #rhopts_edge = 100
 #rhopts_core = 10
 
 #NEUTRALS PARAMETERS
 neut_outfile = gt3_144977_3000_neut.dat
-core_thetapts_ntrl = 30
-ib_thetapts_ntrl = 10
-ob_thetapts_ntrl = 10
+core_thetapts_ntrl = 50
+ib_thetapts_ntrl = 15
+ob_thetapts_ntrl = 15
 #rhopts_ntrl = 500
 edge_rho_ntrl = 0.8
 rhopts_edge_ntrl = 5
