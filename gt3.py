@@ -94,7 +94,8 @@ if __name__ == "__main__":
     # plt.contourf(myshot.core.R, myshot.core.Z, np.log10(myshot.core.n_n_total), 500)
     # plt.colorbar()
     # sys.exit()
-    
+
+
     # fig1 = plt.figure(figsize=(6, 8))
     # ax1 = fig1.add_subplot(1, 1, 1)
     # ax1.axis('equal')
