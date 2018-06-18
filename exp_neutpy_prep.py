@@ -25,6 +25,7 @@ import matplotlib.pyplot as plt
 from exp_core_brnd import exp_core_brnd
 from exp_sol_brnd import exp_sol_brnd
 from exp_pfr_brnd import exp_pfr_brnd
+import pickle
 
 def draw_contour_line(R, Z, array, val, pathnum):
     res = cntr.Cntr(R, Z, array).trace(val)[pathnum]
@@ -50,6 +51,7 @@ def cut(line, distance):
                 LineString(coords[:i] + [(cp.x, cp.y)]),
                 LineString([(cp.x, cp.y)] + coords[i:])]
 
+
 def grid(x, y, z, resX=100, resY=100):
     """Convert 3 column data to matplotlib grid"""
     xi = np.linspace(min(x), max(x), resX)
@@ -60,6 +62,7 @@ def grid(x, y, z, resX=100, resY=100):
     #interp = Rbf(x, y, z, function='linear')
     #Z = interp(X, Y)
     return X, Y, Z
+
 
 def draw_core_line(R, Z, psi, psi_val, sep_pts):
     num_lines = int(len(cntr.Cntr(R, Z, psi).trace(psi_val))/2)
@@ -85,6 +88,7 @@ def draw_core_line(R, Z, psi, psi_val, sep_pts):
     fs_axis = [(out_pt[0]+in_pt[0])/2, (out_pt[1]+in_pt[1])/2]
     return line, fs_axis
 
+
 def getangle(p1, p2):
     if isinstance(p1, Point) and isinstance(p2, Point):
         p1 = [p1.coords.xy[0][0], p1.coords.xy[1][0]]
@@ -97,12 +101,14 @@ def getangle(p1, p2):
     theta_mod = np.where(theta<0, theta+pi, theta)  # makes it so the angle is always measured counterclockwise from the horizontal
     return theta
 
+
 def getangle3ptsdeg(p1, p2, p3):
     a = sqrt((p1[0]-p2[0])**2+(p1[1]-p2[1])**2)
     b = sqrt((p2[0]-p3[0])**2+(p2[1]-p3[1])**2)
     c = sqrt((p1[0]-p3[0])**2+(p1[1]-p3[1])**2)
     theta = degrees(acos((c**2 - a**2 - b**2)/(-2*a*b)))  # returns degree in radians
     return theta
+
 
 def isinline(pt, line):
     pt_s = Point(pt)
@@ -111,6 +117,7 @@ def isinline(pt, line):
         return True
     else:
         return False
+
 
 class Neutrals:
     def __init__(self, inp, core):
@@ -158,12 +165,6 @@ class Neutrals:
             nT_dict['wall'] = sol.wall_nT
             nT = namedtuple('nT', nT_dict.keys())(*nT_dict.values())
 
-            print 'core_nT.ni = ', core_nT.ni
-            print 'core_nT.ne = ', core_nT.ne
-            print 'core_nT.Ti = ', core_nT.Ti
-            print 'core_nT.Te = ', core_nT.Te
-
-
             # get points from those lines
             pts = self.create_tri_pts(inp, lines)
 
@@ -185,13 +186,19 @@ class Neutrals:
             # run neutpy
             self.neutpy_inst = neutpy2(inarrs=toneutpy)
 
+            print 'instantiating NeutpyTools'
+            self.ntools = NeutpyTools(self.neutpy_inst)
+
+            #print 'calling plot_cell_vals from NeutpyTools'
+            #self.ntools.plot_cell_vals
+
             dict = {}
             dict['R'] = midpts[:, 0]
             dict['Z'] = midpts[:, 1]
-            dict['n_n_slow'] = self.neutpy_inst.cell_nn_s
-            dict['n_n_thermal'] = self.neutpy_inst.cell_nn_t
-            dict['izn_rate_slow'] = self.neutpy_inst.cell_izn_rate_s
-            dict['izn_rate_thermal'] = self.neutpy_inst.cell_izn_rate_t
+            dict['n_n_slow'] = self.neutpy_inst.nn.s
+            dict['n_n_thermal'] = self.neutpy_inst.nn.t
+            dict['izn_rate_slow'] = self.neutpy_inst.izn_rate.s
+            dict['izn_rate_thermal'] = self.neutpy_inst.izn_rate.t
 
             self.data = namedtuple('data', dict.keys())(*dict.values())
 
@@ -682,25 +689,25 @@ class Neutrals:
         ni_tri = griddata(ni_global[:, :2],
                           ni_global[:, 2],
                           (mid_x, mid_y),
-                          method='linear',
+                          method='nearest',
                           fill_value=0,
                           rescale=True)
         ne_tri = griddata(ne_global[:, :2],
                           ne_global[:, 2],
                           (mid_x, mid_y),
-                          method='linear',
+                          method='nearest',
                           fill_value=0,
                           rescale=True)
         Ti_tri = griddata(Ti_global[:, :2],
                           Ti_global[:, 2],
                           (mid_x, mid_y),
-                          method='linear',
+                          method='nearest',
                           fill_value=0,
                           rescale=True)
         Te_tri = griddata(Te_global[:, :2],
                           Te_global[:, 2],
                           (mid_x, mid_y),
-                          method='linear',
+                          method='nearest',
                           fill_value=0,
                           rescale=True)
 
