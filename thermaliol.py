@@ -132,7 +132,6 @@ class iol_calc:
 
         # Calculate IOL for fast, monoenergetic alphas
         v_alpha = sqrt(2*3.5E6*1.6021E-19/m_a)
-        print 'v_alpha = ', v_alpha
         self.forb_a_fast, self.morb_a_fast, self.eorb_a_fast = self.calc_iol_mono_en(2, m_a, iol_p, brnd.thetapts, v_alpha)
 
     @staticmethod
