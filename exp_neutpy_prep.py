@@ -10,7 +10,6 @@ import numpy as np
 from shapely.geometry import LinearRing, Point, LineString, Polygon
 import matplotlib._cntr as cntr
 from neutpy import neutpy
-from neutpy2 import neutpy2
 from neutpy_tools import NeutpyTools
 from math import degrees, sqrt, acos, pi
 from scipy.interpolate import griddata, Rbf
@@ -124,8 +123,7 @@ class Neutrals:
         print 'starting neutrals stuff'
         # Try to read in specified neutrals data file. If it's not there, then prepare inputs for and run neutpy
         try:
-            ntrl_data = np.loadtxt(inp.neutfile_loc, skiprows=1)
-
+            ntrl_data = np.loadtxt(inp.neutfile_loc, delimiter=',', skiprows=1)
             dict = {}
             dict['R'] = ntrl_data[:, 0]
             dict['Z'] = ntrl_data[:, 1]
@@ -184,7 +182,7 @@ class Neutrals:
             midpts, toneutpy = self.create_neutpy_input(inp, core, lines, nT)
 
             # run neutpy
-            self.neutpy_inst = neutpy2(inarrs=toneutpy)
+            self.neutpy_inst = neutpy(inarrs=toneutpy)
 
             print 'instantiating NeutpyTools'
             self.ntools = NeutpyTools(self.neutpy_inst)
