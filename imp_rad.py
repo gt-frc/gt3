@@ -52,7 +52,7 @@ class ImpRad:
     """
     def __init__(self, z=None, core=None):
         sys.dont_write_bytecode = True
-
+        print 'imp_rad init'
         # list of impurity names and pickled impurity interpolation object filenames, if they exist. Will be used later.
         imp_names = {}
         imp_names[2] = 'Helium'
@@ -74,18 +74,21 @@ class ImpRad:
             # NOTE: if a core instance is passed, then z is ignored.
             for z in [6]:  # list of all z elements in core. Update this list as necessary.
                 try:  # before running adpak, try to find a pickled interpolator somewhere in the main directory.
-                    Lz = self.find_interp(z, imp_names)
+                    Lz, dLzdT = self.find_interp(z, imp_names)
                 except:
                     print 'Pickled interpolater not found for {}. Running adpak.'.format(imp_names[z])
-                    Lz = self.run_adpak(z, imp_names)
-                core.update_Lz_data(z, Lz)
+                    Lz, dLzdT= self.run_adpak(z, imp_names)
+                core.update_Lz_data(6, Lz, dLzdT)
 
         elif z is not None:
+            print 'z is not none'
             try:  # before running adpak, try to find a pickled interpolator somewhere in the main directory.
-                self.Lz = self.find_interp(z, imp_names)
+                print 'trying to find interpolation object'
+                self.Lz, self.dLzdT = self.find_interp(z, imp_names)
             except:
+                print 'didn\tt work'
                 print 'Pickled interpolater not found for {}. Running adpak.'.format(imp_names[z])
-                self.Lz = self.run_adpak(z, imp_names)
+                self.Lz, self.dLzdT = self.run_adpak(z, imp_names)
         else:
             print 'Neither core nor z were specified. I can\'t read minds. Stopping.'
             sys.exit()
@@ -94,23 +97,35 @@ class ImpRad:
 
     def find_interp(self, z, imp_names):
         # create filename
-        pkl_file = imp_names[z]+'_Lz.pkl'
+        Lz_pkl_file = imp_names[z]+'_Lz.pkl'
+        dLzdT_pkl_file = imp_names[z]+'_dLzdT.pkl'
 
+        print 'Lz_pkl_file = ',Lz_pkl_file
+        print 'dLzdT_pkl_file = ',dLzdT_pkl_file
         # search for pkl_file
         outfile_found = 0
         for root, subdirs, files in os.walk(os.getcwd()):
             for filename in files:
-                if filename == pkl_file:
-                    outfile_found = 1
+                if filename == Lz_pkl_file:
+                    Lz_found = True
                     os.path.join(root, filename)
                     pkl_file_loc = os.path.join(root, filename)
                     pickle_in = open(pkl_file_loc, "rb")
-                    interp = pickle.load(pickle_in)
+                    Lz_interp = pickle.load(pickle_in)
                     pickle_in.close()
-                    return interp
-        if outfile_found == 0:
+                if filename == dLzdT_pkl_file:
+                    dLzdT_found = True
+                    os.path.join(root, filename)
+                    pkl_file_loc = os.path.join(root, filename)
+                    pickle_in = open(pkl_file_loc, "rb")
+                    dLzdT_interp = pickle.load(pickle_in)
+                    pickle_in.close()
+        if Lz_found and dLzdT_found:
+            print 'found \'em'
+            return Lz_interp, dLzdT_interp
+        else:
             # pickle file was not found. Bummer.
-            raise ValueError('Pickle file was not found for {}.'.format(imp_names[z]))
+            raise ValueError('One or more of the pickle files was not found for {}.'.format(imp_names[z]))
 
     def run_adpak(self, z, imp_names):
 
@@ -252,8 +267,8 @@ class ImpRad:
 
                 # create interpolation function for Lz and dLzdT based on coronal equilibrium approximation
                 Lz_interp, dLzdT_interp = self.calc_Lz(inp2, data)
-                Lz_complete[i, j, :] = Lz_interp(Te_vals*1E3*1.6021E-19)
 
+                Lz_complete[i, j, :] = Lz_interp(Te_vals*1E3*1.6021E-19)
                 dLzdT_complete[i, j, :] = dLzdT_interp(Te_vals*1E3*1.6021E-19)
 
         Tn_mesh, nf_mesh, Te_mesh = np.meshgrid(Tn_vals, nf_vals, Te_vals)
@@ -262,6 +277,7 @@ class ImpRad:
                                   np.log10(nf_mesh).flatten(),
                                   np.log10(Te_mesh).flatten()))
         Lz = LinearNDInterpolator(points, Lz_complete.flatten(), rescale=False)
+        dLzdT = LinearNDInterpolator(points, dLzdT_complete.flatten(), rescale=False)
 
         #pickle the interpolation object to save time in the future
         filename = os.getcwd() + '/Lz_interpolators/' + imp_names[z] + '_Lz.pkl'
@@ -269,7 +285,10 @@ class ImpRad:
         pickle.dump(Lz, outfile)
         outfile.close()
 
-        # self.dLzdT = interpn((Tn_vals*1E3*1.6021E-19, nf_vals, Te_vals*1E3*1.6021E-19), dLzdT_complete, brnd_vals, method='linear')
+        filename = os.getcwd() + '/Lz_interpolators/' + imp_names[z] + '_dLzdT.pkl'
+        outfile = open(filename,'wb')
+        pickle.dump(dLzdT, outfile)
+        outfile.close()
 
         # cleanup
         files = ['toadpak', 'outplt.txt', 'outblk.dat', 'adfits.txt', 'outadpk.txt']
@@ -279,7 +298,7 @@ class ImpRad:
             except OSError:
                 pass
 
-        return Lz
+        return Lz, dLzdT
 
     @classmethod
     def calc_nz_cs(cls, inp, data):
@@ -393,24 +412,24 @@ if __name__ == '__main__':
     ncxopt = 1      # Selects cross sections to be used   1 --> OSAS   2 --> GJ    3 --> OSCT
 
     # Helium
-    #He_2 = ImpRad(z=2)
+    He_2 = ImpRad(z=2)
     # Carbon
-    #C_6 = ImpRad(z=6)
+    C_6 = ImpRad(z=6)
     #
     # #Neon
-    # Ne_10 = ImpRad(10)
+    Ne_10 = ImpRad(z=10)
     #
     # #Argon
-    # Ar_18 = ImpRad(18)
+    Ar_18 = ImpRad(z=18)
     #
     # #Krypton
-    # Kr_36 = ImpRad(36)
+    Kr_36 = ImpRad(z=36)
     #
     # #Xenon
     # Xe_54 = ImpRad(54)
     #
     # #Tungsten
-    W_74 = ImpRad(74)
+    # W_74 = ImpRad(74)
 
     def element_plot(inst, element):
         # specify density and temperature parameters at which you want to
@@ -443,4 +462,4 @@ if __name__ == '__main__':
     # element_plot(Ar_18,'Argon')
     # element_plot(Kr_36,'Krypton')
     # element_plot(Xe_54,'Xenon')
-    element_plot(W_74,'Tungsten')
+    # element_plot(W_74,'Tungsten')
