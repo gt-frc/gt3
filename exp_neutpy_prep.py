@@ -120,19 +120,18 @@ def isinline(pt, line):
 
 class Neutrals:
     def __init__(self, inp, core):
-        print 'starting neutrals stuff'
         # Try to read in specified neutrals data file. If it's not there, then prepare inputs for and run neutpy
         try:
             ntrl_data = np.loadtxt(inp.neutfile_loc, delimiter=',', skiprows=1)
-            dict = {}
-            dict['R'] = ntrl_data[:, 0]
-            dict['Z'] = ntrl_data[:, 1]
-            dict['n_n_slow'] = ntrl_data[:, 2]
-            dict['n_n_thermal'] = ntrl_data[:, 3]
-            dict['izn_rate_slow'] = ntrl_data[:, 5]
-            dict['izn_rate_thermal'] = ntrl_data[:, 6]
+            ntrl_dict = {}
+            ntrl_dict['R'] = ntrl_data[:, 1]
+            ntrl_dict['Z'] = ntrl_data[:, 2]
+            ntrl_dict['n_n_slow'] = ntrl_data[:, 3]
+            ntrl_dict['n_n_thermal'] = ntrl_data[:, 4]
+            ntrl_dict['izn_rate_slow'] = ntrl_data[:, 5]
+            ntrl_dict['izn_rate_thermal'] = ntrl_data[:, 6]
 
-            self.data = namedtuple('data', dict.keys())(*dict.values())
+            self.data = namedtuple('data', ntrl_dict.keys())(*ntrl_dict.values())
         except:
             # instantiate sol and pfr
             sol = exp_sol_brnd(inp, core)
