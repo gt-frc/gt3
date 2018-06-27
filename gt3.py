@@ -19,7 +19,7 @@ from mil_sol_brnd import mil_sol_brnd
 from mil_pfr_brnd import mil_pfr_brnd
 from beamdep import beamdep
 from dens_lim import dens_lim
-from marfe import marfe
+from marfe import Marfe
 from rad_trans import rad_trans
 
 
@@ -42,7 +42,7 @@ class gt3:
         nbeams:
         adpack:
     """
-    def __init__(self, shotlabel=None, mode='coreonly'):
+    def __init__(self, shotlabel=None, mode=None):
         sys.dont_write_bytecode = True 
         # Create shotlabel as an attribute of plasma class
         self.shotlabel = shotlabel
@@ -68,15 +68,19 @@ class gt3:
         elif mode == 'therm_instab':
             self.nbi = beamdep(self.inp, self.core)
             self.ntrl = Neutrals(self.inp, self.core)
-            self.imp = ImpRad(self.inp, self.core)
+            self.imp = ImpRad(z=None, core=self.core)
             self.dl = dens_lim(self.inp, self.core, self.nbi, self.imp, self.ntrl)
             self.mar = marfe(self.inp, self.core, self.imp)
         elif mode == 'allthethings':
             self.nbi = beamdep(self.inp, self.core)
             self.iol = iol_calc(self.inp, self.core)
             self.ntrl = Neutrals(self.inp, self.core)
-            self.imp = ImpRad(self.inp, self.core)
+            self.imp = ImpRad(z=None, core=self.core)
             self.dl = dens_lim(self.inp, self.core, self.nbi, self.imp, self.ntrl)
             self.mar = marfe(self.inp, self.core, self.imp)
         elif mode == 'radialtrans':
+            self.iol = iol_calc(self.inp, self.core)
+            self.nbi = beamdep(self.inp, self.core)
+            self.ntrl = Neutrals(self.inp, self.core)
+            self.imp = ImpRad(z=None, core=self.core)
             self.rtrans = rad_trans(self.inp,self.core,self.iol,self.ntrl,self.nbi)
