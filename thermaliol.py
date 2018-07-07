@@ -25,7 +25,7 @@ m_a = 6.643e-27
 class iol_calc:
     """
     """
-    def __init__(self, inp, brnd):
+    def __init__(self, inp, core):
         sys.dont_write_bytecode = True
         np.warnings.filterwarnings('ignore')
 
@@ -33,8 +33,8 @@ class iol_calc:
         angles = np.linspace(-1, 1, inp.numcos + 1)
         self.coslist = ((angles + np.roll(angles, -1)) / 2)[:-1]
 
-        polpts = len(brnd.rho[-1])
-        radpts = len(brnd.rho.T[-1])
+        polpts = len(core.rho[-1])
+        radpts = len(core.rho.T[-1])
 
         # THE FOLLOWING ARRAYS ARE 4-DIMENSIONAL ARRAYS
         # [ LAUNCH THETA POSITION , LAUNCH ANGLE COSINE, LAUNCH r  , EXIT THETA POSITION  ]
@@ -47,59 +47,59 @@ class iol_calc:
         # CREATE ARRAYS FOR LAUNCH POINTS IN THE PLASMA
         r0 = np.broadcast_arrays(np.ones(polpts)[:, None, None, None],
                                  np.ones(inp.numcos)[:, None, None],
-                                 brnd.rho)[-1]
+                                 core.rho)[-1]
 
         B0 = np.broadcast_arrays(np.ones(polpts)[:, None, None, None],
                                  np.ones(inp.numcos)[:, None, None],
-                                 brnd.B_tot)[-1]
+                                 core.B_tot)[-1]
 
         f0 = np.broadcast_arrays(np.ones(polpts)[:, None, None, None],
                                  np.ones(inp.numcos)[:, None, None],
-                                 brnd.f_phi)[-1]
+                                 core.f_phi)[-1]
 
         psi0 = np.broadcast_arrays(np.ones(polpts)[:, None, None, None],
                                    np.ones(inp.numcos)[:, None, None],
-                                   brnd.psi)[-1]
+                                   core.psi)[-1]
 
         phi0 = np.broadcast_arrays(np.ones(polpts)[:, None, None, None],
                                    np.ones(inp.numcos)[:, None, None],
-                                   brnd.E_pot)[-1] * 1E3  # now in volts
+                                   core.E_pot)[-1] * 1E3  # now in volts
 
         xi0 = np.broadcast_arrays(np.ones(polpts)[:, None, None, None],
                                   self.coslist[:, None, None],
-                                  np.ones(brnd.R.shape))[1]
+                                  np.ones(core.R.shape))[1]
 
         # CREATE ARRAYS FOR DESTINATION POINTS ALONG THE SEPERATRIX
         R1 = np.broadcast_arrays(np.ones(polpts)[:, None, None, None],
                                  np.ones(inp.numcos)[:, None, None],
                                  np.ones(radpts)[:, None],
                                  np.ones(polpts)[:],
-                                 brnd.R[-1][:, None, None, None])[-1]
+                                 core.R[-1][:, None, None, None])[-1]
 
         f1 = np.broadcast_arrays(np.ones(polpts)[:, None, None, None],
                                  np.ones(inp.numcos)[:, None, None],
                                  np.ones(radpts)[:, None], np.ones(polpts)[:],
-                                 brnd.f_phi[-1][:, None, None, None])[-1]
+                                 core.f_phi[-1][:, None, None, None])[-1]
 
         B1 = np.broadcast_arrays(np.ones(polpts)[:, None, None, None],
                                  np.ones(inp.numcos)[:, None, None],
                                  np.ones(radpts)[:, None],
                                  np.ones(polpts)[:],
-                                 brnd.B_tot[-1][:, None, None, None])[-1]
+                                 core.B_tot[-1][:, None, None, None])[-1]
 
         psi1 = np.broadcast_arrays(np.ones(polpts)[:, None, None, None],
                                    np.ones(inp.numcos)[:, None, None],
                                    np.ones(radpts)[:, None],
                                    np.ones(polpts)[:],
-                                   brnd.psi[-1][:, None, None, None])[-1]
+                                   core.psi[-1][:, None, None, None])[-1]
 
         phi1 = np.broadcast_arrays(np.ones(polpts)[:, None, None, None],
                                    np.ones(inp.numcos)[:, None, None],
                                    np.ones(radpts)[:, None],
                                    np.ones(polpts)[:],
-                                   brnd.E_pot[-1][:, None, None, None])[-1] * 1E3  # now in volts
+                                   core.E_pot[-1][:, None, None, None])[-1] * 1E3  # now in volts
 
-        Tprofile = brnd.Ti_kev.T[0]
+        Tprofile = core.T.i.kev.T[0]
 
         iol_params = {}
         iol_params['r0'] = r0
@@ -119,20 +119,20 @@ class iol_calc:
         iol_p = namedtuple('iol_p', iol_params.keys())(*iol_params.values())
         
         # Calculate IOL for thermal deuterium
-        self.forb_d_therm, self.morb_d_therm, self.eorb_d_therm = self.calc_iol_maxwellian(1, m_d, iol_p, brnd.thetapts)
+        self.forb_d_therm, self.morb_d_therm, self.eorb_d_therm = self.calc_iol_maxwellian(1, m_d, iol_p, core.thetapts)
 
         # Calculate IOL for thermal tritium
-        self.forb_t_therm, self.morb_t_therm, self.eorb_t_therm = self.calc_iol_maxwellian(1, m_t, iol_p, brnd.thetapts)
+        self.forb_t_therm, self.morb_t_therm, self.eorb_t_therm = self.calc_iol_maxwellian(1, m_t, iol_p, core.thetapts)
 
         # Calculate IOL for thermal carbon
-        self.forb_c_therm, self.morb_c_therm, self.eorb_c_therm = self.calc_iol_maxwellian(6, m_c, iol_p, brnd.thetapts)
+        self.forb_c_therm, self.morb_c_therm, self.eorb_c_therm = self.calc_iol_maxwellian(6, m_c, iol_p, core.thetapts)
 
         # Calculate IOL for thermal alphas
-        self.forb_a_therm, self.morb_a_therm, self.eorb_a_therm = self.calc_iol_maxwellian(2, m_a, iol_p, brnd.thetapts)
+        self.forb_a_therm, self.morb_a_therm, self.eorb_a_therm = self.calc_iol_maxwellian(2, m_a, iol_p, core.thetapts)
 
         # Calculate IOL for fast, monoenergetic alphas
         v_alpha = sqrt(2*3.5E6*1.6021E-19/m_a)
-        self.forb_a_fast, self.morb_a_fast, self.eorb_a_fast = self.calc_iol_mono_en(2, m_a, iol_p, brnd.thetapts, v_alpha)
+        self.forb_a_fast, self.morb_a_fast, self.eorb_a_fast = self.calc_iol_mono_en(2, m_a, iol_p, core.thetapts, v_alpha)
 
     @staticmethod
     def calc_vsep(z, m, p):
