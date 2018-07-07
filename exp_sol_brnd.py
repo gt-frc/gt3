@@ -8,17 +8,19 @@ Created on Fri May 18 15:14:01 2018
 from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib._cntr as cntr
 from scipy.interpolate import griddata, UnivariateSpline
 from scipy.constants import elementary_charge
 from shapely.geometry import Point, LineString
 from shapely.ops import polygonize
 from collections import namedtuple
 from math import ceil
+from contours.quad import QuadContourGenerator
 import sys
 
-def draw_line(R, Z, array, val, pathnum):
-    res = cntr.Cntr(R, Z, array).trace(val)[pathnum]
+def draw_contour_line(R, Z, array, val, pathnum):
+    c = QuadContourGenerator.from_rectilinear(R[0], Z[:, 0], array)
+
+    res = c.contour(val)[pathnum]
     x = res[:, 0]
     y = res[:, 1]
     return x, y
@@ -40,28 +42,27 @@ def cut(line, distance):
                 LineString(coords[:i] + [(cp.x, cp.y)]), 
                 LineString([(cp.x, cp.y)] + coords[i:])]
 
+
 class exp_sol_brnd():
     def __init__(self, inp, core):
         
         R = inp.psirz_exp[:, 0].reshape(-1, 65)
         Z = inp.psirz_exp[:, 1].reshape(-1, 65)
         
-        self.calc_sol_lines(inp, R, Z, core)
-        self.calc_sol_nT(inp, R, Z, core)
+        self.calc_sol_lines(inp, core)
+        self.calc_sol_nT(inp, core)
         pass
     
-    def calc_sol_lines(self, inp, R, Z, core):
-        # find value of psi at outside of what we're going to call the SOL
+    def calc_sol_lines(self, inp, core):
+        c = QuadContourGenerator.from_rectilinear(core.psi_data.R[0], core.psi_data.Z[:, 0], core.psi_data.psi_norm)
         self.sol_lines = []
         self.sol_lines_cut = []
 
         psi_pts = np.linspace(1, inp.sollines_psi_max, inp.num_sollines+1, endpoint=True)[1:]
         for i, v in enumerate(psi_pts):
-            num_lines = int(len(cntr.Cntr(R, Z, core.psi_norm_raw).trace(v))/2)
-            if num_lines==1:
-                # then we're definitely dealing with a surface inside the seperatrix
-                x, y = draw_line(R, Z, core.psi_norm_raw, v, 0)
-                self.sol_lines.append(LineString(np.column_stack((x, y))))
+            num_lines = len(c.contour(v))
+            if num_lines == 1:
+                self.sol_lines.append(LineString(c.contour(v)[0]))
             else:
                 # TODO:
                 pass
@@ -78,12 +79,12 @@ class exp_sol_brnd():
         # end of the flux line isn't exactly on top of the wall line.
 
         # add inboard seperatrix strike point
-        union = inp.wall_line.union(core.ib_div_line)
+        union = inp.wall_line.union(core.lines.div.ib)
         result = [geom for geom in polygonize(union)][0]
         inp.wall_line = LineString(result.exterior.coords)
 
         # add outboard seperatrix strike point
-        union = inp.wall_line.union(core.ob_div_line)
+        union = inp.wall_line.union(core.lines.div.ob)
         result = [geom for geom in polygonize(union)][0]
         inp.wall_line = LineString(result.exterior.coords)  
         
@@ -101,7 +102,7 @@ class exp_sol_brnd():
             result = [geom for geom in polygonize(union)][0]
             inp.wall_line = LineString(result.exterior.coords)
             
-    def calc_sol_nT(self, inp, R, Z, core):
+    def calc_sol_nT(self, inp, core):
         # calculate spatial gradients for density and temperature along the seperatrix from dni/dr = dni/dpsi * dpsi/dr
         # specify the flux surface to get densities, temperatures, and their gradients
         sep_flx_surf = 0.98
@@ -115,14 +116,14 @@ class exp_sol_brnd():
         dTi_dpsi_sep = Ti_psi_fit.derivative()(sep_flx_surf)
 
         # calculate dpsidr everywhere (technically, we're calculating |dpsi/dr|. We don't care about the direction.
-        dpsidR = np.abs(np.gradient(core.psi_norm_raw, R[0, :], axis=1))
-        dpsidZ = np.abs(np.gradient(core.psi_norm_raw, Z[:, 0], axis=0))
+        dpsidR = np.abs(np.gradient(core.psi_data.psi_norm, core.psi_data.R[0, :], axis=1))
+        dpsidZ = np.abs(np.gradient(core.psi_data.psi_norm, core.psi_data.Z[:, 0], axis=0))
 
         dpsidr = dpsidR + dpsidZ
 
-        dpsidr_sep = griddata(np.column_stack((R.flatten(), Z.flatten())),
+        dpsidr_sep = griddata(np.column_stack((core.psi_data.R.flatten(), core.psi_data.Z.flatten())),
                               dpsidr.flatten(),
-                              (core.main_sep_pts[:,0], core.main_sep_pts[:,1]),
+                              np.asarray(core.lines.sep.coords),
                               method='linear')
 
         # calculate dni/dr and dTi/dr at the seperatrix
@@ -131,7 +132,7 @@ class exp_sol_brnd():
         dTidr_sep = dTi_dpsi_sep * dpsidr_sep
         dTedr_sep = dTidr_sep
 
-        num_sep_pts = len(core.main_sep_pts)
+        num_sep_pts = len(np.asarray(core.lines.sep.coords))
 
         ni_sep = np.full(num_sep_pts, ni_psi_fit(sep_flx_surf))
         ne_sep = np.full(num_sep_pts, ne_psi_fit(sep_flx_surf))
@@ -139,7 +140,7 @@ class exp_sol_brnd():
         Te_sep = np.full(num_sep_pts, Te_psi_fit(sep_flx_surf)) * 1E3 * 1.6021E-19  # in Joules
 
         #calculate BT along the seperatrix
-        BT_sep = inp.BT0 * core.m_axis[0] / core.main_sep_pts[:,0]
+        BT_sep = inp.BT0 * core.pts.axis.mag[0] / np.asarray(core.lines.sep.coords)[:,0]
 
         # remove a certain percentage of the seperatrix in the vicinity of the x-point
         # this fraction will be removed from both the inboard and the outboard sides of the x-point
@@ -218,9 +219,9 @@ class exp_sol_brnd():
         dTedr_xi = np.concatenate((dTedr_ib, dTedr_sep_cut, dTedr_ob))
         BT_xi = np.concatenate((BT_ib, BT_sep_cut, BT_ob))
         
-        ib_leg_length = core.ib_div_line_cut.length
-        ob_leg_length = core.ob_div_line_cut.length
-        sep_length = core.main_sep_line_closed.length
+        ib_leg_length = core.lines.div.ib.length
+        ob_leg_length = core.lines.div.ob.length
+        sep_length = core.lines.sep_closed.length
         ib_frac = ib_leg_length / (ib_leg_length + sep_length + ob_leg_length)
         sep_frac = sep_length / (ib_leg_length + sep_length + ob_leg_length)
         ob_frac = ob_leg_length / (ib_leg_length + sep_length + ob_leg_length)
@@ -286,8 +287,8 @@ class exp_sol_brnd():
             for j, xi_val in enumerate(xi_pts):
                 sol_pt = sol_line.interpolate(xi_val, normalized=True)
                 sol_nT_pts[j, :, i] = np.asarray(sol_pt.xy).T
-                sep_pt_pos = core.entire_sep_line.project(sol_pt, normalized=True)
-                sep_pt = core.entire_sep_line.interpolate(sep_pt_pos, normalized=True)
+                sep_pt_pos = core.lines.ib2ob.project(sol_pt, normalized=True)
+                sep_pt = core.lines.ib2ob.interpolate(sep_pt_pos, normalized=True)
                 sol_line_dist[j, i] = sol_pt.distance(sep_pt)
         
         sol_line_ni = np.zeros((len(xi_pts), len(self.sol_lines_cut)))
@@ -332,8 +333,8 @@ class exp_sol_brnd():
 
         # draw wall line through 2d strip model to get n, T along the line
         wall_pts = np.asarray(inp.wall_line.xy).T
-        ib_int_pt = np.asarray(core.ib_div_line.intersection(inp.wall_line).xy).T
-        ob_int_pt = core.ob_div_line.intersection(inp.wall_line)
+        ib_int_pt = np.asarray(core.lines.div.ib.intersection(inp.wall_line).xy).T
+        ob_int_pt = core.lines.div.ob.intersection(inp.wall_line)
         wall_start_pos = np.where((wall_pts == ib_int_pt).all(axis=1))[0][0]
         wall_line_rolled = LineString(np.roll(wall_pts, -wall_start_pos, axis=0))
         wall_line_cut = cut(wall_line_rolled, 
@@ -355,8 +356,8 @@ class exp_sol_brnd():
 
         for i, pt in enumerate(wall_nT_pts):
             wall_pt = Point(pt)
-            sep_pt_pos = core.entire_sep_line.project(Point(wall_pt), normalized=True)
-            sep_pt = core.entire_sep_line.interpolate(sep_pt_pos, normalized=True)
+            sep_pt_pos = core.lines.ib2ob.project(Point(wall_pt), normalized=True)
+            sep_pt = core.lines.ib2ob.interpolate(sep_pt_pos, normalized=True)
             wall_pos_norm[i] = wall_line_cut.project(wall_pt, normalized=True)
             wall_dist[i] = wall_pt.distance(sep_pt)
         

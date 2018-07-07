@@ -41,8 +41,8 @@ class dens_lim:
         g = ni/n0
         
         fz = 0.05
-        Lz = imp.core_emissivity[:, 0] * 1E1
-        dLzdT = imp.core_dEmiss_dT[:, 0] * 1E1
+        Lz = core.Lz_thermal[:, 0] * 1E1
+        dLzdT = core.Lz_thermal[:, 0] * 1E1
         
         sv_fus = core.sv_fus[:, 0]
         dsv_fus_dT = core.dsv_fus_dT[:, 0]

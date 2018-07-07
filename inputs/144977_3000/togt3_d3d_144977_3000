@@ -11,13 +11,13 @@ BT0 = 2.11
 
 #MAIN MESH PARAMETERS
 thetapts_approx = 50
-rhopts = 10
+rhopts = 100
 #edge_rho = 0.6
 #rhopts_edge = 100
 #rhopts_core = 10
 
 #NEUTRALS PARAMETERS
-neut_outfile = gt3_144977_3000_neut.dat
+neut_outfile = neutpy_cell_values.txt
 core_thetapts_ntrl = 50
 ib_thetapts_ntrl = 15
 ob_thetapts_ntrl = 15
