@@ -70,14 +70,14 @@ class gt3:
             self.ntrl = Neutrals(self.inp, self.core)
             self.imp = ImpRad(z=None, core=self.core)
             self.dl = dens_lim(self.inp, self.core, self.nbi, self.imp, self.ntrl)
-            self.mar = marfe(self.inp, self.core, self.imp)
+            self.mar = Marfe(self.inp, self.core, self.imp)
         elif mode == 'allthethings':
             self.nbi = beamdep(self.inp, self.core)
             self.iol = iol_calc(self.inp, self.core)
             self.ntrl = Neutrals(self.inp, self.core)
             self.imp = ImpRad(z=None, core=self.core)
             self.dl = dens_lim(self.inp, self.core, self.nbi, self.imp, self.ntrl)
-            self.mar = marfe(self.inp, self.core, self.imp)
+            self.mar = Marfe(self.inp, self.core, self.imp)
         elif mode == 'radialtrans':
             self.iol = iol_calc(self.inp, self.core)
             self.nbi = beamdep(self.inp, self.core)
