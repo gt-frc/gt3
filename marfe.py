@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from imp_rad import ImpRad
 from collections import namedtuple
 import sys
+from exp_core_brnd import *
 
 
 def calc_z_0(n):
@@ -71,19 +72,24 @@ def calc_Lz(n, T):
     Tn = (n.n.s*T.n.s + n.n.t*T.n.t) / (n.n.s + n.n.t)
 
     # calculate a total neutral fraction
-    nf = (n.n.s + n.n.t) / n.e
+    nf = 1.0E-7  #(n.n.s + n.n.t) / n.e
 
     # obtain interpolations from ImpRad
     imp_C = ImpRad(z=6)
     Lz_interp_C = imp_C.Lz
     dLzdT_interp_C = imp_C.dLzdT
 
-    print 'got the interpolators'
-    print 'now we\'re probably going to break it or return NaNs'
     # obtain values from the interpolations
     Lz_C = Lz_interp_C(np.log10(Tn), np.log10(nf), np.log10(T.e.kev))
     dLzdT_C = dLzdT_interp_C(np.log10(Tn), np.log10(nf), np.log10(T.e.kev))
 
+    print
+    print 'Tn = ',Tn
+    print 'nf = ',nf
+    print 'T.e.kev = ',T.e.kev
+    print 'Lz_C = ',Lz_C
+    print 'dLzdT_C = ',dLzdT_C
+    print
     return Lz_C, dLzdT_C
 
 
@@ -110,29 +116,46 @@ def calc_n_marfe(n, sv, T, L, Lz, chi_r):
     print ' chi_r = ', chi_r
     print ' nu = ', nu
     print ' L.T = ', L.T
-    print ' C2 = ', C2
     print ' L.n = ', L.n
+    print ' C2 = ', C2
     print ' fz = ', fz
     print ' f0 = ', f0
     print ' f0c = ', f0c
     print ' E_ion = ', E_ion
     print ' sv.ion = ', sv.ion
-    print ' T.i.J = ', T.i.J
     print ' sv.ion_ddT = ', sv.ion_ddT
+    print ' sv.cx = ', sv.cx
+    print ' sv.cx_ddT = ', sv.cx_ddT
+    print ' sv.el = ', sv.el
+    print ' sv.el_ddT = ', sv.el_ddT
+    print ' Lz_t = ', Lz_t
     print ' dLzdT = ', dLzdT
-    print 'fz = ', fz
+    print ' T.i.J = ',T.i.J
+    print ' n.e = ', n.e
     print
-    print 'term1 = ', chi_r * (nu * L.T ** -2 - (1.0 - C2) * L.T ** -1 * L.n ** -1)
-    print 'term2 = ', fz * ((nu + 1 - C2) * Lz / T.i - dLzdT)
-    print 'term3 = ', f0 * (E_ion * sv.ion / T.i * (nu - T.i / sv.ion * sv.ion_ddT))
-    print 'term4 = ', f0c * (3.0 / 2.0 * (sv.cx + sv.el) * (nu - 1.0 - T.i * (sv.cx_ddT + sv.el_ddT) / (sv.cx + sv.el)))
 
-    n_marfe = chi_r * (nu * L.T ** -2 - (1.0 - C2) * L.T ** -1 * L.n ** -1) / \
+
+
+    term1 = chi_r * (nu * L.T**-2 + (C2 - 1.0) * L.T**-1 * L.n**-1)
+    term2 = fz * ((nu + 1 - C2) * Lz_t / T.i.J - dLzdT)
+    term3 = f0 * (E_ion * sv.ion / T.i.J * (nu - T.i.J / sv.ion * sv.ion_ddT))
+    term4 = f0c * (3.0 / 2.0 * (sv.cx + sv.el) * (nu - 1.0 - T.i.J * (sv.cx_ddT + sv.el_ddT) / (sv.cx + sv.el)))
+    print
+    print 'term1 = ', term1
+    print 'term2 = ', term2
+    print 'term3 = ', term3
+    print 'term4 = ', term4
+    print 'term 2+3+4 = ', term2 + term3 + term4
+
+    n_marfe = term1 / \
               (
-                      fz * ((nu + 1 - C2) * Lz / T.i - dLzdT) +
-                      f0 * (E_ion * sv.ion / T.i * (nu - T.i / sv.ion * sv.ion_ddT)) +
-                      f0c * (3.0 / 2.0 * (sv.cx + sv.el) * (nu - 1.0 - T.i * (sv.cx_ddT + sv.el_ddT) / (sv.cx + sv.el)))
+                      term2 +
+                      term3 +
+                      term4
               )
+
+    print 'n_marfe = ', n_marfe
+    print 'MI = ', n.e / n_marfe
     return n_marfe
 
 
@@ -217,64 +240,151 @@ class Marfe:
 
 
 if __name__ == '__main__':
-    nn_s =
-    nn_t =
-    n_e =
-    n_i =
-    n_C =
 
-    sv_ion =
-    sv_ion_ddT =
-    sv_el =
-    sv_el_ddT =
-    sv_cx =
-    sv_cx_ddT =
+    # Values for 92980.3600
+    nn_dict = {}
+    nn_dict['s'] = 0.0
+    nn_dict['t'] = 0.29 * 1E20 * 1.2E-3
+    nn = namedtuple('nn', nn_dict.keys())(*nn_dict.values())
 
-    T_e_kev =
-    T_e_ev = T_e_kev * 1E3
-    T_e_J = T_e_kev * 1E3 * 1.6021E-19
+    n_dict = {}
+    n_dict['n'] = nn
+    n_dict['e'] = 0.29 * 1E20
+    n_dict['i'] = n_dict['e']
+    n_dict['C'] = n_dict['e'] * 0.015
+    n = namedtuple('n', n_dict.keys())(*n_dict.values())
 
-    T_i_kev =
-    T_i_ev = T_i_kev * 1E3
-    T_i_J = T_i_kev * 1E3 * 1.6021E-19
+    Te_dict = {}
+    Te_dict['kev'] = np.array([0.03,0.05])
+    Te_dict['ev'] = Te_dict['kev'] * 1E3
+    Te_dict['J'] = Te_dict['kev'] * 1E3 * 1.6021E-19
+    Te = namedtuple('Te', Te_dict.keys())(*Te_dict.values())
 
-    T_n_kev =
-    T_n_ev = T_n_kev * 1E3
-    T_n_J = T_n_kev * 1E3 * 1.6021E-19
+    Ti_dict = {}
+    Ti_dict['kev'] = 0.08
+    Ti_dict['ev'] = Ti_dict['kev'] * 1E3
+    Ti_dict['J'] = Ti_dict['kev'] * 1E3 * 1.6021E-19
+    Ti = namedtuple('Ti', Ti_dict.keys())(*Ti_dict.values())
 
-    L_n =
-    L_T =
+    Tn_dict = {}
+    Tn_dict['s'] = 0.002  # in kev
+    Tn_dict['t'] = Ti_dict['kev']  # in kev
+    Tn = namedtuple('Tn', Tn_dict.keys())(*Tn_dict.values())
 
-    Lz_t =
-    Lz_ddT =
+    T_dict = {}
+    T_dict['e'] = Te
+    T_dict['i'] = Ti
+    T_dict['n'] = Tn
+    T = namedtuple('T', T_dict.keys())(*T_dict.values())
+
+    sv_dict = {}
+    sv_dict['ion'] = calc_svion_st(T)[0]
+    sv_dict['ion_ddT'] = calc_svion_st(T)[1]
+    sv_dict['el'] = calc_svel_st(T)[0]
+    sv_dict['el_ddT'] = calc_svel_st(T)[1]
+    sv_dict['cx'] = calc_svcx_st(T)[0]
+    sv_dict['cx_ddT'] = calc_svcx_st(T)[1]
+    sv = namedtuple('sv', sv_dict.keys())(*sv_dict.values())
+
+    L_dict = {}
+    L_dict['n'] = 1 / 17.9
+    L_dict['T'] = 1 / 16.4
+    L = namedtuple('L', L_dict.keys())(*L_dict.values())
+
+    Lz_dict = {}
+    Lz_dict['t'] = calc_Lz(n, T)[0]
+    Lz_dict['ddT'] = calc_Lz(n, T)[1]
+    Lz = namedtuple('Lz', Lz_dict.keys())(*Lz_dict.values())
 
     chi_r = 2.0
 
-    nn_nt = namedtuple('nn', 's t')
-    n_n = nn_nt(nn_s, nn_t)
+    calc_n_marfe(n, sv, T, L, Lz, chi_r)
 
-    n_nt = namedtuple('n', 'n e i C')
-    n = n_nt(n_n, n_e, n_i, n_C)
 
-    sv_nt = namedtuple('sv', 'ion ion_ddT el el_ddT cx cx_ddT')
-    sv = sv_nt(sv_ion, sv_ion_ddT, sv_el, sv_el_ddT, sv_cx, sv_cx_ddT)
 
-    T_units_nt = namedtuple('T_units', 'kev ev J')
-    T_i = T_units_nt(T_i_kev, T_i_ev, T_i_J)
-    T_e = T_units_nt(T_e_kev, T_e_ev, T_e_J)
-    T_n = T_units_nt(T_n_kev, T_n_ev, T_n_J)
 
-    T_nt = namedtuple('T', 'e i n')
-    T = T_nt(T_i, T_e, T_n)
 
-    L_nt = namedtuple('L', 'n T')
-    L = L_nt(L_n, L_T)
 
-    Lz_nt = namedtuple('Lz', 't ddT')
-    Lz = Lz_nt(Lz_t, Lz_ddT)
 
-    inputs_nt = namedtuple('inputs', 'n sv T L Lz chi_r')
-    inputs = inputs_nt(n, sv, T, L, Lz, chi_r)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # n_e = 0.46 * 1E20  # complete
+    # n_i = n_e  # complete
+    # n_C = 0.013 * n_e  # complete
+    # nn_s = 0  # complete
+    # nn_t = n_i * 1E-3  # complete
+    #
+    # T_units_nt = namedtuple('T_units', '')
+    # T_nt = namedtuple('T', '')
+    #
+    # sv_ion = calc_svel_st(T)
+    # sv_ion_ddT =
+    # sv_el =
+    # sv_el_ddT =
+    # sv_cx =
+    # sv_cx_ddT =
+    #
+    # T_e_kev =
+    # T_e_ev = T_e_kev * 1E3
+    # T_e_J = T_e_kev * 1E3 * 1.6021E-19
+    #
+    # T_i_kev =
+    # T_i_ev = T_i_kev * 1E3
+    # T_i_J = T_i_kev * 1E3 * 1.6021E-19
+    #
+    # T_n_kev =
+    # T_n_ev = T_n_kev * 1E3
+    # T_n_J = T_n_kev * 1E3 * 1.6021E-19
+    #
+    # L_n =
+    # L_T =
+    #
+    # Lz_t =
+    # Lz_ddT =
+    #
+    # chi_r = 2.0
+    #
+    # nn_nt = namedtuple('nn', 's t')
+    # n_n = nn_nt(nn_s, nn_t)
+    #
+    # n_nt = namedtuple('n', 'n e i C')
+    # n = n_nt(n_n, n_e, n_i, n_C)
+    #
+    # sv_nt = namedtuple('sv', 'ion ion_ddT el el_ddT cx cx_ddT')
+    # sv = sv_nt(sv_ion, sv_ion_ddT, sv_el, sv_el_ddT, sv_cx, sv_cx_ddT)
+    #
+    # T_units_nt = namedtuple('T_units', 'kev ev J')
+    # T_i = T_units_nt(T_i_kev, T_i_ev, T_i_J)
+    # T_e = T_units_nt(T_e_kev, T_e_ev, T_e_J)
+    # T_n = T_units_nt(T_n_kev, T_n_ev, T_n_J)
+    #
+    # T_nt = namedtuple('T', 'e i n')
+    # T = T_nt(T_i, T_e, T_n)
+    #
+    # L_nt = namedtuple('L', 'n T')
+    # L = L_nt(L_n, L_T)
+    #
+    # Lz_nt = namedtuple('Lz', 't ddT')
+    # Lz = Lz_nt(Lz_t, Lz_ddT)
+    #
+    # inputs_nt = namedtuple('inputs', 'n sv T L Lz chi_r')
+    # inputs = inputs_nt(n, sv, T, L, Lz, chi_r)
 
 
     # chi_r = 2.0
