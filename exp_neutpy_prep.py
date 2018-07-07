@@ -8,7 +8,6 @@ Created on Sat May 19 14:27:42 2018
 from __future__ import division
 import numpy as np
 from shapely.geometry import LinearRing, Point, LineString, Polygon
-import matplotlib._cntr as cntr
 from neutpy import neutpy
 from neutpy_tools import NeutpyTools
 from math import degrees, sqrt, acos, pi
@@ -25,9 +24,12 @@ from exp_core_brnd import exp_core_brnd
 from exp_sol_brnd import exp_sol_brnd
 from exp_pfr_brnd import exp_pfr_brnd
 import pickle
+from contours.quad import QuadContourGenerator
 
 def draw_contour_line(R, Z, array, val, pathnum):
-    res = cntr.Cntr(R, Z, array).trace(val)[pathnum]
+    c = QuadContourGenerator.from_rectilinear(R[0], Z[:, 0], array)
+
+    res = c.contour(val)[pathnum]
     x = res[:, 0]
     y = res[:, 1]
     return x, y
@@ -64,14 +66,20 @@ def grid(x, y, z, resX=100, resY=100):
 
 
 def draw_core_line(R, Z, psi, psi_val, sep_pts):
-    num_lines = int(len(cntr.Cntr(R, Z, psi).trace(psi_val))/2)
-    if num_lines == 1:
+    # create contour generator
+    c = QuadContourGenerator.from_rectilinear(R[0], Z[:, 0], psi)
+
+    # draw contours with psi_val
+    contours = c.contour(psi_val)
+
+    if len(contours) == 1:
         # then we're definitely dealing with a surface inside the seperatrix
         x, y = draw_contour_line(R, Z, psi, psi_val, 0)
     else:
         # we need to find which of the surfaces is inside the seperatrix
-        for j, line in enumerate(cntr.Cntr(R, Z, psi).trace(psi_val)[:num_lines]):
+        for j, line in enumerate(contours):
             x, y = draw_contour_line(R, Z, psi, psi_val, j)
+
             if (np.amax(x) < np.amax(sep_pts[:, 0]) and
                 np.amin(x) > np.amin(sep_pts[:, 0]) and
                 np.amax(y) < np.amax(sep_pts[:, 1]) and
@@ -112,10 +120,221 @@ def getangle3ptsdeg(p1, p2, p3):
 def isinline(pt, line):
     pt_s = Point(pt)
     dist = line.distance(pt_s)
-    if dist < 0.003:
+    if dist < 1E-6:
         return True
     else:
         return False
+
+
+def calc_core_lines_ntrl(core):
+
+    c = QuadContourGenerator.from_rectilinear(core.psi_data.R[0], core.psi_data.Z[:, 0], core.psi_data.psi_norm)
+
+    rhovals = np.linspace(0.7, 1, 5, endpoint=False)
+    psivals = core.rho2psi(rhovals)
+
+    core_lines_ntrl = []
+    for i, psival in enumerate(psivals):
+        contours = c.contour(psival)
+        # determine how many surfaces have that psi value
+        num_lines = len(contours)
+
+        if num_lines == 1:
+            # then we're definitely dealing with a surface inside the seperatrix
+            core_lines_ntrl.append(LineString(contours[0]))
+        else:
+            # we need to find which of the surfaces is inside the seperatrix
+            for contour in contours:
+                x, y = contour[:, 0], contour[:, 1]
+                if (
+                        np.amax(x) < np.amax(np.asarray(core.lines.sep.coords)[:, 0]) and
+                        np.amin(x) > np.amin(np.asarray(core.lines.sep.coords)[:, 0]) and
+                        np.amax(y) < np.amax(np.asarray(core.lines.sep.coords)[:, 1]) and
+                        np.amin(y) > np.amin(np.asarray(core.lines.sep.coords)[:, 1])
+                ):
+                    # then it's an internal flux surface
+                    core_lines_ntrl.append(LineString(contour))
+                    break
+
+    return core_lines_ntrl
+
+
+def create_tri_pts(inp, lines):
+    sol_pol_pts = inp.core_thetapts_ntrl + inp.ib_thetapts_ntrl + inp.ob_thetapts_ntrl
+
+    # GET POINTS FOR TRIANGULATION
+    # main seperatrix
+    sep_pts = np.zeros((inp.core_thetapts_ntrl, 2))
+    for i, v in enumerate(np.linspace(0, 1, inp.core_thetapts_ntrl, endpoint=False)):
+        sep_pts[i] = np.asarray(lines.sep.interpolate(v, normalized=True).xy).T[0]
+
+    # inboard divertor leg
+    ib_div_pts = np.zeros((inp.ib_thetapts_ntrl, 2))
+    for i, v in enumerate(np.linspace(0, 1, inp.ib_thetapts_ntrl, endpoint=True)):  # skipping the x-point (point 0)
+        ib_div_pts[i] = np.asarray(lines.ib_div.interpolate(v, normalized=True).xy).T[0]
+
+    # outboard divertor leg
+    ob_div_pts = np.zeros((inp.ob_thetapts_ntrl, 2))
+    for i, v in enumerate(np.linspace(0, 1, inp.ob_thetapts_ntrl, endpoint=True)):  # skipping the x-point (point 0)
+        ob_div_pts[i] = np.asarray(lines.ob_div.interpolate(v, normalized=True).xy).T[0]
+
+    # core
+    core_pts = np.zeros((inp.core_thetapts_ntrl*len(lines.core), 2))
+    for num, line in enumerate(lines.core):
+        for i, v in enumerate(np.linspace(0, 1, inp.core_thetapts_ntrl, endpoint=False)):
+            core_pts[num*inp.core_thetapts_ntrl + i] = np.asarray(line.interpolate(v, normalized=True).xy).T[0]
+
+    core_ring = LinearRing(core_pts[:inp.core_thetapts_ntrl])
+
+    # sol
+    sol_pts = np.zeros((sol_pol_pts*len(lines.sol), 2))
+    for num, line in enumerate(lines.sol):
+        for i, v in enumerate(np.linspace(0, 1, sol_pol_pts, endpoint=True)):
+            sol_pts[num*sol_pol_pts + i] = np.asarray(line.interpolate(v, normalized=True).xy).T[0]
+
+    # wall
+    wall_pts = np.asarray(inp.wall_line.coords)[:-1]
+
+    pts_dict = {}
+    pts_dict['core'] = core_pts
+    pts_dict['sep'] = sep_pts
+    pts_dict['sol'] = sol_pts
+    #pts_dict['pfr'] = pfr_pts
+    pts_dict['ib_div'] = ib_div_pts
+    pts_dict['ob_div'] = ob_div_pts
+    pts_dict['wall'] = wall_pts
+    pts = namedtuple('pts', pts_dict.keys())(*pts_dict.values())
+
+    return pts, core_ring
+
+
+def create_tri_segs(inp, lines, pts):
+
+    # CREATE SEGMENTS FOR TRIANGULATION
+    # WHEN DOING WALL, CHECK EACH POINT TO SEE IF IT HAS ALREADY BEEN
+    # CREATED. IF SO, USE THE NUMBER OF THAT POINT AND DELETE THE WALL
+    # VERSION OF IT IN THE ALL_PTS ARRAY.
+    sol_pol_pts = inp.core_thetapts_ntrl + inp.ib_thetapts_ntrl + inp.ob_thetapts_ntrl
+
+    sep_segs = np.column_stack((np.arange(inp.core_thetapts_ntrl),
+                                np.roll(np.arange(inp.core_thetapts_ntrl), -1)))
+
+    ib_div_segs = np.column_stack((np.arange(inp.ib_thetapts_ntrl),
+                                   np.roll(np.arange(inp.ib_thetapts_ntrl), -1)))[:-1]
+
+    ob_div_segs = np.column_stack((np.arange(inp.ob_thetapts_ntrl),
+                                   np.roll(np.arange(inp.ob_thetapts_ntrl), -1)))[:-1]
+
+    core_segs = np.zeros((0, 2), dtype='int')
+    for i, v in enumerate(lines.core):
+        new_segs = np.column_stack((np.arange(inp.core_thetapts_ntrl),
+                                    np.roll(np.arange(inp.core_thetapts_ntrl), -1))) \
+                                    + inp.core_thetapts_ntrl * i
+        core_segs = np.vstack((core_segs, new_segs))
+
+    sol_segs = np.zeros((0, 2), dtype='int')
+    for i, v in enumerate(lines.sol):
+        new_segs = np.column_stack((np.arange(sol_pol_pts),
+                                    np.roll(np.arange(sol_pol_pts), -1)))[:-1] \
+                                    + sol_pol_pts * i
+        sol_segs = np.vstack((sol_segs, new_segs))
+
+    wall_segs = np.column_stack((np.arange(len(pts.wall)),
+                                 np.roll(np.arange(len(pts.wall)), -1)))
+
+    all_segs = np.vstack((sep_segs,
+                          ib_div_segs + len(sep_segs),
+                          ob_div_segs + len(ib_div_segs) + len(sep_segs) + 1,
+                          core_segs + len(ob_div_segs) + len(ib_div_segs) + len(sep_segs) + 1 + 1,
+                          sol_segs + len(core_segs) + len(ob_div_segs) + len(ib_div_segs) + len(sep_segs)  + 1 + 1,
+                          wall_segs + len(sol_segs) + len(core_segs) + len(ob_div_segs) + len(ib_div_segs) + len(sep_segs) + 1 + 1 + inp.num_sollines
+                          ))
+
+    # CLEANUP
+    # NOTE: this process will result in a segments array that looks fairly chaotic,
+    # but will ensure that the triangulation goes smoothly.
+
+    all_pts = np.vstack((pts.sep,
+                         pts.ib_div,
+                         pts.ob_div,
+                         pts.core,
+                         pts.sol,
+                         pts.wall))
+
+    all_pts_unique = np.unique(all_pts, axis=0)
+
+    # Steps:
+    #   loop over each point in all_segs
+    #   look up the point's coordinates in all_pts
+    #   find the location of those coordinates in all_pts_unique
+    #   put that location in the corresponding location in all_segs_unique
+
+    all_segs_unique = np.zeros(all_segs.flatten().shape, dtype='int')
+    for i, pt in enumerate(all_segs.flatten()):
+        pt_coords = all_pts[pt]
+        loc_unique = np.where((all_pts_unique == pt_coords).all(axis=1))[0][0]
+        all_segs_unique[i] = loc_unique
+
+    all_segs_unique = all_segs_unique.reshape(-1, 2)
+
+    return all_pts_unique, all_segs_unique
+
+
+def create_triangle_infile(all_pts_unique, all_segs_unique, core):
+    # OUTPUT .poly FILE AND RUN TRIANGLE PROGRAM
+    open('./outputs/exp_mesh.poly', 'w').close()
+    outfile = open('./outputs/exp_mesh.poly', 'ab')
+    filepath = os.path.realpath(outfile.name)
+    np.savetxt(outfile,
+               np.array([all_pts_unique.shape[0], 2, 0, 0])[None],
+               fmt='%i %i %i %i')
+    np.savetxt(outfile,
+               np.column_stack((np.arange(len(all_pts_unique)),
+                                all_pts_unique)),
+               fmt='%i %f %f')
+    np.savetxt(outfile,
+               np.array([all_segs_unique.shape[0], 0])[None],
+               fmt='%i %i')
+    np.savetxt(outfile,
+               np.column_stack((np.arange(len(all_segs_unique)),
+                                all_segs_unique,
+                                np.zeros(len(all_segs_unique), dtype='int'))),
+               fmt='%i %i %i %i')
+    np.savetxt(outfile,
+               np.array([1])[None],
+               fmt='%i')
+    np.savetxt(outfile,
+               np.array([1, core.pts.axis.mag[0], core.pts.axis.mag[1]])[None],
+               fmt='%i %f %f')
+    np.savetxt(outfile,
+               np.array([0])[None],
+               fmt='%i')
+    outfile.close()
+
+    return filepath
+
+
+def create_triangle_opts(inp):
+    """
+    Create input options for Triangle.
+
+    Refer to https://www.cs.cmu.edu/~quake/triangle.html
+    :param inp:
+    :return:
+    """
+    tri_options = '-p'
+    try:
+        tri_options = tri_options + 'q' + str(inp.tri_min_angle)
+    except:
+        pass
+
+    try:
+        tri_options = tri_options + 'a' + str(inp.tri_min_area)
+    except:
+        pass
+
+    tri_options = tri_options + 'nz'
+    return tri_options
 
 
 class Neutrals:
@@ -139,21 +358,21 @@ class Neutrals:
 
             # assemble lines for neutrals calculation
             lines_dict = {}
-            lines_dict['core'] = self.calc_core_lines_ntrl(core)
-            lines_dict['sep'] = core.main_sep_line
+            lines_dict['core'] = calc_core_lines_ntrl(core)
+            lines_dict['sep'] = core.lines.sep
             lines_dict['sol'] = sol.sol_lines_cut
             lines_dict['pfr'] = pfr.pfr_line
-            lines_dict['ib_div'] = core.ib_div_line_cut
-            lines_dict['ob_div'] = core.ob_div_line_cut
+            lines_dict['ib_div'] = core.lines.div.ib
+            lines_dict['ob_div'] = core.lines.div.ob
             lines_dict['wall'] = inp.wall_line
             lines = namedtuple('lines', lines_dict.keys())(*lines_dict.values())
 
             # assemble density and temperature points and values for neutrals calculation
             core_nT_dict = {}
-            core_nT_dict['ni'] = np.column_stack((core.R.flatten(), core.Z.flatten(), core.ni.flatten()))
-            core_nT_dict['ne'] = np.column_stack((core.R.flatten(), core.Z.flatten(), core.ne.flatten()))
-            core_nT_dict['Ti'] = np.column_stack((core.R.flatten(), core.Z.flatten(), core.Ti_kev.flatten()))
-            core_nT_dict['Te'] = np.column_stack((core.R.flatten(), core.Z.flatten(), core.Te_kev.flatten()))
+            core_nT_dict['ni'] = np.column_stack((core.R.flatten(), core.Z.flatten(), core.n.i.flatten()))
+            core_nT_dict['ne'] = np.column_stack((core.R.flatten(), core.Z.flatten(), core.n.e.flatten()))
+            core_nT_dict['Ti'] = np.column_stack((core.R.flatten(), core.Z.flatten(), core.T.i.kev.flatten()))
+            core_nT_dict['Te'] = np.column_stack((core.R.flatten(), core.Z.flatten(), core.T.e.kev.flatten()))
             core_nT = namedtuple('core_nT', core_nT_dict.keys())(*core_nT_dict.values())
 
             nT_dict = {}
@@ -163,22 +382,22 @@ class Neutrals:
             nT = namedtuple('nT', nT_dict.keys())(*nT_dict.values())
 
             # get points from those lines
-            pts = self.create_tri_pts(inp, lines)
+            pts, core_ring = create_tri_pts(inp, lines)
 
             # get segments from those points
-            pts_unique, segs_unique = self.create_tri_segs(inp, lines, pts)
+            pts_unique, segs_unique = create_tri_segs(inp, lines, pts)
 
             # create the triangle input file from the points and segments
-            triangle_infile = self.create_triangle_infile(pts_unique, segs_unique, core)
+            triangle_infile = create_triangle_infile(pts_unique, segs_unique, core)
 
             # specify triangle options based on input file specs
-            triangle_opts = self.create_triangle_opts(inp)
+            triangle_opts = create_triangle_opts(inp)
 
             print 'running triangle'
             # run triangle
             call(['triangle', triangle_opts, triangle_infile])
 
-            midpts, toneutpy = self.create_neutpy_input(inp, core, lines, nT)
+            midpts, toneutpy = self.create_neutpy_input(inp, core, lines, nT, core_ring)
 
             # run neutpy
             self.neutpy_inst = neutpy(inarrs=toneutpy)
@@ -205,225 +424,10 @@ class Neutrals:
             print 'unable to update values in core instance.'
             pass
 
-    @staticmethod
-    def calc_core_lines_ntrl(core):
-        rho_line = LineString([Point(core.m_axis), Point(core.obmp_pt)])
-
-        rho_pts = np.linspace(0.7, 1, 5, endpoint=False)
-
-        core_lines_ntrl = []
-        for i, rho in enumerate(rho_pts):
-
-            # get R, Z coordinates of each point along the rho_line
-            pt_coords = np.asarray(rho_line.interpolate(rho, normalized=True).coords)[0]
-
-            # get psi value at that point
-            psi_val = griddata(np.column_stack((core.R_psi.flatten(), core.Z_psi.flatten())),
-                               core.psi_norm_raw.flatten(),
-                               pt_coords,
-                               method='linear')
-
-            # determine how many surfaces have that psi value
-            num_lines = int(len(cntr.Cntr(core.R_psi, core.Z_psi, core.psi_norm_raw).trace(psi_val)) / 2)
-
-            if num_lines == 1:
-                # then we're definitely dealing with a surface inside the seperatrix
-                x, y = draw_contour_line(core.R_psi, core.Z_psi, core.psi_norm_raw, psi_val, 0)
-                core_lines_ntrl.append(LineString(np.column_stack((x, y))))
-            else:
-                # we need to find which of the surfaces is inside the seperatrix
-                for j, line in enumerate(cntr.Cntr(core.R_psi, core.Z_psi, core.psi_norm_raw).trace(psi_val)[:num_lines]):
-                    x, y = draw_contour_line(core.R_psi, core.Z_psi, core.psi_norm_raw, psi_val, j)
-                    if (np.amax(x) < np.amax(core.main_sep_pts[:, 0]) and
-                            np.amin(x) > np.amin(core.main_sep_pts[:, 0]) and
-                            np.amax(y) < np.amax(core.main_sep_pts[:, 1]) and
-                            np.amin(y) > np.amin(core.main_sep_pts[:, 1])):
-                        # then it's an internal flux surface
-                        core_lines_ntrl.append(LineString(np.column_stack((x, y))))
-                        break
-
-        return core_lines_ntrl
 
     @staticmethod
-    def create_tri_pts(inp, lines):
-        sol_pol_pts = inp.core_thetapts_ntrl + inp.ib_thetapts_ntrl + inp.ob_thetapts_ntrl
+    def create_neutpy_input(inp, core, lines, nT, core_ring):
 
-        # GET POINTS FOR TRIANGULATION
-        # main seperatrix
-        sep_pts = np.zeros((inp.core_thetapts_ntrl, 2))
-        for i, v in enumerate(np.linspace(0, 1, inp.core_thetapts_ntrl, endpoint=False)):
-            sep_pts[i] = np.asarray(lines.sep.interpolate(v, normalized=True).xy).T[0]
-
-        # inboard divertor leg
-        ib_div_pts = np.zeros((inp.ib_thetapts_ntrl, 2))
-        for i, v in enumerate(np.linspace(0, 1, inp.ib_thetapts_ntrl, endpoint=True)):  # skipping the x-point (point 0)
-            ib_div_pts[i] = np.asarray(lines.ib_div.interpolate(v, normalized=True).xy).T[0]
-
-        # outboard divertor leg
-        ob_div_pts = np.zeros((inp.ob_thetapts_ntrl, 2))
-        for i, v in enumerate(np.linspace(0, 1, inp.ob_thetapts_ntrl, endpoint=True)):  # skipping the x-point (point 0)
-            ob_div_pts[i] = np.asarray(lines.ob_div.interpolate(v, normalized=True).xy).T[0]
-
-        # core
-        core_pts = np.zeros((inp.core_thetapts_ntrl*len(lines.core), 2))
-        for num, line in enumerate(lines.core):
-            for i, v in enumerate(np.linspace(0, 1, inp.core_thetapts_ntrl, endpoint=False)):
-                core_pts[num*inp.core_thetapts_ntrl + i] = np.asarray(line.interpolate(v, normalized=True).xy).T[0]
-
-        core_ring = LinearRing(core_pts[:inp.core_thetapts_ntrl])
-
-        # sol
-        sol_pts = np.zeros((sol_pol_pts*len(lines.sol), 2))
-        for num, line in enumerate(lines.sol):
-            for i, v in enumerate(np.linspace(0, 1, sol_pol_pts, endpoint=True)):
-                sol_pts[num*sol_pol_pts + i] = np.asarray(line.interpolate(v, normalized=True).xy).T[0]
-
-        # wall
-        wall_pts = np.asarray(inp.wall_line.coords)[:-1]
-
-        pts_dict = {}
-        pts_dict['core'] = core_pts
-        pts_dict['sep'] = sep_pts
-        pts_dict['sol'] = sol_pts
-        #pts_dict['pfr'] = pfr_pts
-        pts_dict['ib_div'] = ib_div_pts
-        pts_dict['ob_div'] = ob_div_pts
-        pts_dict['wall'] = wall_pts
-        pts = namedtuple('pts', pts_dict.keys())(*pts_dict.values())
-
-        return pts
-
-    @staticmethod
-    def create_tri_segs(inp, lines, pts):
-
-        # CREATE SEGMENTS FOR TRIANGULATION
-        # WHEN DOING WALL, CHECK EACH POINT TO SEE IF IT HAS ALREADY BEEN
-        # CREATED. IF SO, USE THE NUMBER OF THAT POINT AND DELETE THE WALL
-        # VERSION OF IT IN THE ALL_PTS ARRAY.
-        sol_pol_pts = inp.core_thetapts_ntrl + inp.ib_thetapts_ntrl + inp.ob_thetapts_ntrl
-
-        sep_segs = np.column_stack((np.arange(inp.core_thetapts_ntrl),
-                                    np.roll(np.arange(inp.core_thetapts_ntrl), -1)))
-
-        ib_div_segs = np.column_stack((np.arange(inp.ib_thetapts_ntrl),
-                                       np.roll(np.arange(inp.ib_thetapts_ntrl), -1)))[:-1]
-
-        ob_div_segs = np.column_stack((np.arange(inp.ob_thetapts_ntrl),
-                                       np.roll(np.arange(inp.ob_thetapts_ntrl), -1)))[:-1]
-
-        core_segs = np.zeros((0, 2), dtype='int')
-        for i, v in enumerate(lines.core):
-            new_segs = np.column_stack((np.arange(inp.core_thetapts_ntrl),
-                                        np.roll(np.arange(inp.core_thetapts_ntrl), -1))) \
-                                        + inp.core_thetapts_ntrl * i
-            core_segs = np.vstack((core_segs, new_segs))
-
-        sol_segs = np.zeros((0, 2), dtype='int')
-        for i, v in enumerate(lines.sol):
-            new_segs = np.column_stack((np.arange(sol_pol_pts),
-                                        np.roll(np.arange(sol_pol_pts), -1)))[:-1] \
-                                        + sol_pol_pts * i
-            sol_segs = np.vstack((sol_segs, new_segs))
-
-        wall_segs = np.column_stack((np.arange(len(pts.wall)),
-                                     np.roll(np.arange(len(pts.wall)), -1)))
-
-        all_segs = np.vstack((sep_segs,
-                              ib_div_segs + len(sep_segs),
-                              ob_div_segs + len(ib_div_segs) + len(sep_segs) + 1,
-                              core_segs + len(ob_div_segs) + len(ib_div_segs) + len(sep_segs) + 1 + 1,
-                              sol_segs + len(core_segs) + len(ob_div_segs) + len(ib_div_segs) + len(sep_segs)  + 1 + 1,
-                              wall_segs + len(sol_segs) + len(core_segs) + len(ob_div_segs) + len(ib_div_segs) + len(sep_segs) + 1 + 1 + inp.num_sollines
-                              ))
-
-        # CLEANUP
-        # NOTE: this process will result in a segments array that looks fairly chaotic,
-        # but will ensure that the triangulation goes smoothly.
-
-        all_pts = np.vstack((pts.sep,
-                             pts.ib_div,
-                             pts.ob_div,
-                             pts.core,
-                             pts.sol,
-                             pts.wall))
-
-        all_pts_unique = np.unique(all_pts, axis=0)
-
-        # Steps:
-        #   loop over each point in all_segs
-        #   look up the point's coordinates in all_pts
-        #   find the location of those coordinates in all_pts_unique
-        #   put that location in the corresponding location in all_segs_unique
-
-        all_segs_unique = np.zeros(all_segs.flatten().shape, dtype='int')
-        for i, pt in enumerate(all_segs.flatten()):
-            pt_coords = all_pts[pt]
-            loc_unique = np.where((all_pts_unique == pt_coords).all(axis=1))[0][0]
-            all_segs_unique[i] = loc_unique
-
-        all_segs_unique = all_segs_unique.reshape(-1, 2)
-
-        return all_pts_unique, all_segs_unique
-
-    @staticmethod
-    def create_triangle_infile(all_pts_unique, all_segs_unique, core):
-        # OUTPUT .poly FILE AND RUN TRIANGLE PROGRAM
-        open('./outputs/exp_mesh.poly', 'w').close()
-        outfile = open('./outputs/exp_mesh.poly', 'ab')
-        filepath = os.path.realpath(outfile.name)
-        np.savetxt(outfile,
-                   np.array([all_pts_unique.shape[0], 2, 0, 0])[None],
-                   fmt='%i %i %i %i')
-        np.savetxt(outfile,
-                   np.column_stack((np.arange(len(all_pts_unique)),
-                                    all_pts_unique)),
-                   fmt='%i %f %f')
-        np.savetxt(outfile,
-                   np.array([all_segs_unique.shape[0], 0])[None],
-                   fmt='%i %i')
-        np.savetxt(outfile,
-                   np.column_stack((np.arange(len(all_segs_unique)),
-                                    all_segs_unique,
-                                    np.zeros(len(all_segs_unique), dtype='int'))),
-                   fmt='%i %i %i %i')
-        np.savetxt(outfile,
-                   np.array([1])[None],
-                   fmt='%i')
-        np.savetxt(outfile,
-                   np.array([1, core.m_axis[0], core.m_axis[1]])[None],
-                   fmt='%i %f %f')
-        np.savetxt(outfile,
-                   np.array([0])[None],
-                   fmt='%i')
-        outfile.close()
-
-        return filepath
-
-    @staticmethod
-    def create_triangle_opts(inp):
-        """
-        Create input options for Triangle.
-
-        Refer to https://www.cs.cmu.edu/~quake/triangle.html
-        :param inp:
-        :return:
-        """
-        tri_options = '-p'
-        try:
-            tri_options = tri_options + 'q' + str(inp.tri_min_angle)
-        except:
-            pass
-
-        try:
-            tri_options = tri_options + 'a' + str(inp.tri_min_area)
-        except:
-            pass
-
-        tri_options = tri_options + 'nz'
-        return tri_options
-
-    @staticmethod
-    def create_neutpy_input(inp, core, lines, nT):
         # Assemble global density and temperature data
         ni_global = np.vstack((nT.core.ni,
                                nT.sol.ni,
@@ -562,16 +566,11 @@ class Neutrals:
 
         for index, nei in enumerate(neighbors):
             # for each face of the cell, find the mid-point and check if it falls along the innermost flux surface being used
-            side1inline = isinline(side1_midpt[index], lines.core[0])
-            side2inline = isinline(side2_midpt[index], lines.core[0])
-            side3inline = isinline(side3_midpt[index], lines.core[0])
+            side1inline = isinline(side1_midpt[index], core_ring)
+            side2inline = isinline(side2_midpt[index], core_ring)
+            side3inline = isinline(side3_midpt[index], core_ring)
 
             if side1inline or side2inline or side3inline:
-                plt.scatter(side1_midpt[index, 0], side1_midpt[index, 1])
-                plt.scatter(side2_midpt[index, 0], side2_midpt[index, 1])
-                plt.scatter(side3_midpt[index, 0], side3_midpt[index, 1])
-
-                #sys.exit()
                 # count number of times -1 occurs in nei
                 nb = (nei == -1).sum()
 
@@ -584,8 +583,8 @@ class Neutrals:
                     # update neighbors
                     nei[np.argmax(nei == -1)] = pcellnum
                     # get ready for next run
-                    pcellnum +=1
-                    pcellcount +=1
+                    pcellnum += 1
+                    pcellcount += 1
                 elif nb == 2:
                     # cell has two plasma borders (this will probably never happen. It would require a local
                     # concavity in the inner-most meshed flux surface)
@@ -594,7 +593,7 @@ class Neutrals:
                     plasmacells[pcellcount, 1] = index
                     plasmacells = np.vstack((plasmacells, [0, 0]))
                     # update neighbors
-                    nei[np.argmax(nei==-1)] = pcellnum
+                    nei[np.argmax(nei == -1)] = pcellnum
                     # get ready for next run
                     pcellnum +=1
                     pcellcount +=1
@@ -608,6 +607,7 @@ class Neutrals:
                     # get ready for next run
                     pcellnum +=1
                     pcellcount +=1
+
         plasmacells = np.delete(plasmacells, -1, 0)
         plasmacells = plasmacells.astype('int')
 
@@ -615,14 +615,6 @@ class Neutrals:
         wallcells = np.zeros((1, 6))
         wcellnum = pcellnum  # was already advanced in the plasmacell loop. Don't add 1.
         wcellcount = 0
-
-        # X, Y, Z = grid(Ti_global[:, 0], Ti_global[:, 1], Ti_global[:, 2])
-        # print 'Z.shape = ',Z.shape
-        # plt.contourf(X, Y, np.log10(Z), 500)
-        # plt.colorbar()
-        # #plt.scatter(u[:,0],u[:,1],s=0.1)
-        # plt.show()
-        # sys.exit()
 
         for index, nei in enumerate(neighbors):
             # for each face of the cell, find the mid-point and check if it falls in line
@@ -632,15 +624,15 @@ class Neutrals:
 
             if side1inline or side2inline or side3inline:
                 # print index, nei, side1inline, side2inline, side3inline
-                nb = (nei == -1).sum() # count number of times -1 occurs in nei
+                nb = (nei == -1).sum()  # count number of times -1 occurs in nei
                 if nb == 1:  # cell has one wall border
                     # identify the side that is the wall cell
                     sidenum = np.where(np.asarray([side1inline, side2inline, side3inline]))[0][0]
-                    if sidenum==0:
+                    if sidenum == 0:
                         pt = side1_midpt[index]
-                    elif sidenum==1:
+                    elif sidenum == 1:
                         pt = side2_midpt[index]
-                    elif sidenum==2:
+                    elif sidenum == 2:
                         pt = side3_midpt[index]
 
                     # create wall cell
@@ -656,7 +648,7 @@ class Neutrals:
                     # get ready for next run
                     wcellnum +=1
                     wcellcount +=1
-                elif nb == 2:  #  cell has two wall borders (This can easily happen because the wall has many concave points.)
+                elif nb == 2:  # cell has two wall borders (This can easily happen because the wall has many concave points.)
                     # create wall cell #1
                     wallcells[wcellcount, 0] = wcellnum
                     wallcells[wcellcount, 1] = index
