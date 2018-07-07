@@ -8,14 +8,15 @@ Created on Fri May 18 13:22:31 2018
 from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib._cntr as cntr
+# import matplotlib._cntr as cntr
 from scipy.interpolate import griddata, UnivariateSpline, interp1d, interp2d, Rbf
 from scipy.constants import elementary_charge
-from shapely.geometry import Point, LineString
+from shapely.geometry import Point, MultiPoint, LineString, LinearRing
 from shapely.ops import polygonize, linemerge
 import sys
 from math import atan2, pi, ceil, sin, cos
 from collections import namedtuple
+from contours.quad import QuadContourGenerator
 
 
 def calc_svfus(T, mode='dd'):
@@ -225,8 +226,13 @@ def calc_svel_st(T):
     return sv_el, dsv_el_dT
 
 
+########################################
+
+
 def draw_contour_line(R, Z, array, val, pathnum):
-    res = cntr.Cntr(R, Z, array).trace(val)[pathnum]
+    c = QuadContourGenerator.from_rectilinear(R[0], Z[:, 0], array)
+
+    res = c.contour(val)[pathnum]
     x = res[:, 0]
     y = res[:, 1]
     return x, y
@@ -251,13 +257,18 @@ def cut(line, distance):
 
 
 def draw_core_line(R, Z, psi, psi_val, sep_pts):
-    num_lines = int(len(cntr.Cntr(R, Z, psi).trace(psi_val))/2)
-    if num_lines == 1:
+    # create contour generator
+    c = QuadContourGenerator.from_rectilinear(R[0], Z[:, 0], psi)
+
+    # draw contours with psi_val
+    contours = c.contour(psi_val)
+
+    if len(contours) == 1:
         # then we're definitely dealing with a surface inside the seperatrix
         x, y = draw_contour_line(R, Z, psi, psi_val, 0)
     else:
         # we need to find which of the surfaces is inside the seperatrix
-        for j, line in enumerate(cntr.Cntr(R, Z, psi).trace(psi_val)[:num_lines]):
+        for j, line in enumerate(contours):
             x, y = draw_contour_line(R, Z, psi, psi_val, j)
 
             if (np.amax(x) < np.amax(sep_pts[:, 0]) and
@@ -291,62 +302,83 @@ def calc_rho1d(edge_rho=None, rhopts_core=None, rhopts_edge=None, rhopts=None):
 
 
 def find_xpt_mag_axis(R, Z, psi):
-    # find x-point location
+    # calculate gradients of psi in R and Z directions
     dpsidR = np.gradient(psi, R[0, :], axis=1)
     dpsidZ = np.gradient(psi, Z[:, 0], axis=0)
-    d2psidR2 = np.gradient(dpsidR, R[0, :], axis=1)
-    d2psidZ2 = np.gradient(dpsidZ, Z[:, 0], axis=0)
 
     # find line(s) where dpsidR=0
-    dpsidR_0 = cntr.Cntr(R, Z, dpsidR).trace(0.0)
-    # find line(s) where dpsidZ=0
-    dpsidZ_0 = cntr.Cntr(R, Z, dpsidZ).trace(0.0)
+    c_dpsidR = QuadContourGenerator.from_rectilinear(R[0], Z[:,0], dpsidR)
+    c_dpsidZ = QuadContourGenerator.from_rectilinear(R[0], Z[:,0], dpsidZ)
+    dpsidR_0 = c_dpsidR.contour(0.0)
+    dpsidZ_0 = c_dpsidZ.contour(0.0)
 
+    # populate list all intersection points (as Shapely points)
+    int_pts = []
     for i, path1 in enumerate(dpsidR_0):
         for j, path2 in enumerate(dpsidZ_0):
             try:
                 # find intersection points between curves for dpsidR=0 and dpsidZ=0
+                # these correspond to local minima, local maxima, or saddle-points in psi
                 ints = LineString(path1).intersection(LineString(path2))
-                # if there is only one intersection ('Point'), then we're probably not
-                # dealing with irrelevant noise in psi
                 if ints.type == 'Point':
-                    # check if local maximum or minimum
-                    d2psidR2_pt = griddata(np.column_stack((R.flatten(), Z.flatten())),
-                                           d2psidR2.flatten(),
-                                           [ints.x, ints.y],
-                                           method='cubic')
-                    d2psidZ2_pt = griddata(np.column_stack((R.flatten(), Z.flatten())),
-                                           d2psidZ2.flatten(),
-                                           [ints.x, ints.y],
-                                           method='cubic')
-
-                    if d2psidR2_pt > 0 and d2psidZ2_pt > 0:
-                        # we've found the magnetic axis
-                        mag_axis = np.array([ints.x, ints.y])
-                    elif d2psidR2_pt < 0 and d2psidZ2_pt < 0:
-                        # we've found a magnet. Do nothing.
-                        pass
-                    elif ints.y < 0:
-                        # we've probably found our x-point, although this isn't super robust
-                        # and obviously only applies to a single-diverted, lower-null configuration
-                        # TODO: make this more robust, I could easily see this failing on some shots
-                        xpt = np.array([ints.x, ints.y])
-
-                    # uncomment this line when debugging
-                    # print list(ints.coords), d2psidR2(ints.x, ints.y), d2psidZ2(ints.x, ints.y)
+                    int_pts.append(ints)
+                elif ints.type == 'MultiPoint':
+                    for pt in ints:
+                        int_pts.append(pt)
             except:
                 pass
+
+    # magnetic axis is the intersection point with the minimum value of psi
+    psi_int_pts = griddata(np.column_stack((R.flatten(), Z.flatten())),
+                           psi.flatten(),
+                           np.asarray(MultiPoint(int_pts)),
+                           method='cubic')
+    mag_axis = np.asarray(MultiPoint(int_pts))[np.argmin(psi_int_pts)]
+
+    # find the dpsidR_0 = 0 contour that contains the magnetic axis.
+    # Of the other intersection points along the same dpsidR_0 = 0 contour, the x-point
+    # will be the highest (in Z) of those points that are below the magnetic axis.
+
+    # create list of potential x-points (i.e. points that also fall on the same dpsidR_0 = 0 contour
+    # as the magnetic axis and whose y-values are lower than that of the magnetic axis.
+    pot_xpts = []
+    for i, path in enumerate(dpsidR_0):
+        line = LineString(path)
+        if line.distance(Point(mag_axis)) < 1E-8:
+            # then we've found the contour that includes the magnetic axis
+            for pt in int_pts:
+                if line.distance(pt) < 1E-8 and pt.y < Point(mag_axis).y:
+                    pot_xpts.append(pt)
+
+    # of the potential x-points, take the one with the largest y value (there might be only one potential x-point)
+    pts_xpts_array = np.asarray(MultiPoint(pot_xpts))
+    xpt = pts_xpts_array[pts_xpts_array[:, 1].argsort()][-1]
+
     return xpt, mag_axis
 
 
 def calc_psi_norm(R, Z, psi, xpt, axis_mag):
     # normalize psi
-    psi_interp = Rbf(R, Z, psi)
-    psi_min = psi_interp(axis_mag[0], axis_mag[1])
+    # psi_interp = Rbf(R, Z, psi)
+    # psi_min = psi_interp(axis_mag[0], axis_mag[1])
+    #
+    # psi_shifted = psi - psi_min  # set center to zero
+    # psi_shifted_interp = Rbf(R, Z, psi_shifted)
+    # psi_shifted_xpt = psi_shifted_interp(xpt[0], xpt[1])
+    #
+    # psi_norm = psi_shifted / psi_shifted_xpt
+
+    psi_min = griddata(np.column_stack((R.flatten(), Z.flatten())),
+                       psi.flatten(),
+                       [axis_mag[0], axis_mag[1]],
+                       method='cubic')
 
     psi_shifted = psi - psi_min  # set center to zero
-    psi_shifted_interp = Rbf(R, Z, psi_shifted)
-    psi_shifted_xpt = psi_shifted_interp(xpt[0], xpt[1])
+
+    psi_shifted_xpt = griddata(np.column_stack((R.flatten(), Z.flatten())),
+                               psi_shifted.flatten(),
+                               [xpt[0], xpt[1]],
+                               method='cubic')
 
     psi_norm = psi_shifted / psi_shifted_xpt
 
@@ -356,109 +388,95 @@ def calc_psi_norm(R, Z, psi, xpt, axis_mag):
 def calc_pts_lines(psi_data, xpt, wall, mag_axis):
     # create lines for seperatrix and divertor legs of seperatrix
 
-    R = psi_data.R
-    Z = psi_data.Z
-    psi_norm = psi_data.psi_norm
-    num_lines = int(len(cntr.Cntr(R, Z, psi_norm).trace(1.0)) / 2)
-    if num_lines == 1:
-        # in this case, the contour points that matplotlib returned constitute
-        # a single line from inboard divertor to outboard divertor. We need to
-        # add in the x-point in at the appropriate locations and split into a
-        # main and a lower seperatrix line, each of which will include the x-point.
-        x_psi, y_psi = draw_contour_line(R, Z, psi_norm, 1.0, 0)
+    c = QuadContourGenerator.from_rectilinear(psi_data.R[0], psi_data.Z[:, 0], psi_data.psi_norm)
+    contours = c.contour(1.0)
 
-        loc1 = np.argmax(y_psi > xpt[1])
-        loc2 = len(y_psi) - np.argmin(y_psi[::-1] < xpt[1])
+    # Replace points in the vic. of the xpt with the xpt
+    contour_new = []
+    for contour in contours:
+        dist = np.sqrt((contour[:, 0] - xpt[0])**2 + (contour[:, 1] - xpt[1])**2)
+        contour[dist < 0.05] = xpt
+        contour_new.append(contour[np.where((contour != np.roll(contour, -1, axis=0)).all(axis=1))])
 
-        x_psi = np.insert(x_psi, (loc1, loc2), xpt[0])
-        y_psi = np.insert(y_psi, (loc1, loc2), xpt[1])
+    # if there is only one contour, then it's drawing one continuous line from ib strike point to ob strike point
+    # if there are two contours, then it's drawing separate seperatrix and divertor legs
+    if len(contour_new) == 1:
+        contour = contour_new[0]
 
-        psi_1_pts = np.column_stack((x_psi, y_psi))
-        main_sep_pts = psi_1_pts[loc1:loc2 + 1, :]
-        main_sep_line = LineString(main_sep_pts[:-1])
-        main_sep_line_closed = LineString(main_sep_pts)
+        # make sure the line goes from inboard to outboard
+        if contour[-1, 0] < contour[0, 0]:
+            contour = np.flipud(contour_new)
 
-        # get the inboard and outboard divertor legs seperately. This is so that
-        # everything that includes the x-point can start with the x-point, which
-        # elliminates the risk of tiny triangles in the vicinity of the x-point
-        inboard_div_sep = np.flipud(psi_1_pts[:loc1 + 1])
-        outboard_div_sep = psi_1_pts[loc2 + 1:]
+        xpt_loc = np.where((contour == xpt).all(axis=1))[0]
 
-        # cut inboard line at the wall and add intersection point to wall_line
-        line = LineString(inboard_div_sep)
-        int_pt = line.intersection(wall)
-        ib_div_line = line
-        ib_div_line_cut = cut(line, line.project(int_pt, normalized=True))[0]
+        ib = np.flipud(contour[:xpt_loc[0]+1])
+        lcfs = contour[xpt_loc[0]:xpt_loc[1]]
+        ob = contour[xpt_loc[1]:]
 
-        # cut outboard line at the wall and add intersection point to wall_line
-        line = LineString(outboard_div_sep)
-        int_pt = line.intersection(wall)
-        ob_div_line = line
-        ob_div_line_cut = cut(line, line.project(int_pt, normalized=True))[0]
+    elif len(contour_new) == 2:
+        for contour in contour_new:
+            # determine if contour is seperatrix or divertor legs by checking if
+            # the largest y value is larger than the y value of the magnetic axis
+            if np.amax(contour[:, 1]) > mag_axis[1]:  # we have the main seperatrix
+                lcfs = contour
 
-    elif num_lines == 2:
-        # in this case, we have a lower seperatrix trace (line 0), and a main
-        # seperatrix trace (line 1).
+            else:  # we have the divertor legs
+                # make sure the line goes from inboard to outboard
+                if contour[-1, 0] < contour[0, 0]:
+                    contour = np.flipud(contour)
 
-        # first do lower seperatrix line
-        x_psi, y_psi = draw_contour_line(R, Z, psi_norm, 1.0, 0)
-        loc = np.argmax(x_psi > xpt[0])
+                # create ib and ob divertor legs, each starting at the x-point
+                xpt_loc = np.where((contour == xpt).all(axis=1))[0][0]
+                ob = contour[xpt_loc:]
+                ib = np.flipud(contour[:xpt_loc+1])
 
-        x_psi = np.insert(x_psi, loc, xpt[0])
-        y_psi = np.insert(y_psi, loc, xpt[1])
-        psi_1_pts = np.column_stack((x_psi, y_psi))
+    # create lcfs lines
+    lcfs_line = LineString(lcfs)
+    lcfs_line_closed = LinearRing(lcfs)
 
-        inboard_div_sep = np.flipud(psi_1_pts[:loc + 1])
-        outboard_div_sep = psi_1_pts[loc + 1:]
+    # create ib and ob linestrings and truncate at the wall
+    ib_line = LineString(ib)
+    ob_line = LineString(ob)
 
-        # cut inboard line at the wall and add intersection point to wall_line
-        line = LineString(inboard_div_sep)
-        int_pt = line.intersection(wall)
-        ib_div_line = line
-        ib_div_line_cut = cut(line, line.project(int_pt, normalized=True))[0]
+    ib_strike = ib_line.intersection(wall)
+    ob_strike = ob_line.intersection(wall)
 
-        # cut inboard line at the wall and add intersection point to wall_line
-        line = LineString(outboard_div_sep)
-        int_pt = line.intersection(wall)
-        ob_div_line = line
-        ob_div_line_cut = cut(line, line.project(int_pt, normalized=True))[0]
-        # TODO: add point to wall line
+    ib_line_cut = cut(ib_line, ib_line.project(ib_strike, normalized=True))[0]
+    ob_line_cut = cut(ob_line, ib_line.project(ob_strike, normalized=True))[0]
 
-        # now to main seperatrix line
-        x_psi, y_psi = draw_contour_line(R, Z, psi_norm, 1.0, 1)
-        main_sep_pts = np.insert(np.column_stack((x_psi, y_psi)), 0, xpt, axis=0)
-        main_sep_line = LineString(main_sep_pts[:-1])
-        main_sep_line_closed = LineString(main_sep_pts)
-
-        # entire_sep_pts = np.vstack((ib_div_pts, sep_pts[1:, :], ob_div_pts))
-        # entire_sep_line = LineString(entire_sep_pts)
-
-    ib_div_pts = np.flipud(np.asarray(ib_div_line_cut.xy).T)
-    sep_pts = np.asarray(main_sep_line.xy).T
-    ob_div_pts = np.asarray(ob_div_line_cut.xy).T
-
-    entire_sep_pts = np.vstack((ib_div_pts, sep_pts[1:, :], ob_div_pts))
-    entire_sep_line = LineString(entire_sep_pts)
+    entire_sep = np.vstack((np.flipud(ib), lcfs[1:], ob))
+    entire_sep_line = LineString(entire_sep)
 
     # create points object
-    obmp_pt = main_sep_pts[np.argmax(main_sep_pts, axis=0)[0]]
-    ibmp_pt = main_sep_pts[np.argmin(main_sep_pts, axis=0)[0]]
-    top_pt = main_sep_pts[np.argmax(main_sep_pts, axis=0)[1]]
-    bot_pt = main_sep_pts[np.argmin(main_sep_pts, axis=0)[1]]
+    obmp_pt = lcfs[np.argmax(lcfs, axis=0)[0]]
+    ibmp_pt = lcfs[np.argmin(lcfs, axis=0)[0]]
+    top_pt = lcfs[np.argmax(lcfs, axis=0)[1]]
+    bot_pt = lcfs[np.argmin(lcfs, axis=0)[1]]
     axis_geo = [(obmp_pt[0] + ibmp_pt[0]) / 2, (obmp_pt[1] + ibmp_pt[1]) / 2]
 
     axis_nt = namedtuple('axis', 'geo mag')
     axis = axis_nt(axis_geo, mag_axis)
 
-    pts_nt = namedtuple('pts', 'ibmp obmp top bottom xpt axis')
-    pts = pts_nt(ibmp_pt, obmp_pt, top_pt, bot_pt, xpt, axis)
+    strike_nt = namedtuple('strike', 'ib ob')
+    strike = strike_nt(ib_strike, ob_strike)
+
+    pts_nt = namedtuple('pts', 'ibmp obmp top bottom xpt axis strike')
+    pts = pts_nt(ibmp_pt, obmp_pt, top_pt, bot_pt, xpt, axis, strike)
 
     # create lines object
     div_lines_nt = namedtuple('div_lines', 'ib ob')
-    div_lines = div_lines_nt(ib_div_line_cut, ob_div_line_cut)
+    div_lines = div_lines_nt(ib_line_cut, ob_line_cut)
 
     lines_nt = namedtuple('lines', 'sep sep_closed div ib2ob')
-    lines = lines_nt(main_sep_line, main_sep_line_closed, div_lines, entire_sep_line)
+    lines = lines_nt(lcfs_line, lcfs_line_closed, div_lines, entire_sep_line)
+
+    # plt.contourf(psi_data.R, psi_data.Z, psi_data.psi_norm, 500)
+    # plt.colorbar()
+    # plt.plot(ib[:,0],ib[:,1],color='blue')
+    # plt.plot(ob[:,0],ob[:,1],color='red')
+    # plt.plot(lcfs[:,0],lcfs[:,1],color='yellow')
+    # plt.scatter(xpt[0],xpt[1],color='black')
+    # plt.show()
 
     return pts, lines
 
@@ -587,25 +605,23 @@ def calc_nT_grad(rho, quant, psi, R, Z, psi_data):
     return dval_dr
 
 
-def rho2psi(pts, rhovals, R, Z, psi):
-
-    psi_vals_R = np.zeros(rhovals.shape)
-    psi_vals_Z = np.zeros(rhovals.shape)
-    psi_vals = np.zeros(rhovals.shape)
+def calc_rho2psi_interp(pts, psi_data):
+    rhovals = np.linspace(0, 1, 100)
+    ptsRZ = np.zeros((len(rhovals), 2))
 
     obmp_line = LineString([Point(pts.axis.mag), Point(pts.obmp)])
     for i, rho in enumerate(rhovals):
-        pt = np.asarray(obmp_line.interpolate(rho, normalized=True).coords)[0]
-        psi_vals_R[i] = pt[0]
-        psi_vals_Z[i] = pt[1]
+        ptsRZ[i] = np.asarray(obmp_line.interpolate(rho, normalized=True).coords)
 
-    psivals = griddata(np.column_stack((R.flatten(), Z.flatten())),
-                        psi.flatten(),
-                        (psi_vals_R, psi_vals_Z),
+    psivals = griddata(np.column_stack((psi_data.R.flatten(), psi_data.Z.flatten())),
+                        psi_data.psi_norm.flatten(),
+                        ptsRZ,
                         method='linear')
-    # self.rho2psi = interp1d(inp.ni_data[:, 0], psi_vals)
-    # self.psi2rho = interp1d(psi_vals, inp.ni_data[:, 0])
-    return psivals
+
+    rho2psi = interp1d(rhovals, psivals)
+    psi2rho = interp1d(psivals, rhovals)
+
+    return rho2psi, psi2rho
 
 
 class exp_core_brnd():
@@ -623,7 +639,7 @@ class exp_core_brnd():
         raw_dpsidr = raw_dpsidR + raw_dpsidZ
 
         psi_data_nt = namedtuple('psi_data', 'R Z psi psi_norm dpsidR dpsidZ dpsidr')
-        psi_data = psi_data_nt(
+        self.psi_data = psi_data_nt(
             raw_psi_R,
             raw_psi_Z,
             raw_psi,
@@ -634,8 +650,7 @@ class exp_core_brnd():
         )
 
         # calculate some important points and lines
-        self.pts, self.lines = calc_pts_lines(psi_data, xpt, inp.wall_line, mag_axis)
-
+        self.pts, self.lines = calc_pts_lines(self.psi_data, xpt, inp.wall_line, mag_axis)
         self.R0_a = self.pts.axis.geo[0]
 
         # TODO: Figure out which of these is the definition of 'a'
@@ -646,15 +661,17 @@ class exp_core_brnd():
         rho1d = calc_rho1d(rhopts=inp.rhopts)
         theta1d, theta_markers = calc_theta1d(self.pts, inp.thetapts_approx)
         theta_xpt = theta_markers[3]
-        thetapts = len(theta1d)
+        self.thetapts = len(theta1d)
 
         # create rho and theta arrays (initializing the main computational grid)
         self.theta, self.rho = np.meshgrid(theta1d, rho1d)
         self.r = self.rho * self.a
-        self.psi, self.psi_norm = calc_psi(self.rho, self.pts, psi_data)
+        self.psi, self.psi_norm = calc_psi(self.rho, self.pts, self.psi_data)
 
-        print 'calc_RZ'
-        self.R, self.Z = calc_RZ(self.rho, self.theta, theta_xpt, self.pts, psi_data, self.psi_norm, self.lines)
+        self.R, self.Z = calc_RZ(self.rho, self.theta, theta_xpt, self.pts, self.psi_data, self.psi_norm, self.lines)
+
+        # create interpolation functions to convert rho to psi and vice versa
+        self.rho2psi, self.psi2rho = calc_rho2psi_interp(self.pts, self.psi_data)
 
         # populate q-profile from input data
         # TODO: in the future, get this from psi data
@@ -716,13 +733,13 @@ class exp_core_brnd():
         self.T = T_nt(Ti, Te, Tn, TC)
 
         # initialize spatial gradients and gradient scale lengths
-        dni_dr = calc_nT_grad(self.rho, self.n.i, self.psi_norm, self.R, self.Z, psi_data)
-        dne_dr = calc_nT_grad(self.rho, self.n.e, self.psi_norm, self.R, self.Z, psi_data)
-        dnC_dr = calc_nT_grad(self.rho, self.n.C, self.psi_norm, self.R, self.Z, psi_data)
-        dTi_kev_dr = calc_nT_grad(self.rho, self.T.i.kev, self.psi_norm, self.R, self.Z, psi_data)
+        dni_dr = calc_nT_grad(self.rho, self.n.i, self.psi_norm, self.R, self.Z, self.psi_data)
+        dne_dr = calc_nT_grad(self.rho, self.n.e, self.psi_norm, self.R, self.Z, self.psi_data)
+        dnC_dr = calc_nT_grad(self.rho, self.n.C, self.psi_norm, self.R, self.Z, self.psi_data)
+        dTi_kev_dr = calc_nT_grad(self.rho, self.T.i.kev, self.psi_norm, self.R, self.Z, self.psi_data)
         dTi_ev_dr = dTi_kev_dr * 1E3
         dTi_J_dr = dTi_kev_dr * 1E3 * 1.6021E-19
-        dTe_kev_dr = calc_nT_grad(self.rho, self.T.i.kev, self.psi_norm, self.R, self.Z, psi_data)
+        dTe_kev_dr = calc_nT_grad(self.rho, self.T.i.kev, self.psi_norm, self.R, self.Z, self.psi_data)
         dTe_ev_dr = dTe_kev_dr * 1E3
         dTe_J_dr = dTe_kev_dr * 1E3 * 1.6021E-19
 
@@ -769,8 +786,8 @@ class exp_core_brnd():
         )
 
         # initialize magnetic field-related quantities
-        B_pol_raw = np.sqrt((np.gradient(psi_data.psi, axis=1) / psi_data.R) ** 2 +
-                            (-np.gradient(psi_data.psi, axis=0) / psi_data.R) ** 2)
+        B_pol_raw = np.sqrt((np.gradient(self.psi_data.psi, axis=1) / self.psi_data.R) ** 2 +
+                            (-np.gradient(self.psi_data.psi, axis=0) / self.psi_data.R) ** 2)
 
         self.B_p = griddata(np.column_stack((raw_psi_R.flatten(), raw_psi_Z.flatten())),
                             B_pol_raw.flatten(),
@@ -887,189 +904,4 @@ class exp_core_brnd():
                           np.log10(self.T.e.kev))
 
 
-    def core_lines_main(self, inp, R, Z, psi):                    
-        # define lines to be used for the main computational grid
-        self.core_main_lines = []
-        psi_pts_main = np.concatenate((np.linspace(0, 0.8, 20, endpoint=False), np.linspace(0.8, 1.0, 20, endpoint=False)))
-        for i, v in enumerate(psi_pts_main):
-            num_lines = int(len(cntr.Cntr(R, Z, self.psi_norm_raw).trace(v))/2)
-            if num_lines==1:
-                # then we're definitely dealing with a surface inside the seperatrix
-                x, y = draw_contour_line(R, Z, self.psi_norm_raw, v, 0)
-                self.core_main_lines.append(LineString(np.column_stack((x[:-1], y[:-1]))))
-            else:
-                # we need to find which of the surfaces is inside the seperatrix
-                for j, line in enumerate(cntr.Cntr(R, Z, self.psi_norm_raw).trace(v)[:num_lines]):
-                # for j, line in enumerate(cntr.Cntr(R, Z, self.psi_norm_raw).trace(v)):
-                    x, y = draw_contour_line(R, Z, self.psi_norm_raw, v, j)
-                    if (np.amax(x) < np.amax(self.main_sep_pts[:, 0]) and
-                        np.amin(x) > np.amin(self.main_sep_pts[:, 0]) and
-                        np.amax(y) < np.amax(self.main_sep_pts[:, 1]) and
-                        np.amin(y) > np.amin(self.main_sep_pts[:, 1])):
-                        # then it's an internal flux surface
-                        self.core_main_lines.append(LineString(np.column_stack((x[:-1], y[:-1]))))
-                        break
 
-    def core_main(self, inp, R_psi, Z_psi, psi, B_pol_raw):
-
-
-
-
-
-
-
-        #plt.axis('equal')
-        #for i, (Rvals, Zvals) in enumerate(zip(self.R, self.Z)):
-        #    plt.plot(Rvals, Zvals, lw=0.5)
-
-        #calculate gradients and gradient scale lengths
-        #get quantities on a fairly fine R, Z grid for the purpose of taking gradients, etc.
-        # R_temp, Z_temp = np.meshgrid(np.linspace(0.98*self.ibmp_pt[0], 1.02*self.obmp_pt[0], 500),
-        #                             np.linspace(1.02*self.top_pt[1], 1.02*self.bot_pt[1], 500))
-        #
-        # ni_grid = griddata(np.column_stack((self.R.flatten(), self.Z.flatten())),
-        #                    self.ni.flatten(),
-        #                    (R_temp, Z_temp),
-        #                    method='cubic',
-        #                    fill_value = self.ni[-1, 0])
-        # ne_grid = griddata(np.column_stack((self.R.flatten(), self.Z.flatten())),
-        #                    self.ne.flatten(),
-        #                    (R_temp, Z_temp),
-        #                    method='cubic',
-        #                    fill_value = self.ne[-1, 0])
-        # Ti_kev_grid = griddata(np.column_stack((self.R.flatten(), self.Z.flatten())),
-        #                    self.Ti_kev.flatten(),
-        #                    (R_temp, Z_temp),
-        #                    method='cubic',
-        #                    fill_value = self.Ti_kev[-1, 0])
-        # Te_kev_grid = griddata(np.column_stack((self.R.flatten(), self.Z.flatten())),
-        #                    self.Te_kev.flatten(),
-        #                    (R_temp, Z_temp),
-        #                    method='cubic',
-        #                    fill_value = self.Te_kev[-1, 0])
-        
-        # dnidr_temp = -1.0*(np.abs(np.gradient(ni_grid, Z_temp[:, 0], axis=1)) + np.abs(np.gradient(ni_grid, R_temp[0, :], axis=0)))
-        # dnedr_temp = -1.0*(np.abs(np.gradient(ne_grid, Z_temp[:, 0], axis=1)) + np.abs(np.gradient(ne_grid, R_temp[0, :], axis=0)))
-        # dTidr_temp = -1.0*(np.abs(np.gradient(Ti_kev_grid, Z_temp[:, 0], axis=1)) + np.abs(np.gradient(Ti_kev_grid, R_temp[0, :], axis=0)))
-        # dTedr_temp = -1.0*(np.abs(np.gradient(Te_kev_grid, Z_temp[:, 0], axis=1)) + np.abs(np.gradient(Te_kev_grid, R_temp[0, :], axis=0)))
-        #
-        # self.dni_dr = griddata(np.column_stack((R_temp.flatten(), Z_temp.flatten())),
-        #                       dnidr_temp.flatten(),
-        #                       (self.R, self.Z),
-        #                       method='cubic')
-        # self.dne_dr = griddata(np.column_stack((R_temp.flatten(), Z_temp.flatten())),
-        #                       dnedr_temp.flatten(),
-        #                       (self.R, self.Z),
-        #                       method='cubic')
-        # self.dTi_kev_dr = griddata(np.column_stack((R_temp.flatten(), Z_temp.flatten())),
-        #                       dTidr_temp.flatten(),
-        #                       (self.R, self.Z),
-        #                       method='cubic')
-        # self.dTe_kev_dr = griddata(np.column_stack((R_temp.flatten(), Z_temp.flatten())),
-        #                       dTedr_temp.flatten(),
-        #                       (self.R, self.Z),
-        #                       method='cubic')
-
-
-        self.dTi_J_dr = self.dTi_kev_dr * 1.6021E-16
-        self.dTi_ev_dr = self.dTi_kev_dr * 1E3
-        self.dTe_J_dr = self.dTe_kev_dr * 1.6021E-16
-        self.dTe_ev_dr = self.dTe_kev_dr * 1E3
-        self.L_ni = -self.dni_dr / self.ni
-        self.L_ne = -self.dne_dr / self.ne
-        self.L_Ti_J = -self.dTi_J_dr / self.Ti_J
-        self.L_Te_J = -self.dTe_J_dr / self.Te_J
-        #plt.axis('equal')
-        #plt.contourf(self.R, self.Z, self.dnidr, 500)
-        #plt.colorbar()
-        #sys.exit()
-            
-        #create neutrals-related variables. These will remain zero unless set by exp_neutpy_prep or read_ntrl_data modules
-        # self.n_n_slow = np.zeros(self.rho.shape)
-        # self.n_n_thermal = np.zeros(self.rho.shape)
-        # self.n_n_total = np.zeros(self.rho.shape)
-        #
-        # self.izn_rate_slow = np.zeros(self.rho.shape)
-        # self.izn_rate_thermal = np.zeros(self.rho.shape)
-        # self.izn_rate_total = np.zeros(self.rho.shape)
-        #
-
-
-    def core_nT_ntrl(self, inp, R, Z, psi):
-        #CREATE ARRAYS OF POINTS, DENSITIES AND TEMPERATURES FOR THE NEUTRALS CALCULATION
-        
-        #Master arrays that will contain all the points we'll use to get n, T
-        #throughout the plasma chamber via 2-D interpolation
-        self.ni_pts = np.zeros((0, 3), dtype='float')
-        self.ne_pts = np.zeros((0, 3), dtype='float')
-        self.Ti_kev_pts = np.zeros((0, 3), dtype='float')
-        self.Te_kev_pts = np.zeros((0, 3), dtype='float')
-        
-        ##########################################
-        #Calculate n, T throughout the core plasma using radial profile input files, uniform on flux surface
-        ni = UnivariateSpline(inp.ni_data[:, 0], inp.ni_data[:, 1], k=5, s=2.0)
-        ne = UnivariateSpline(inp.ne_data[:, 0], inp.ne_data[:, 1], k=5, s=2.0)
-        Ti_kev = UnivariateSpline(inp.Ti_data[:, 0], inp.Ti_data[:, 1], k=5, s=2.0)
-        Te_kev = UnivariateSpline(inp.Te_data[:, 0], inp.Te_data[:, 1], k=5, s=2.0)
-        
-        #get approximate rho values associated with the psi values we're using
-        #draw line between magnetic axis and the seperatrix at the outboard midplane
-        rho_line = LineString([Point(self.m_axis), Point(self.obmp_pt)])
-
-        rho_pts = np.linspace(0.7, 1, 5, endpoint=False)
-        thetapts = np.linspace(0, 1, 100, endpoint=False)
-
-        for i, rho in enumerate(rho_pts): 
-            #get n, T information at the point by interpolating the rho-based input file data
-            ni_val = ni(rho)
-            ne_val = ne(rho)
-            Ti_kev_val = Ti_kev(rho)
-            Te_kev_val = Te_kev(rho)
-            #get R, Z coordinates of each point along the rho_line
-            pt_coords = np.asarray(rho_line.interpolate(rho, normalized=True).coords)[0]
-
-            #get psi value at that point
-            psi_val = griddata(np.column_stack((R.flatten(), Z.flatten())), 
-                                 self.psi_norm_raw.flatten(), 
-                                 pt_coords, 
-                                 method='linear')
-            #map this n, T data to every point on the corresponding flux surface
-            num_lines = int(len(cntr.Cntr(R, Z, self.psi_norm_raw).trace(psi_val))/2)
-
-            if num_lines==1:
-                #then we're definitely dealing with a surface inside the seperatrix
-                x, y = draw_contour_line(R, Z, self.psi_norm_raw, psi_val, 0)
-                surf = LineString(np.column_stack((x, y)))
-            else:
-                #we need to find which of the surfaces is inside the seperatrix
-                for j, line in enumerate(cntr.Cntr(R, Z, self.psi_norm_raw).trace(psi_val)[:num_lines]):
-                    #for j, line in enumerate(cntr.Cntr(R, Z, self.psi_norm_raw).trace(v)):
-                    x, y = draw_contour_line(R, Z, self.psi_norm_raw, psi_val, j)
-                    if (np.amax(x) < np.amax(self.main_sep_pts[:, 0]) and \
-                        np.amin(x) > np.amin(self.main_sep_pts[:, 0]) and \
-                        np.amax(y) < np.amax(self.main_sep_pts[:, 1]) and \
-                        np.amin(y) > np.amin(self.main_sep_pts[:, 1])):
-                        #then it's an internal flux surface
-                        surf = LineString(np.column_stack((x, y)))
-                        break
-            
-            for j, theta_norm in enumerate(thetapts):
-                pt = np.asarray(surf.interpolate(theta_norm, normalized=True).coords).T
-                self.ni_pts = np.vstack((self.ni_pts, np.append(pt, ni_val)))
-                self.ne_pts = np.vstack((self.ne_pts, np.append(pt, ne_val)))
-                self.Ti_kev_pts = np.vstack((self.Ti_kev_pts, np.append(pt, Ti_kev_val)))
-                self.Te_kev_pts = np.vstack((self.Te_kev_pts, np.append(pt, Te_kev_val)))
-
-        #Do seperatrix separately so we don't accidentally assign the input n, T data to the divertor legs
-        self.ni_sep_val = ni(1.0)
-        self.ne_sep_val = ne(1.0)
-        self.Ti_kev_sep_val = Ti_kev(1.0)
-        self.Te_kev_sep_val = Te_kev(1.0)
-        self.Ti_J_sep_val = self.Ti_kev_sep_val * 1.0E3 * 1.6021E-19
-        self.Te_J_sep_val = self.Te_kev_sep_val * 1.0E3 * 1.6021E-19
-        for j, theta_norm in enumerate(thetapts): 
-            pt = np.asarray(self.main_sep_line.interpolate(theta_norm, normalized=False).coords, dtype='float').T
-            self.ni_pts = np.vstack((self.ni_pts, np.append(pt, self.ni_sep_val)))
-            self.ne_pts = np.vstack((self.ne_pts, np.append(pt, self.ne_sep_val)))
-            self.Ti_kev_pts = np.vstack((self.Ti_kev_pts, np.append(pt, self.Ti_kev_sep_val)))
-            self.Te_kev_pts = np.vstack((self.Te_kev_pts, np.append(pt, self.Te_kev_sep_val)))
