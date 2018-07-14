@@ -5,6 +5,7 @@ Created on Sun Mar 18 21:51:19 2018
 
 @author: max
 """
+from __future__ import division
 import numpy as np
 from scipy.interpolate import interp1d
 from subprocess import call
@@ -12,8 +13,13 @@ import os
 import re
 import sys
 from scipy.interpolate import interp1d
+from collections import namedtuple
+from scipy.constants import physical_constants
 
-class beamdep:
+m_d = physical_constants['deuteron mass'][0]
+print 'm_d = ',m_d
+
+class BeamDeposition:
     """
     Methods:
     prep_nbi_infile
@@ -122,10 +128,10 @@ class beamdep:
         
         rho_nbi = np.linspace(0, 1, 51)
         
-        ni_nbi = interp1d(core.rho[:, 0], core.ni[:, 0])(rho_nbi)
-        ne_nbi = interp1d(core.rho[:, 0], core.ne[:, 0])(rho_nbi)
-        Ti_nbi = interp1d(core.rho[:, 0], core.Ti_kev[:, 0])(rho_nbi)
-        Te_nbi = interp1d(core.rho[:, 0], core.Te_kev[:, 0])(rho_nbi)
+        ni_nbi = interp1d(core.rho[:, 0], core.n.i[:, 0])(rho_nbi)
+        ne_nbi = interp1d(core.rho[:, 0], core.n.e[:, 0])(rho_nbi)
+        Ti_nbi = interp1d(core.rho[:, 0], core.T.i.kev[:, 0])(rho_nbi)
+        Te_nbi = interp1d(core.rho[:, 0], core.T.e.kev[:, 0])(rho_nbi)
         
         for i, v in enumerate(rho_nbi):
             f.write('ni20('+str(i+1)+', 1) = '+str(ni_nbi[i]*1E-20)+'\n')
@@ -294,27 +300,173 @@ class beamdep:
             #print data
             result = re.match(r'.*hofr_3 *((?:(?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)? +)|(?:NaN +))+) +Pitch.*', data).group(1)
             array = np.reshape(np.asarray(result.split(), dtype=float), (-1, 4))
-            self.dep_prof1  = interp1d(array[:, 0], array[:, 1])(brnd.rho)
-            self.dep_prof2  = interp1d(array[:, 0], array[:, 2])(brnd.rho)
-            self.dep_prof3  = interp1d(array[:, 0], array[:, 3])(brnd.rho)
+            self.dep_prof1 = interp1d(array[:, 0], array[:, 1])(brnd.rho)
+            self.dep_prof2 = interp1d(array[:, 0], array[:, 2])(brnd.rho)
+            self.dep_prof3 = interp1d(array[:, 0], array[:, 3])(brnd.rho)
+            self.dep_prof1_1D = self.dep_prof1[:, 0]
+            self.dep_prof2_1D = self.dep_prof2[:, 0]
+            self.dep_prof3_1D = self.dep_prof3[:, 0]
 
             result = re.match(r'.*zeta_3 *((?:(?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)? +)|(?:NaN +))+) +rho.*', data).group(1)
             array = np.reshape(np.asarray(result.split(), dtype=float), (-1, 4))
             self.ptch_angl1 = interp1d(array[:, 0], array[:, 1])(brnd.rho)
             self.ptch_angl2 = interp1d(array[:, 0], array[:, 2])(brnd.rho)
             self.ptch_angl3 = interp1d(array[:, 0], array[:, 3])(brnd.rho)
-            
+            self.ptch_angl1_1D = self.ptch_angl1[:, 0]
+            self.ptch_angl2_1D = self.ptch_angl2[:, 0]
+            self.ptch_angl3_1D = self.ptch_angl3[:, 0]
+
             result = re.match(r'.*dA *((?:(?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)? +)|(?:NaN +))+) *', data).group(1)
             array = np.reshape(np.asarray(result.split(), dtype=float), (-1, 9))
-            self.jnbtot     = interp1d(array[:, 0], array[:, 1])(brnd.rho)
-            self.pNBe       = interp1d(array[:, 0], array[:, 2])(brnd.rho) # in MW/m^3
-            self.pNBi       = interp1d(array[:, 0], array[:, 3])(brnd.rho) # in MW/m^3
-            self.pNB_tot    = self.pNBe + self.pNBi
-            self.pNBe_dvol  = interp1d(array[:, 0], array[:, 2] * array[:, 7])(brnd.rho) #in MW
-            self.pNBi_dvol  = interp1d(array[:, 0], array[:, 3] * array[:, 7])(brnd.rho) #in MW
-            self.nbfast     = interp1d(array[:, 0], array[:, 4])(brnd.rho)
-            self.pressb     = interp1d(array[:, 0], array[:, 5])(brnd.rho)
-            self.pfusb      = interp1d(array[:, 0], array[:, 6])(brnd.rho)
-            self.dvol       = interp1d(array[:, 0], array[:, 7])(brnd.rho)
-            self.dA         = interp1d(array[:, 0], array[:, 8])(brnd.rho)
-            
+            self.jnbtot = interp1d(array[:, 0], array[:, 1])(brnd.rho)
+            self.pNBe = interp1d(array[:, 0], array[:, 2])(brnd.rho)  # in MW/m^3
+            self.pNBi = interp1d(array[:, 0], array[:, 3])(brnd.rho)  # in MW/m^3
+            self.pNB_tot = self.pNBe + self.pNBi
+            self.pNBe_dvol = interp1d(array[:, 0], array[:, 2] * array[:, 7])(brnd.rho)  # in MW
+            self.pNBi_dvol = interp1d(array[:, 0], array[:, 3] * array[:, 7])(brnd.rho)  # in MW
+            self.nbfast = interp1d(array[:, 0], array[:, 4])(brnd.rho)
+            self.pressb = interp1d(array[:, 0], array[:, 5])(brnd.rho)
+            self.pfusb = interp1d(array[:, 0], array[:, 6])(brnd.rho)
+            self.dvol = interp1d(array[:, 0], array[:, 7])(brnd.rho)
+            self.dA = interp1d(array[:, 0], array[:, 8])(brnd.rho)
+            self.jnbtot_1D = self.jnbtot[:, 0]
+            self.pNBe_1D = self.pNBe[:, 0]
+            self.pNBi_1D = self.pNBi[:, 0]
+            self.pNB_tot_1D = self.pNB_tot[:, 0]
+            self.pNBe_dvol_1D = self.pNBe_dvol[:, 0]
+            self.pNBi_dvol_1D = self.pNBi_dvol[:, 0]
+            self.nbfast_1D = self.nbfast[:, 0]
+            self.pressb_1D = self.pressb[:, 0]
+            self.pfusb_1D = self.pfusb[:, 0]
+            self.dvol_1D = self.dvol[:, 0]
+            self.dA_1D = self.dA[:, 0]
+
+            beam_D_pwr = 2/3
+            beam_D2_pwr = 2/3
+            beam_D3_pwr = 2/3
+
+            # create beams object
+            self.beams = namedtuple('beam', 'D D2 D3')(
+                #create D beam
+                namedtuple('beam_D', 'z m a num e p rtan dp')(
+                    # num = 1 for atomic deuterium - find better way to do this
+                    1,
+                    m_d,
+                    2,
+                    1,
+                    namedtuple('e', 'kev ev J')(
+                        inp.ebeam,
+                        inp.ebeam * 1E3,
+                        inp.ebeam * 1E3 * 1.6021E-19
+                    ),
+                    namedtuple('p', 'MW W')(
+                        beam_D_pwr,
+                        beam_D_pwr * 1E6
+                    ),
+                    inp.rtang,
+                    self.dep_prof1 * self.dvol / self.Volp_nbi
+                ),
+
+                # create D2 beam
+                namedtuple('beam_D2', 'z m a num e p rtan dp')(
+                    # num = 1 for atomic deuterium - find better way to do this
+                    1,
+                    2 * m_d,
+                    4,
+                    2,
+                    namedtuple('e', 'kev ev J')(
+                        inp.ebeam,
+                        inp.ebeam * 1E3,
+                        inp.ebeam * 1E3 * 1.6021E-19
+                    ),
+                    namedtuple('p', 'MW W')(
+                        beam_D2_pwr,
+                        beam_D2_pwr * 1E6
+                    ),
+                    inp.rtang,
+                    self.dep_prof2 * self.dvol / self.Volp_nbi
+                ),
+
+                # create D3 beam
+                namedtuple('beam_D2', 'z m a num e p rtan dp')(
+                    # num = 1 for atomic deuterium - find better way to do this
+                    1,
+                    3 * m_d,
+                    6,
+                    3,
+                    namedtuple('e', 'kev ev J')(
+                        inp.ebeam,
+                        inp.ebeam * 1E3,
+                        inp.ebeam * 1E3 * 1.6021E-19
+                    ),
+                    namedtuple('p', 'MW W')(
+                        beam_D3_pwr,
+                        beam_D3_pwr * 1E6
+                    ),
+                    inp.rtang,
+                    self.dep_prof3 * self.dvol / self.Volp_nbi
+                )
+            )
+
+            # create beams1D object
+            self.beams_1D = namedtuple('beam', 'D D2 D3')(
+                #create D beam
+                namedtuple('beam_D', 'z m a num e p rtan dp')(
+                    # num = 1 for atomic deuterium - find better way to do this
+                    1,
+                    m_d,
+                    2,
+                    1,
+                    namedtuple('e', 'kev ev J')(
+                        inp.ebeam,
+                        inp.ebeam * 1E3,
+                        inp.ebeam * 1E3 * 1.6021E-19
+                    ),
+                    namedtuple('p', 'MW W')(
+                        beam_D_pwr,
+                        beam_D_pwr * 1E6
+                    ),
+                    inp.rtang,
+                    self.dep_prof1_1D * self.dvol_1D / self.Volp_nbi
+                ),
+
+                # create D2 beam
+                namedtuple('beam_D2', 'z m a num e p rtan dp')(
+                    # num = 1 for atomic deuterium - find better way to do this
+                    1,
+                    2 * m_d,
+                    4,
+                    2,
+                    namedtuple('e', 'kev ev J')(
+                        inp.ebeam,
+                        inp.ebeam * 1E3,
+                        inp.ebeam * 1E3 * 1.6021E-19
+                    ),
+                    namedtuple('p', 'MW W')(
+                        beam_D2_pwr,
+                        beam_D2_pwr * 1E6
+                    ),
+                    inp.rtang,
+                    self.dep_prof2_1D * self.dvol_1D / self.Volp_nbi
+                ),
+
+                # create D3 beam
+                namedtuple('beam_D2', 'z m a num e p rtan dp')(
+                    # num = 1 for atomic deuterium - find better way to do this
+                    1,
+                    3 * m_d,
+                    6,
+                    3,
+                    namedtuple('e', 'kev ev J')(
+                        inp.ebeam,
+                        inp.ebeam * 1E3,
+                        inp.ebeam * 1E3 * 1.6021E-19
+                    ),
+                    namedtuple('p', 'MW W')(
+                        beam_D3_pwr,
+                        beam_D3_pwr * 1E6
+                    ),
+                    inp.rtang,
+                    self.dep_prof3_1D * self.dvol_1D / self.Volp_nbi
+                )
+            )
