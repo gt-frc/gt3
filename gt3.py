@@ -71,9 +71,7 @@ class gt3:
             self.dl = dens_lim(self.inp, self.core, self.nbi, self.imp, self.ntrl)
             self.mar = Marfe(self.inp, self.core, self.imp)
         elif mode == 'radialtrans':
-            print 'running iol'
             self.iol = IOL(self.inp, self.core)
-            print 'running nbi'
             self.nbi = BeamDeposition(self.inp, self.core)
             self.ntrl = Neutrals(self.inp, self.core)
             #self.imp = ImpRad(z=None, core=self.core)
