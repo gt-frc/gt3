@@ -20,11 +20,12 @@ import re
 import time
 from subprocess import call
 import matplotlib.pyplot as plt
-from exp_core_brnd import exp_core_brnd
-from exp_sol_brnd import exp_sol_brnd
-from exp_pfr_brnd import exp_pfr_brnd
+from exp_core_brnd import ExpCoreBrnd
+from exp_sol_brnd import ExpSolBrnd
+from exp_pfr_brnd import ExpPfrBrnd
 import pickle
 from contours.quad import QuadContourGenerator
+
 
 def draw_contour_line(R, Z, array, val, pathnum):
     c = QuadContourGenerator.from_rectilinear(R[0], Z[:, 0], array)
@@ -353,8 +354,8 @@ class Neutrals:
             self.data = namedtuple('data', ntrl_dict.keys())(*ntrl_dict.values())
         except:
             # instantiate sol and pfr
-            sol = exp_sol_brnd(inp, core)
-            pfr = exp_pfr_brnd(inp, core)
+            sol = ExpSolBrnd(inp, core)
+            pfr = ExpPfrBrnd(inp, core)
 
             # assemble lines for neutrals calculation
             lines_dict = {}
