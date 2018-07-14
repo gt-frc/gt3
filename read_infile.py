@@ -175,6 +175,7 @@ class ReadInfile:
 
         #IOL PARAMETERS
         self.invars["numcos"]           = ["int", r0di]
+        self.invars["R_loss"]           = ["float", r0df]
 
         #RAD TRANS RELATED QUANTITIES - NEEDS WORK
         self.invars["eq1"]              = ["float", r0df]

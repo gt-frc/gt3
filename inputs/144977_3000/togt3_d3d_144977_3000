@@ -132,3 +132,5 @@ vneut = 0.001
 
 #ION ORBIT LOSS CALCULATION
 numcos = 20
+R_loss = 0.5
+
