@@ -490,7 +490,7 @@ class RadialTransport:
                                                  1,
                                                  n,
                                                  B_p,
-                                                 self.gamma)
+                                                 self.gamma_D)
 
         self.vtor_fluid_D = self.vtor_D_total - self.vtor_D_intrin
 
@@ -542,5 +542,5 @@ class RadialTransport:
         #                pressure=False,
         #                iol_adjusted=False,
         #                E_orb=None)
-        plt.plot(r, self.nu_drag_D)
+        plt.plot(r, self.gamma_D)
         plt.show()
