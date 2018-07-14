@@ -16,7 +16,7 @@ from scipy.interpolate import griddata
 from shapely.geometry import LineString, Polygon
 from scipy.interpolate import UnivariateSpline, interp1d
 
-class read_infile():
+class ReadInfile:
     """Reads main GT3 input file.
     
     Methods:
