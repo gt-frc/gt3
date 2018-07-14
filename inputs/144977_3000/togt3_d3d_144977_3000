@@ -10,11 +10,11 @@ q95 = 3.884
 BT0 = 2.11
 
 #MAIN MESH PARAMETERS
-thetapts_approx = 50
-rhopts = 100
-#edge_rho = 0.6
-#rhopts_edge = 100
-#rhopts_core = 10
+thetapts_approx = 30
+#rhopts = 10
+edge_rho = 0.7
+rhopts_edge = 100
+rhopts_core = 10
 
 #NEUTRALS PARAMETERS
 neut_outfile = neutpy_cell_values.txt
