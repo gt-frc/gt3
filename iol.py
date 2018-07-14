@@ -120,24 +120,38 @@ class IOL:
         
         # Calculate IOL for thermal deuterium
         self.forb_d_therm, self.morb_d_therm, self.eorb_d_therm = self.calc_iol_maxwellian(1, m_d, iol_p, core.thetapts)
+        self.forb_d_therm = inp.R_loss * self.forb_d_therm
+        self.morb_d_therm = inp.R_loss * self.morb_d_therm
+        self.eorb_d_therm = inp.R_loss * self.eorb_d_therm
         self.forb_d_therm_1D = self.forb_d_therm[:, 0]
         self.morb_d_therm_1D = self.morb_d_therm[:, 0]
         self.eorb_d_therm_1D = self.eorb_d_therm[:, 0]
+        plt.plot(self.forb_d_therm_1D)
+        plt.show()
 
         # Calculate IOL for thermal tritium
         self.forb_t_therm, self.morb_t_therm, self.eorb_t_therm = self.calc_iol_maxwellian(1, m_t, iol_p, core.thetapts)
+        self.forb_t_therm = inp.R_loss * self.forb_t_therm
+        self.morb_t_therm = inp.R_loss * self.morb_t_therm
+        self.eorb_t_therm = inp.R_loss * self.eorb_t_therm
         self.forb_t_therm_1D = self.forb_t_therm[:, 0]
         self.morb_t_therm_1D = self.morb_t_therm[:, 0]
         self.eorb_t_therm_1D = self.eorb_t_therm[:, 0]
 
         # Calculate IOL for thermal carbon
         self.forb_c_therm, self.morb_c_therm, self.eorb_c_therm = self.calc_iol_maxwellian(6, m_c, iol_p, core.thetapts)
+        self.forb_c_therm = inp.R_loss * self.forb_c_therm
+        self.morb_c_therm = inp.R_loss * self.morb_c_therm
+        self.eorb_c_therm = inp.R_loss * self.eorb_c_therm
         self.forb_c_therm_1D = self.forb_c_therm[:, 0]
         self.morb_c_therm_1D = self.morb_c_therm[:, 0]
         self.eorb_c_therm_1D = self.eorb_c_therm[:, 0]
 
         # Calculate IOL for thermal alphas
         self.forb_a_therm, self.morb_a_therm, self.eorb_a_therm = self.calc_iol_maxwellian(2, m_a, iol_p, core.thetapts)
+        self.forb_a_therm = inp.R_loss * self.forb_a_therm
+        self.morb_a_therm = inp.R_loss * self.morb_a_therm
+        self.eorb_a_therm = inp.R_loss * self.eorb_a_therm
         self.forb_a_therm_1D = self.forb_a_therm[:, 0]
         self.morb_a_therm_1D = self.morb_a_therm[:, 0]
         self.eorb_a_therm_1D = self.eorb_a_therm[:, 0]
@@ -145,6 +159,10 @@ class IOL:
         # Calculate IOL for fast, monoenergetic alphas
         v_alpha = sqrt(2*3.5E6*1.6021E-19/m_a)
         self.forb_a_fast, self.morb_a_fast, self.eorb_a_fast = self.calc_iol_mono_en(2, m_a, iol_p, core.thetapts, v_alpha)
+        # currently applying R_loss to fast alphas as well as thermal, although I'm skeptical of this. -MH
+        self.forb_a_fast = inp.R_loss * self.forb_a_fast
+        self.morb_a_fast = inp.R_loss * self.morb_a_fast
+        self.eorb_a_fast = inp.R_loss * self.eorb_a_fast
         self.forb_a_fast_1D = self.forb_a_fast[:, 0]
         self.morb_a_fast_1D = self.morb_a_fast[:, 0]
         self.eorb_a_fast_1D = self.eorb_a_fast[:, 0]
