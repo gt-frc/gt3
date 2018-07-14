@@ -544,5 +544,3 @@ class RadialTransport:
         #                E_orb=None)
         plt.plot(r, self.nu_drag_D)
         plt.show()
-
-        sys.exit()
