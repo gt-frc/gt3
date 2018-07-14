@@ -292,7 +292,11 @@ def draw_core_line(R, Z, psi, psi_val, sep_pts):
 
     if len(contours) == 0 and isclose(psi_val, 0, abs_tol=1E-9):
         # This is probably the magnetic axis
-        line = None
+        fs_line = None
+        fs_inn_pt = None
+        fs_out_pt = None
+        fs_top_pt = None
+        fs_bot_pt = None
         fs_axis = None
     elif len(contours) == 0 and not isclose(psi_val, 0, abs_tol=1E-9):
         # This either means that either:
@@ -301,7 +305,11 @@ def draw_core_line(R, Z, psi, psi_val, sep_pts):
         #       package to give us a contour. This can happen if you you have an very fine
         #       radial mesh in the vicinity of the magnetic axis.
         # Passing back None for now, but should probably raise an exception in the future  # TODO
-        line = None
+        fs_line = None
+        fs_inn_pt = None
+        fs_out_pt = None
+        fs_top_pt = None
+        fs_bot_pt = None
         fs_axis = None
     else:
         if len(contours) == 1:
@@ -320,13 +328,47 @@ def draw_core_line(R, Z, psi, psi_val, sep_pts):
                     break
 
         pts = np.column_stack((x, y))
-        line = LineString(pts)
-        out_pt = pts[np.argmax(pts, axis=0)[0]]
-        in_pt = pts[np.argmin(pts, axis=0)[0]]
-        top_pt = pts[np.argmax(pts, axis=0)[1]]
-        bot_pt = pts[np.argmin(pts, axis=0)[1]]
-        fs_axis = [(out_pt[0]+in_pt[0])/2, (out_pt[1]+in_pt[1])/2]
-    return line, fs_axis
+        fs_line = LineString(pts)
+        fs_out_pt = pts[np.argmax(pts, axis=0)[0]]
+        fs_inn_pt = pts[np.argmin(pts, axis=0)[0]]
+        fs_top_pt = pts[np.argmax(pts, axis=0)[1]]
+        fs_bot_pt = pts[np.argmin(pts, axis=0)[1]]
+        fs_axis = [(fs_out_pt[0]+fs_inn_pt[0])/2, (fs_out_pt[1]+fs_inn_pt[1])/2]
+
+    fs_pts = namedtuple('fs_pts', 'inn out top bot axis')(
+        fs_inn_pt,
+        fs_out_pt,
+        fs_top_pt,
+        fs_bot_pt,
+        fs_axis
+    )
+    return fs_line, fs_pts
+
+def calc_kappa_elong(psi_data, sep_pts):
+    # get kappa and elongation from the psi_norm=0.95 flux surface
+    fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, 0.95, sep_pts)
+    elong_a = (fs_pts.top[1] - fs_pts.bot[1]) / (fs_pts.out[0] - fs_pts.inn[0])
+    tri_a = (fs_pts.axis[0] - fs_pts.top[0]) / (fs_pts.out[0] - fs_pts.axis[0])
+
+    # get kappa and elongation near the magnetic axis
+    fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, 0.05, sep_pts)
+
+    # a small number isn't guaranteed to find a contour. If one is not found,
+    # start near zero increase psi_norm until we find one
+    if fs_line is None:
+        for psi_val in np.linspace(0.05,1,100):
+            fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm,psi_val, sep_pts)
+            if fs_line is None:
+                pass
+            else:
+                break
+
+    elong_0 = (fs_pts.top[1] - fs_pts.bot[1]) / (fs_pts.out[0] - fs_pts.inn[0])
+    tri_0 = 0
+
+    kappa = namedtuple('kappa', 'axis sep')(elong_0, elong_a)
+    tri = namedtuple('tri', 'axis sep')(tri_0, tri_a)
+    return kappa, tri
 
 
 def calc_rho1d(edge_rho=None, rhopts_core=None, rhopts_edge=None, rhopts=None):
@@ -593,8 +635,8 @@ def calc_RZ(rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
         else:
             # attempt to draw flux surface line through that point
             # (may not work for flux surfaces very close to the magnetic axis)
-            fs_line, fs_axis = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, psi_norm_val, sep_pts)
-            if fs_line == None and fs_axis == None:
+            fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, psi_norm_val, sep_pts)
+            if fs_line == None and fs_pts.axis == None:
                 # then draw_core_line didn't find any contours, which probably means it was trying
                 # to draw a surface closer to psi_norm=0 than the contours package would cooperate with.
                 # When this happens, the best thing to do for now is decrease the radial resolution in
@@ -609,9 +651,9 @@ def calc_RZ(rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
 
             for j, thetaval in enumerate(theta[0]):
                 if psi_norm_val < 1.0:
-                    thetaline = LineString([Point(fs_axis),
-                                            Point([3.0 * cos(thetaval) + fs_axis[0],
-                                                   3.0 * sin(thetaval) + fs_axis[1]])])
+                    thetaline = LineString([Point(fs_pts.axis),
+                                            Point([3.0 * cos(thetaval) + fs_pts.axis[0],
+                                                   3.0 * sin(thetaval) + fs_pts.axis[1]])])
                     int_pt = fs_line.intersection(thetaline)
                 else:
                     if thetaval == theta_xpt:
@@ -718,6 +760,8 @@ class ExpCoreBrnd():
         self.a = self.pts.obmp[0] - self.pts.axis.mag[0]
         self.vol = (pi*self.a**2) * 2 * pi * self.R0_a  # TODO: This is only a rough estimate. Replace later.
 
+        self.shaf_shift = (self.pts.axis.mag[0] - self.pts.axis.geo[0]) / self.a
+
         # calculate rho and theta values and number of thetapts
 
         # specify rho values
@@ -741,6 +785,9 @@ class ExpCoreBrnd():
         self.psi, self.psi_norm = calc_psi(self.rho, self.pts, self.psi_data)
 
         self.R, self.Z = calc_RZ(self.rho, self.theta, theta_xpt, self.pts, self.psi_data, self.psi_norm, self.lines)
+
+        # estimate elongation and triangularity
+        self.kappa_vals, self.tri_vals = calc_kappa_elong(self.psi_data, np.asarray(self.lines.sep_closed.coords))
 
         # create interpolation functions to convert rho to psi and vice versa
         self.rho2psi, self.psi2rho = calc_rho2psi_interp(self.pts, self.psi_data)
