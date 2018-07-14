@@ -17,7 +17,9 @@ import sys
 from math import atan2, pi, ceil, sin, cos
 from collections import namedtuple
 from contours.quad import QuadContourGenerator
+from scipy import constants
 
+e = constants.elementary_charge
 
 def calc_svfus(T, mode='dd'):
     def sigv(T, mode):  # function takes T in kev
@@ -79,7 +81,7 @@ def calc_svfus(T, mode='dd'):
     # (bosch hale technically only valid over 0.2 - 100 kev)
     Ti_range = np.logspace(-1, 2, 1000)  # values in kev
     sigv_fus_range = sigv(Ti_range, mode=mode)  # in m^3/s
-    sigv_fus_interp = UnivariateSpline(Ti_range * 1.0E3 * 1.6021E-19, sigv_fus_range, s=0)  # converted to Joules
+    sigv_fus_interp = UnivariateSpline(Ti_range * 1.0E3 * e, sigv_fus_range, s=0)  # converted to Joules
     sv_fus = sigv_fus_interp(T.i.J)
     dsv_fus_dT = sigv_fus_interp.derivative()(T.i.J)
 
@@ -104,7 +106,7 @@ def calc_svrec_st(n, T):
     # svrec_vals = 10.0 ** (interp1(zni_exps, Ti_exps))  # in m^3/s
     #
     # zni_vals = np.logspace(16, 22, 100)
-    # Ti_vals = np.logspace(-1, 3, 100) * 1.6021E-19  # in joules
+    # Ti_vals = np.logspace(-1, 3, 100) * e  # in joules
     #
     # dsvrec_dTi_vals = np.gradient(svrec_vals, Ti_vals, axis=0)
     #
@@ -112,8 +114,8 @@ def calc_svrec_st(n, T):
     #
     # zni_mod = np.where(n.i > 1E22, 1E22, n.i)
     # zni_mod = np.where(n.i < 1E16, 1E16, zni_mod)
-    # Ti_mod = np.where(T.i.ev > 1E3, 1E3 * 1.6021E-19, T.i.ev * 1.6021E-19)
-    # Ti_mod = np.where(T.i.ev < 1E-1, 1E-1 * 1.6021E-19, Ti_mod)
+    # Ti_mod = np.where(T.i.ev > 1E3, 1E3 * e, T.i.ev * e)
+    # Ti_mod = np.where(T.i.ev < 1E-1, 1E-1 * e, Ti_mod)
     #
     # plt.semilogx(zni_vals2d.flatten(), Ti_vals2d.flatten())
     # plt.show()
@@ -147,15 +149,15 @@ def calc_svcx_st(T):
     Tn_exps = np.linspace(0, 2, 100)
     svcx_vals = 10.0 ** (interp1(Ti_exps, Tn_exps))  # in m^3/s
 
-    Ti_vals = np.logspace(-1, 3, 100) * 1.6021E-19  # in joules
-    Tn_vals = np.logspace(0, 2, 100) * 1.6021E-19  # in joules
+    Ti_vals = np.logspace(-1, 3, 100) * e  # in joules
+    Tn_vals = np.logspace(0, 2, 100) * e  # in joules
 
     dsvcx_dTi_vals = np.gradient(svcx_vals, Ti_vals, axis=0)
 
     Ti_vals2d, Tn_vals2d = np.meshgrid(Ti_vals, Tn_vals)
 
-    Ti_mod = np.where(T.i.ev > 1E3, 1E3 * 1.6021E-19, T.i.ev * 1.6021E-19)
-    Tn_mod = np.zeros(Ti_mod.shape) + 2.0 * 1.6021E-19
+    Ti_mod = np.where(T.i.ev > 1E3, 1E3 * e, T.i.ev * e)
+    Tn_mod = np.zeros(Ti_mod.shape) + 2.0 * e
 
     sv_cx = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())),
                           svcx_vals.flatten(),
@@ -181,7 +183,7 @@ def calc_svion_st(T):
     T_exps_range = np.linspace(-1, 5, 1000)
     sigv_vals_range = 10.0 ** interp1(T_exps_range)  # in m^3/s
 
-    T_vals_range = np.logspace(-1, 5, 1000) * 1.6021E-19  # in joules
+    T_vals_range = np.logspace(-1, 5, 1000) * e  # in joules
     interp2 = UnivariateSpline(T_vals_range, sigv_vals_range, s=0)
 
     sv_ion = interp2(T.i.J)
@@ -204,15 +206,15 @@ def calc_svel_st(T):
     Tn_exps = np.linspace(0, 2, 100)
     svel_vals = 10.0 ** (interp1(Ti_exps, Tn_exps))  # in m^3/s
 
-    Ti_vals = np.logspace(-1, 3, 100) * 1.6021E-19  # in joules
-    Tn_vals = np.logspace(0, 2, 100) * 1.6021E-19  # in joules
+    Ti_vals = np.logspace(-1, 3, 100) * e  # in joules
+    Tn_vals = np.logspace(0, 2, 100) * e  # in joules
 
     dsvel_dTi_vals = np.gradient(svel_vals, Ti_vals, axis=0)
 
     Ti_vals2d, Tn_vals2d = np.meshgrid(Ti_vals, Tn_vals)
 
-    Ti_mod = np.where(T.i.ev > 1E3, 1E3 * 1.6021E-19, T.i.ev * 1.6021E-19)
-    Tn_mod = np.zeros(Ti_mod.shape) + 2.0 * 1.6021E-19
+    Ti_mod = np.where(T.i.ev > 1E3, 1E3 * e, T.i.ev * e)
+    Tn_mod = np.zeros(Ti_mod.shape) + 2.0 * e
 
     sv_el = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())),
                           svel_vals.flatten(),
@@ -227,6 +229,31 @@ def calc_svel_st(T):
 
 
 ########################################
+
+# isclose is included in python3.5+, so you can delete this if the code ever gets ported into python3.5+
+def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
+    return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
+
+def calc_fsa(x, R, Z):
+    R1 = R[:, :-1]
+    R2 = np.roll(R[:, :-1], -1, axis=1)
+    Z1 = Z[:, :-1]
+    Z2 = np.roll(Z[:, :-1], -1, axis=1)
+    x1 = x[:, :-1]
+    x2 = np.roll(x[:, :-1], -1, axis=1)
+
+    dl = np.sqrt((R2 - R1) ** 2 + (Z2 - Z1) ** 2)
+
+    R_av = (R1 + R2)/2
+
+    dA = dl * (2 * pi * R_av)
+
+    x_av = (x1 + x2)/2
+
+    fsa = np.sum(x_av * dA, axis=1) / np.sum(dA, axis=1)
+    fsa[0] = x[0,0]
+    return fsa
 
 
 def draw_contour_line(R, Z, array, val, pathnum):
@@ -263,28 +290,85 @@ def draw_core_line(R, Z, psi, psi_val, sep_pts):
     # draw contours with psi_val
     contours = c.contour(psi_val)
 
-    if len(contours) == 1:
-        # then we're definitely dealing with a surface inside the seperatrix
-        x, y = draw_contour_line(R, Z, psi, psi_val, 0)
+    if len(contours) == 0 and isclose(psi_val, 0, abs_tol=1E-9):
+        # This is probably the magnetic axis
+        fs_line = None
+        fs_inn_pt = None
+        fs_out_pt = None
+        fs_top_pt = None
+        fs_bot_pt = None
+        fs_axis = None
+    elif len(contours) == 0 and not isclose(psi_val, 0, abs_tol=1E-9):
+        # This either means that either:
+        #    A) psi is a value not present in the psi data or
+        #    B) psi is very close to the magnetic axis, but is too small for the contours
+        #       package to give us a contour. This can happen if you you have an very fine
+        #       radial mesh in the vicinity of the magnetic axis.
+        # Passing back None for now, but should probably raise an exception in the future  # TODO
+        fs_line = None
+        fs_inn_pt = None
+        fs_out_pt = None
+        fs_top_pt = None
+        fs_bot_pt = None
+        fs_axis = None
     else:
-        # we need to find which of the surfaces is inside the seperatrix
-        for j, line in enumerate(contours):
-            x, y = draw_contour_line(R, Z, psi, psi_val, j)
+        if len(contours) == 1:
+            # then we're definitely dealing with a surface inside the seperatrix
+            x, y = draw_contour_line(R, Z, psi, psi_val, 0)
+        else:
+            # we need to find which of the surfaces is inside the seperatrix
+            for j, line in enumerate(contours):
+                x, y = draw_contour_line(R, Z, psi, psi_val, j)
 
-            if (np.amax(x) < np.amax(sep_pts[:, 0]) and
-                np.amin(x) > np.amin(sep_pts[:, 0]) and
-                np.amax(y) < np.amax(sep_pts[:, 1]) and
-                np.amin(y) > np.amin(sep_pts[:, 1])):
-                # then it's an internal flux surface
+                if (np.amax(x) < np.amax(sep_pts[:, 0]) and
+                    np.amin(x) > np.amin(sep_pts[:, 0]) and
+                    np.amax(y) < np.amax(sep_pts[:, 1]) and
+                    np.amin(y) > np.amin(sep_pts[:, 1])):
+                    # then it's an internal flux surface
+                    break
+
+        pts = np.column_stack((x, y))
+        fs_line = LineString(pts)
+        fs_out_pt = pts[np.argmax(pts, axis=0)[0]]
+        fs_inn_pt = pts[np.argmin(pts, axis=0)[0]]
+        fs_top_pt = pts[np.argmax(pts, axis=0)[1]]
+        fs_bot_pt = pts[np.argmin(pts, axis=0)[1]]
+        fs_axis = [(fs_out_pt[0]+fs_inn_pt[0])/2, (fs_out_pt[1]+fs_inn_pt[1])/2]
+
+    fs_pts = namedtuple('fs_pts', 'inn out top bot axis')(
+        fs_inn_pt,
+        fs_out_pt,
+        fs_top_pt,
+        fs_bot_pt,
+        fs_axis
+    )
+    return fs_line, fs_pts
+
+def calc_kappa_elong(psi_data, sep_pts):
+    # get kappa and elongation from the psi_norm=0.95 flux surface
+    fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, 0.95, sep_pts)
+    elong_a = (fs_pts.top[1] - fs_pts.bot[1]) / (fs_pts.out[0] - fs_pts.inn[0])
+    tri_a = (fs_pts.axis[0] - fs_pts.top[0]) / (fs_pts.out[0] - fs_pts.axis[0])
+
+    # get kappa and elongation near the magnetic axis
+    fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, 0.05, sep_pts)
+
+    # a small number isn't guaranteed to find a contour. If one is not found,
+    # start near zero increase psi_norm until we find one
+    if fs_line is None:
+        for psi_val in np.linspace(0.05,1,100):
+            fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm,psi_val, sep_pts)
+            if fs_line is None:
+                pass
+            else:
                 break
-    pts = np.column_stack((x, y))
-    line = LineString(pts)
-    out_pt = pts[np.argmax(pts, axis=0)[0]]
-    in_pt = pts[np.argmin(pts, axis=0)[0]]
-    top_pt = pts[np.argmax(pts, axis=0)[1]]
-    bot_pt = pts[np.argmin(pts, axis=0)[1]]
-    fs_axis = [(out_pt[0]+in_pt[0])/2, (out_pt[1]+in_pt[1])/2]
-    return line, fs_axis
+
+    elong_0 = (fs_pts.top[1] - fs_pts.bot[1]) / (fs_pts.out[0] - fs_pts.inn[0])
+    tri_0 = 0
+
+    kappa = namedtuple('kappa', 'axis sep')(elong_0, elong_a)
+    tri = namedtuple('tri', 'axis sep')(tri_0, tri_a)
+    return kappa, tri
 
 
 def calc_rho1d(edge_rho=None, rhopts_core=None, rhopts_edge=None, rhopts=None):
@@ -505,8 +589,11 @@ def calc_theta1d(pts, thetapts_approx):
 
     theta1d = np.zeros(0)
     for i in range(4):
-        quad_pts = ceil((theta_markers[i + 1] - theta_markers[i]) / min_delta_theta)
-        quad_theta = np.linspace(theta_markers[i], theta_markers[i + 1], quad_pts)
+        quad_pts = int(ceil((theta_markers[i + 1] - theta_markers[i]) / min_delta_theta))
+        if i == 3:
+            quad_theta = np.linspace(theta_markers[i], theta_markers[i + 1], quad_pts+1, endpoint=True)
+        else:
+            quad_theta = np.linspace(theta_markers[i], theta_markers[i + 1], quad_pts, endpoint=False)
         theta1d = np.concatenate((theta1d, quad_theta))
     return theta1d, theta_markers
 
@@ -522,11 +609,11 @@ def calc_psi(rho, pts, psi_data):
     psi_vals = griddata(np.column_stack((psi_data.R.flatten(), psi_data.Z.flatten())),
                              psi_data.psi.flatten(),
                              init_coords,
-                             method='linear')
+                             method='cubic')
     psi_norm_vals = griddata(np.column_stack((psi_data.R.flatten(), psi_data.Z.flatten())),
                              psi_data.psi_norm.flatten(),
                              init_coords,
-                             method='linear')
+                             method='cubic')
 
     psi = interp1d(rho[:,0], psi_vals)(rho)
     psi_norm = interp1d(rho[:, 0], psi_norm_vals)(rho)
@@ -542,30 +629,45 @@ def calc_RZ(rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
     R = np.zeros(rho.shape)
     Z = np.zeros(rho.shape)
     for i, psi_norm_val in enumerate(psi_norm[:, 0]):
-        # draw flux surface line through that point
-        fs_line, fs_axis = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, psi_norm_val, sep_pts)
+        if i == 0:
+            R[i] = pts.axis.mag[0]
+            Z[i] = pts.axis.mag[1]
+        else:
+            # attempt to draw flux surface line through that point
+            # (may not work for flux surfaces very close to the magnetic axis)
+            fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, psi_norm_val, sep_pts)
+            if fs_line == None and fs_pts.axis == None:
+                # then draw_core_line didn't find any contours, which probably means it was trying
+                # to draw a surface closer to psi_norm=0 than the contours package would cooperate with.
+                # When this happens, the best thing to do for now is decrease the radial resolution in
+                # the vicinity of the magnetic axis. Ideas for the fixing this in the future:
+                #   1) resample the raw psi data (maybe an Rbf interpolation) onto a finer mesh. May or may not work.
+                #   2) some kind of interpolation based on the flux surfaces it can draw.  # TODO
+                print '\nGT3 had trouble drawing a contour line when getting the R and Z points. This ' \
+                      'is most likely due to an overly fine radial mesh in the vicnity of the magnetic ' \
+                      'axis. Try reducing your number of radial meshes in the core and try again. This ' \
+                      'will hopefully be fixed in a future update. Stopping.'
+                sys.exit()
 
-        for j, thetaval in enumerate(theta[0]):
-            if psi_norm_val < 1.0:
-                thetaline = LineString([Point(fs_axis),
-                                        Point([3.0 * cos(thetaval) + fs_axis[0],
-                                               3.0 * sin(thetaval) + fs_axis[1]])])
-                int_pt = fs_line.intersection(thetaline)
-            else:
-                if thetaval == theta_xpt:
-                    int_pt = Point(pts.xpt)
-
+            for j, thetaval in enumerate(theta[0]):
+                if psi_norm_val < 1.0:
+                    thetaline = LineString([Point(fs_pts.axis),
+                                            Point([3.0 * cos(thetaval) + fs_pts.axis[0],
+                                                   3.0 * sin(thetaval) + fs_pts.axis[1]])])
+                    int_pt = fs_line.intersection(thetaline)
                 else:
-                    thetaline = LineString([Point(pts.axis.geo),
-                                            Point([3.0 * cos(thetaval) + pts.axis.geo[0],
-                                                   3.0 * sin(thetaval) + pts.axis.geo[1]])])
-                    int_pt = LineString(sep_pts).intersection(thetaline)
+                    if thetaval == theta_xpt:
+                        int_pt = Point(pts.xpt)
 
-            R[i, j] = int_pt.x
-            Z[i, j] = int_pt.y
+                    else:
+                        thetaline = LineString([Point(pts.axis.geo),
+                                                Point([3.0 * cos(thetaval) + pts.axis.geo[0],
+                                                       3.0 * sin(thetaval) + pts.axis.geo[1]])])
+                        int_pt = LineString(sep_pts).intersection(thetaline)
 
-    R[0] = pts.axis.mag[0]
-    Z[0] = pts.axis.mag[1]
+                R[i, j] = int_pt.x
+                Z[i, j] = int_pt.y
+
     return R, Z
 
 
@@ -624,7 +726,7 @@ def calc_rho2psi_interp(pts, psi_data):
     return rho2psi, psi2rho
 
 
-class exp_core_brnd():
+class ExpCoreBrnd():
     def __init__(self, inp):
 
         raw_psi_R = inp.psirz_exp[:, 0].reshape(-1, 65)
@@ -656,9 +758,23 @@ class exp_core_brnd():
         # TODO: Figure out which of these is the definition of 'a'
         # self.a = self.pts.obmp[0] - self.pts.axis.geo
         self.a = self.pts.obmp[0] - self.pts.axis.mag[0]
+        self.vol = (pi*self.a**2) * 2 * pi * self.R0_a  # TODO: This is only a rough estimate. Replace later.
+
+        self.shaf_shift = (self.pts.axis.mag[0] - self.pts.axis.geo[0]) / self.a
 
         # calculate rho and theta values and number of thetapts
-        rho1d = calc_rho1d(rhopts=inp.rhopts)
+
+        # specify rho values
+        try:
+            rho1d = np.concatenate((np.linspace(0, inp.edge_rho, inp.rhopts_core, endpoint=False),
+                                    np.linspace(inp.edge_rho, 1, inp.rhopts_edge)), axis=0)
+        except AttributeError:
+            try:
+                rho1d = np.linspace(0, 1, inp.rhopts)
+            except AttributeError:
+                raise AttributeError("You haven't specified the number of radial points.")
+        self.rhopts = len(rho1d)
+
         theta1d, theta_markers = calc_theta1d(self.pts, inp.thetapts_approx)
         theta_xpt = theta_markers[3]
         self.thetapts = len(theta1d)
@@ -670,6 +786,9 @@ class exp_core_brnd():
 
         self.R, self.Z = calc_RZ(self.rho, self.theta, theta_xpt, self.pts, self.psi_data, self.psi_norm, self.lines)
 
+        # estimate elongation and triangularity
+        self.kappa_vals, self.tri_vals = calc_kappa_elong(self.psi_data, np.asarray(self.lines.sep_closed.coords))
+
         # create interpolation functions to convert rho to psi and vice versa
         self.rho2psi, self.psi2rho = calc_rho2psi_interp(self.pts, self.psi_data)
 
@@ -677,60 +796,60 @@ class exp_core_brnd():
         # TODO: in the future, get this from psi data
         self.q = UnivariateSpline(inp.q_data[:, 0], inp.q_data[:, 1], k=5, s=2.0)(self.rho)
 
-        # define some namedtuples
-        nn_nt = namedtuple('nn', 's t tot')
-        n_nt = namedtuple('n', 'i e n C')
-        T_units_nt = namedtuple('T', 'kev ev J')
-        Tn_nt = namedtuple('Tn', 's t')
-        T_nt = namedtuple('T', 'i e n C')
-        v_spec_nt = namedtuple('v_spec', 'D C')
-        v_comp_nt = namedtuple('v_comp', 'pol tor')
-
-        # initialize neutral density arrays with zero
-        nn = nn_nt(
+        # initialize ionization rate arrays with zero
+        self.izn_rate = namedtuple('izn_rate', 's t tot')(
             np.zeros(self.rho.shape),  # slow
             np.zeros(self.rho.shape),  # thermal
             np.zeros(self.rho.shape)   # total
         )
+
+        # initialize cooling rate array with zero
+        self.cool_rate = np.zeros(self.rho.shape)
 
         # initialize main density object
         fracz = UnivariateSpline(inp.fracz_data[:, 0], inp.fracz_data[:, 1], k=5, s=2.0)(self.rho)
         ni = UnivariateSpline(inp.ni_data[:, 0], inp.ni_data[:, 1], k=3, s=2.0)(self.rho)
         ne = UnivariateSpline(inp.ne_data[:, 0], inp.ne_data[:, 1], k=3, s=2.0)(self.rho)
         nC = ne * fracz
-        self.n = n_nt(ni, ne, nn, nC)
+        nn = namedtuple('nn', 's t tot')(
+            np.zeros(self.rho.shape),  # slow
+            np.zeros(self.rho.shape),  # thermal
+            np.zeros(self.rho.shape)   # total
+        )
+        self.n = namedtuple('n', 'i e n C')(ni, ne, nn, nC)
         self.z_0 = nC*6.0**2 / ni
         self.z_eff = (ni*1.0**2 + nC*6.0**2) / ne
 
         # populate temperature namedtuples, including the main T object
         Ti_kev = UnivariateSpline(inp.Ti_data[:, 0], inp.Ti_data[:, 1], k=5, s=2.0)(self.rho)
-        Ti_ev = Ti_kev * 1E3
-        Ti_J = Ti_kev * 1E3 * 1.6021E-19
-
         Te_kev = UnivariateSpline(inp.Te_data[:, 0], inp.Te_data[:, 1], k=5, s=2.0)(self.rho)
-        Te_ev = Te_kev * 1E3
-        Te_J = Te_kev * 1E3 * 1.6021E-19
-
         Tns_kev = np.full(self.rho.shape, 0.002)
-        Tns_ev = Tns_kev * 1E3
-        Tns_J = Tns_kev * 1E3 * 1.6021E-19
-
         Tnt_kev = Ti_kev
-        Tnt_ev = Tnt_kev * 1E3
-        Tnt_J = Tnt_kev * 1E3 * 1.6021E-19
-
         TC_kev = Ti_kev
-        TC_ev = Ti_ev
-        TC_J = Ti_J
 
-        Ti = T_units_nt(Ti_kev, Ti_ev, Ti_J)
-        Te = T_units_nt(Te_kev, Te_ev, Te_J)
-        Tn = Tn_nt(
-            T_units_nt(Tns_kev, Tns_ev, Tns_J),
-            T_units_nt(Tnt_kev, Tnt_ev, Tnt_J)
-        )
-        TC = T_units_nt(TC_kev, TC_ev, TC_J)
-        self.T = T_nt(Ti, Te, Tn, TC)
+        self.T = namedtuple('T', 'i e n C')(
+            namedtuple('Ti', 'kev ev J')(
+                Ti_kev,
+                Ti_kev * 1E3,
+                Ti_kev * 1E3 * e),
+            namedtuple('eT', 'kev ev J')(
+                Te_kev,
+                Te_kev * 1E3,
+                Te_kev * 1E3 * e),
+            namedtuple('Tn', 's t')(
+                namedtuple('Tn_s', 'kev ev J')(
+                    Tns_kev,
+                    Tns_kev * 1E3,
+                    Tns_kev * 1E3 * e),
+                namedtuple('Tn_t', 'kev ev J')(
+                    Tnt_kev,
+                    Tnt_kev * 1E3,
+                    Tnt_kev * 1E3 * e)
+            ),
+            namedtuple('TC', 'kev ev J')(
+                TC_kev,
+                TC_kev * 1E3,
+                TC_kev * 1E3 * e))
 
         # initialize spatial gradients and gradient scale lengths
         dni_dr = calc_nT_grad(self.rho, self.n.i, self.psi_norm, self.R, self.Z, self.psi_data)
@@ -738,10 +857,10 @@ class exp_core_brnd():
         dnC_dr = calc_nT_grad(self.rho, self.n.C, self.psi_norm, self.R, self.Z, self.psi_data)
         dTi_kev_dr = calc_nT_grad(self.rho, self.T.i.kev, self.psi_norm, self.R, self.Z, self.psi_data)
         dTi_ev_dr = dTi_kev_dr * 1E3
-        dTi_J_dr = dTi_kev_dr * 1E3 * 1.6021E-19
+        dTi_J_dr = dTi_kev_dr * 1E3 * e
         dTe_kev_dr = calc_nT_grad(self.rho, self.T.i.kev, self.psi_norm, self.R, self.Z, self.psi_data)
         dTe_ev_dr = dTe_kev_dr * 1E3
-        dTe_J_dr = dTe_kev_dr * 1E3 * 1.6021E-19
+        dTe_J_dr = dTe_kev_dr * 1E3 * e
 
         L_ni = -dni_dr / self.n.i
         L_ne = -dne_dr / self.n.e
@@ -780,9 +899,14 @@ class exp_core_brnd():
         except AttributeError:
             vtorC = np.zeros(self.rho.shape)
 
-        self.v = v_comp_nt(
-            v_spec_nt(vpolD, vpolC),
-            v_spec_nt(vtorD, vtorC),
+        self.v = namedtuple('v_comp', 'pol tor')(
+            namedtuple('v_spec', 'D C')(vpolD, vpolC),
+            namedtuple('v_spec', 'D C')(vtorD, vtorC),
+        )
+
+        self.v_1D = namedtuple('v_comp', 'pol tor')(
+            namedtuple('v_spec', 'D C')(vpolD[:, 0], vpolC[:, 0]),
+            namedtuple('v_spec', 'D C')(vtorD[:, 0], vtorC[:, 0]),
         )
 
         # initialize magnetic field-related quantities
@@ -846,44 +970,104 @@ class exp_core_brnd():
 
         self.sv = sv_nt(sv_fus, sv_rec, sv_cx, sv_ion, sv_el)
 
+        # Calculate some 1D Flux-surface averaged quantities
+        self.izn_rate_fsa_s = calc_fsa(self.izn_rate.s, self.R, self.Z)
+        self.izn_rate_fsa_t = calc_fsa(self.izn_rate.t, self.R, self.Z)
+        self.izn_rate_fsa = calc_fsa(self.izn_rate.s + self.izn_rate.t, self.R, self.Z)
+        self.cool_rate_fsa = calc_fsa(self.cool_rate, self.R, self.Z)
+
+        self.z_eff_fsa = calc_fsa(self.z_eff, self.R, self.Z)
+        self.B_p_fsa = calc_fsa(self.B_p, self.R, self.Z)
+
+        self.n_fsa = namedtuple('n', 'i e n C')(
+            calc_fsa(self.n.i, self.R, self.Z),
+            calc_fsa(self.n.e, self.R, self.Z),
+            namedtuple('nn', 's t tot')(
+                calc_fsa(self.n.n.s, self.R, self.Z),  # slow
+                calc_fsa(self.n.n.t, self.R, self.Z),  # thermal
+                calc_fsa(self.n.n.tot, self.R, self.Z)  # total
+            ),
+            calc_fsa(self.n.C, self.R, self.Z))
+
+        Ti_kev_fsa = calc_fsa(self.T.i.kev, self.R, self.Z)
+        Te_kev_fsa = calc_fsa(self.T.e.kev, self.R, self.Z)
+        Tns_kev_fsa = calc_fsa(self.T.n.s.kev, self.R, self.Z)
+        Tnt_kev_fsa = calc_fsa(self.T.n.t.kev, self.R, self.Z)
+        TC_kev_fsa = calc_fsa(self.T.C.kev, self.R, self.Z)
+
+        self.T_fsa = namedtuple('T', 'i e n C')(
+            namedtuple('Ti', 'kev ev J')(
+                Ti_kev_fsa,
+                Ti_kev_fsa * 1E3,
+                Ti_kev_fsa * 1E3 * e),
+            namedtuple('eT', 'kev ev J')(
+                Te_kev_fsa,
+                Te_kev_fsa * 1E3,
+                Te_kev_fsa * 1E3 * e),
+            namedtuple('Tn', 's t')(
+                namedtuple('Tn_s', 'kev ev J')(
+                    Tns_kev_fsa,
+                    Tns_kev_fsa * 1E3,
+                    Tns_kev_fsa * 1E3 * e),
+                namedtuple('Tn_t', 'kev ev J')(
+                    Tnt_kev_fsa,
+                    Tnt_kev_fsa * 1E3,
+                    Tnt_kev_fsa * 1E3 * e)
+            ),
+            namedtuple('TC', 'kev ev J')(
+                TC_kev_fsa,
+                TC_kev_fsa * 1E3,
+                TC_kev_fsa * 1E3 * e))
+
         # initialize chi_r. This might get updated later
         self.chi_r = np.full(self.rho.shape, 2.0)
     
     def update_ntrl_data(self, data):
         try:
-            self.n_n_slow = griddata(np.column_stack((data.R, data.Z)),
-                                     data.n_n_slow,
-                                     (self.R, self.Z),
-                                     method='linear')
+            n_n_s = griddata(np.column_stack((data.R, data.Z)),
+                             data.n_n_slow,
+                             (self.R, self.Z),
+                             method='linear')
         except:
-            pass
+            n_n_s = self.n.n.s
 
         try:
-            self.n_n_thermal = griddata(np.column_stack((data.R, data.Z)),
-                                        data.n_n_thermal,
-                                        (self.R, self.Z),
-                                        method='linear')
+            n_n_t = griddata(np.column_stack((data.R, data.Z)),
+                             data.n_n_thermal,
+                             (self.R, self.Z),
+                             method='linear')
         except:
-            pass
+            n_n_t = self.n.n.t
 
         try:
-            self.izn_rate_slow = griddata(np.column_stack((data.R, data.Z)),
-                                          data.izn_rate_slow,
-                                          (self.R, self.Z),
-                                          method='linear')
+            izn_rate_s = griddata(np.column_stack((data.R, data.Z)),
+                                  data.izn_rate_slow,
+                                  (self.R, self.Z),
+                                  method='linear')
         except:
-            pass
+            izn_rate_s = self.izn_rate.s
 
         try:
-            self.izn_rate_thermal = griddata(np.column_stack((data.R, data.Z)),
+            izn_rate_t = griddata(np.column_stack((data.R, data.Z)),
                                              data.izn_rate_thermal,
                                              (self.R, self.Z),
                                              method='linear')
         except:
-            pass
+            izn_rate_t = self.izn_rate.t
 
-        self.n.n.tot = self.n.n.s + self.n_n_t
-        self.izn_rate.tot = self.izn_rate.s + self.izn_rate.t
+        nn = namedtuple('nn', 's t tot')(
+            n_n_s,  # slow
+            n_n_t,  # thermal
+            n_n_s + n_n_t  # total
+        )
+
+        self.n = namedtuple('n', 'i e n C')(self.n.i, self.n.e, nn, self.n.C)
+
+        self.izn_rate = namedtuple('izn_rate', 's t tot')(
+            izn_rate_s,  # slow
+            izn_rate_t,  # thermal
+            izn_rate_s + izn_rate_t  # total
+        )
 
     def update_Lz_data(self, z, Lz, dLzdT):
 

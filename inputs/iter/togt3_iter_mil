@@ -11,10 +11,10 @@ BT0 = 5.3
 
 #MAIN MESH PARAMETERS
 thetapts_approx = 50
-rhopts = 600
-#edge_rho = 0.6
-#rhopts_edge = 100
-#rhopts_core = 10
+#rhopts = 1000
+edge_rho = 0.7
+rhopts_edge = 400
+rhopts_core = 10
 
 #NEUTRALS PARAMETERS
 neut_outfile = gt3_144977_3000_neut.dat
@@ -105,7 +105,7 @@ ne0 = 3.629E19
 ne9 = 1.523E19
 ne_sep = 0.3E19
 ne_dp = 1E17
-nu_ne = 2.5
+nu_ne = 3.0
 
 Ti0 = 35
 Ti9 = 6
@@ -116,7 +116,7 @@ nu_Ti = 3.5
 Te0 = 36
 Te9 = 6
 Te_sep = 0.6
-Te_dp = 0.01
+Te_dp = 0.03
 nu_Te = 3.5
 
 # RAD TRANS PARAMETERS

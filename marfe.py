@@ -83,13 +83,6 @@ def calc_Lz(n, T):
     Lz_C = Lz_interp_C(np.log10(Tn), np.log10(nf), np.log10(T.e.kev))
     dLzdT_C = dLzdT_interp_C(np.log10(Tn), np.log10(nf), np.log10(T.e.kev))
 
-    print
-    print 'Tn = ',Tn
-    print 'nf = ',nf
-    print 'T.e.kev = ',T.e.kev
-    print 'Lz_C = ',Lz_C
-    print 'dLzdT_C = ',dLzdT_C
-    print
     return Lz_C, dLzdT_C
 
 
@@ -134,8 +127,6 @@ def calc_n_marfe(n, sv, T, L, Lz, chi_r):
     print ' n.e = ', n.e
     print
 
-
-
     term1 = chi_r * (nu * L.T**-2 + (C2 - 1.0) * L.T**-1 * L.n**-1)
     term2 = fz * ((nu + 1 - C2) * Lz_t / T.i.J - dLzdT)
     term3 = f0 * (E_ion * sv.ion / T.i.J * (nu - T.i.J / sv.ion * sv.ion_ddT))
@@ -156,7 +147,7 @@ def calc_n_marfe(n, sv, T, L, Lz, chi_r):
 
     print 'n_marfe = ', n_marfe
     print 'MI = ', n.e / n_marfe
-    return n_marfe
+    return n_marfe, n.e / n_marfe
 
 
 class Marfe:
@@ -234,7 +225,7 @@ class Marfe:
             print 'stopping'
             sys.exit()
 
-        self.n_marfe = calc_n_marfe(n, sv, T, L, Lz, chi_r)
+        self.n_marfe, self.MI = calc_n_marfe(n, sv, T, L, Lz, chi_r)
 
 
 

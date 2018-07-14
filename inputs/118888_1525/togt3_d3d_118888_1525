@@ -11,17 +11,17 @@ BT0 = 2.004
 
 #MAIN MESH PARAMETERS
 thetapts_approx = 50
-rhopts = 200
-#edge_rho = 0.6
-#rhopts_edge = 100
-#rhopts_core = 10
+#rhopts = 200
+edge_rho = 0.7
+rhopts_edge = 100
+rhopts_core = 10
 
 #NEUTRALS PARAMETERS
 neut_outfile = gt3_118888_1525_neut.dat
-core_thetapts_ntrl = 30
+core_thetapts_ntrl = 50
 ib_thetapts_ntrl = 10
 ob_thetapts_ntrl = 10
-#rhopts_ntrl = 500
+#rhopts_ntrl = 100
 edge_rho_ntrl = 0.8
 rhopts_edge_ntrl = 5
 rhopts_core_ntrl = 10
@@ -53,17 +53,12 @@ ni_file         = /118888_1525/gt3_118888_1525_ni.dat
 Te_file         = /118888_1525/gt3_118888_1525_Te.dat
 Ti_file         = /118888_1525/gt3_118888_1525_Ti.dat
 er_file         = /118888_1525/gt3_118888_1525_er.dat
-fz1_file        = /118888_1525/gt3_118888_1525_fz1.dat
 fracz_file      = /118888_1525/gt3_118888_1525_fracz.dat
-exlti_file      = /118888_1525/gt3_118888_1525_exlti.dat
-exlte_file      = /118888_1525/gt3_118888_1525_exlte.dat
-exlni_file      = /118888_1525/gt3_118888_1525_exlni.dat
 vpolC_file      = /118888_1525/gt3_118888_1525_vpolC.dat
 vtorC_file      = /118888_1525/gt3_118888_1525_vtorC.dat
 vpolD_file      = /118888_1525/gt3_118888_1525_vpolD.dat
 vtorD_file      = /118888_1525/gt3_118888_1525_vtorD.dat
 q_file          = /118888_1525/gt3_118888_1525_q.dat
-zbar2_file      = /118888_1525/gt3_118888_1525_zbar2.dat
 
 2D QUANTITIES INPUT FILES
 bpol_file       = /118888_1525/gt3_118888_1525_bpol.dat
@@ -75,24 +70,24 @@ sep_file        = /118888_1525/gt3_118888_1525_sep.dat
 wall_file        = /machine/gt3_diiid_wall.dat
 
 #PARAMETERS FOR MILLER BACKGROUND
-a = 0.598
-R0_a = 1.699
-Z0 = -0.028
-kappa_up = 1.615
-kappa_lo = 1.2
-s_k_up = 0.3
-s_k_lo = 0.0
-tri_up = 0.25
-tri_lo = 0.0
+#a = 0.598
+#R0_a = 1.699
+#Z0 = -0.028
+#kappa_up = 1.615
+#kappa_lo = 1.2
+#s_k_up = 0.3
+#s_k_lo = 0.0
+#tri_up = 0.25
+#tri_lo = 0.0
 
 #PARAMETERS FOR X-MILLER OPTION
-xmil = 1
-xpt_R = 1.480
-xpt_Z = -1.138
-xtheta1 = 3.6
-xtheta2 = 2.7
-xtheta3 = 0.1
-xtheta4 = -1.0
+#xmil = 1
+#xpt_R = 1.480
+#xpt_Z = -1.138
+#xtheta1 = 3.6
+#xtheta2 = 2.7
+#xtheta3 = 0.1
+#xtheta4 = -1.0
 #sep_gamma1 = 3.8
 #sep_gamma2 = 1.25
 
@@ -118,18 +113,16 @@ xtheta4 = -1.0
 #Te_dp = 0.01
 #nu_Te = 3.5
 
-# RAD TRANS PARAMETERS
-eq1 = 1.60e-19
-eq2 = 9.60e-19
-xmas1 = 3.35e-27
-xmas2 = 2.01e-26
-ephia = 0.04
-xk = 1.60E-19
-delma = .005
-xnuioni = 0.0
-xnuati = 0.0
+#NEUTRAL BEAM DEPOSITION
+#nbeams_loc = /home/max/Nextcloud/Max/max_phd/Codes/nbeams/bin/Release/
+ebeam = 77.48
+abeam = 2
+alphain = 0.6475
+pbeam = 4.6
+rtang = 1.09
 
-# ADPAK PARAMETERS
+#IMPURITY CALCULATION
+#adpak_loc = /home/max/Nextcloud/Max/max_phd/Codes/adpak/
 z_imp = 6
 laden = 1
 ladtip = 1
@@ -139,25 +132,7 @@ ncxopt = 1
 anneut = 1.0E9
 vneut = 0.001
 
-#NEUTRAL BEAM DEPOSITION
-#nbeams_loc = /home/max/Nextcloud/Max/max_phd/Codes/nbeams/bin/Release/
-ebeam = 77.48
-abeam = 2
-alphain = 0.6475
-pbeam = 4.6
-rtang = 1.09
-bknot = 2
-pwrfrac1 = 0.76
-pwrfrac2 = 0.13
-pwrfrac3 = 0.11
-epsknot = 1.265
-eps_sep = 1.82
-shftknot = 0.033
-
-#IMPURITY CALCULATION
-#adpak_loc = /home/max/Nextcloud/Max/max_phd/Codes/adpak/
-
 #ION ORBIT LOSS CALCULATION
-numcos = 4
+numcos = 20
 
 
