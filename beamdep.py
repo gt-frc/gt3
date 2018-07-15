@@ -8,7 +8,7 @@ Created on Sun Mar 18 21:51:19 2018
 from __future__ import division
 import numpy as np
 from scipy.interpolate import interp1d
-from subprocess import call
+from subprocess import call, PIPE
 import os
 import re
 import sys
@@ -91,10 +91,10 @@ class BeamDeposition:
         #call nbeams. Note to those familiar with the old nbeams, I modified
         #the source code to take the input file as a commandline argument. - MH
         try:
-            call([inp.nbeams_loc+'nbeams', os.getcwd()+'/inbeams.dat'])
+            call([inp.nbeams_loc+'nbeams', os.getcwd()+'/inbeams.dat'], stdout=PIPE)
         except:
             try:
-                call(['nbeams', os.getcwd()+'/inbeams.dat'])
+                call(['nbeams', os.getcwd()+'/inbeams.dat'], stdout=PIPE)
             except:
                 print 'Unable to find nbeams executable. Stopping.'
                 sys.exit()
@@ -158,7 +158,6 @@ class BeamDeposition:
 
                 if line.startswith(" Absorbed Power"):
                     #this will need to be modified for multiple beams
-                    print 'line = ', line
                     result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
                     try:
                         self.P_abs_1 = float(result)
