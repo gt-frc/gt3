@@ -126,8 +126,6 @@ class IOL:
         self.forb_d_therm_1D = self.forb_d_therm[:, 0]
         self.morb_d_therm_1D = self.morb_d_therm[:, 0]
         self.eorb_d_therm_1D = self.eorb_d_therm[:, 0]
-        plt.plot(self.forb_d_therm_1D)
-        plt.show()
 
         # Calculate IOL for thermal tritium
         self.forb_t_therm, self.morb_t_therm, self.eorb_t_therm = self.calc_iol_maxwellian(1, m_t, iol_p, core.thetapts)

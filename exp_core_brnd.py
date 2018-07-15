@@ -707,8 +707,29 @@ def calc_nT_grad(rho, quant, psi, R, Z, psi_data):
     return dval_dr
 
 
+def create_surf_area_interp(rho2psi, psi_data, sep_pts, R0_a, a):
+    rho_vals = np.linspace(0, 1, 50, endpoint=True)
+    r_vals = rho_vals * a
+    psi_vals = rho2psi(rho_vals)
+
+    surf_area = np.zeros(rho_vals.shape)
+    # skip the first value. First value is zero.
+    for i,psi_val in enumerate(psi_vals[1:]):
+        if psi_val < 1:
+            fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, psi_val, sep_pts)
+            surf_area[i+1] = fs_line.length * 2*pi*fs_pts.axis[0]
+        else:
+            surf_area[i+1] = LineString(sep_pts).length * 2*pi*R0_a
+
+    r2sa = interp1d(r_vals, surf_area)
+    rho2sa = interp1d(rho_vals, surf_area)
+    psi2sa = interp1d(psi_vals, surf_area)
+
+    return r2sa, rho2sa, psi2sa
+
 def calc_rho2psi_interp(pts, psi_data):
     rhovals = np.linspace(0, 1, 100)
+
     ptsRZ = np.zeros((len(rhovals), 2))
 
     obmp_line = LineString([Point(pts.axis.mag), Point(pts.obmp)])
@@ -791,6 +812,11 @@ class ExpCoreBrnd():
 
         # create interpolation functions to convert rho to psi and vice versa
         self.rho2psi, self.psi2rho = calc_rho2psi_interp(self.pts, self.psi_data)
+        self.r2sa, self.rho2sa, self.psi2sa = create_surf_area_interp(self.rho2psi,
+                                                                      self.psi_data,
+                                                                      np.asarray(self.lines.sep_closed.coords),
+                                                                      self.R0_a,
+                                                                      self.a)
 
         # populate q-profile from input data
         # TODO: in the future, get this from psi data
