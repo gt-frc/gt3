@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from collections import namedtuple
 from scipy import constants
 from scipy.integrate import odeint
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, UnivariateSpline
 
 eps_0 = constants.epsilon_0
 e = constants.elementary_charge
@@ -104,21 +104,35 @@ def calc_torque(beam):
     return torque
 
 
-def calc_Qi(r, n, T, en_src_nbi_i, cool_rate, iol_adjusted=False, E_orb=None):  # formerly qheat
+def calc_Qi(r, n, T, en_src_nbi_i, cool_rate, r2sa, iol_adjusted=False, E_orb=None):  # formerly qheat
+
+    if iol_adjusted:
+        diff_E_orb = UnivariateSpline(r, E_orb, k=1, s=0).derivative()(r)
+    else:
+        diff_E_orb = np.zeros(r.shape)
 
     qie = calc_qie(n,T,ion_species='D')
 
-    dQi_dr_interp = interp1d(r, en_src_nbi_i - qie - cool_rate, fill_value='extrapolate')
+    dQi_dr_interp = interp1d(r, (en_src_nbi_i - qie - cool_rate)*(1-diff_E_orb), fill_value='extrapolate')
 
-    # continuity equation
+    # ion energy balance equation
     def dQi_dr(Qi_0, r):
         return dQi_dr_interp(r)
 
     # boundary condition at magnetic axis
     Qi_0 = en_src_nbi_i[0]  # or something like this
 
-    # solve ODE
-    Qi = odeint(dQi_dr, Qi_0, r, hmax=0.1)
+    # solve ODE and divide by surface area
+    # note that r2sa is an interpolation function from core that calculates the
+    # surface area for a flux surface based on its corresponding value of r
+    surf_area = r2sa(r)
+    surf_area[0] = surf_area[1]  # this is just to prevent divide by zero errors at rho=0. Will be replaced later anyway
+
+    Qi = odeint(dQi_dr, Qi_0, r, hmax=0.1).T[0] / surf_area
+
+    # set the center value of Qi equal to the next point radially outward.
+    # Qi(0) is mathematically infinite, so this just gives us a reasonable representation.
+    Qi[0] = Qi[1]
 
     return Qi
 
@@ -142,20 +156,30 @@ def calc_Qi(r, n, T, en_src_nbi_i, cool_rate, iol_adjusted=False, E_orb=None):  
 # return qheat
 
 
-def calc_Qe(r, n, T, en_src_nbi_e, cool_rate):
+def calc_Qe(r, n, T, en_src_nbi_e, cool_rate, r2sa):
 
     qie = calc_qie(n, T, ion_species='D')
     dQe_dr_interp = interp1d(r, en_src_nbi_e - qie - cool_rate, fill_value='extrapolate')
 
-    # continuity equation
+    # electron energy balance equation
     def dQe_dr(Qe_0, r):
         return dQe_dr_interp(r)
 
     # boundary condition at magnetic axis
     Qe_0 = en_src_nbi_e[0]  # or something like this
 
-    # solve ODE
-    Qe = odeint(dQe_dr, Qe_0, r, hmax=0.1)
+    # solve ODE and divide by surface area
+    # note that r2sa is an interpolation function from core that calculates the
+    # surface area for a flux surface based on its corresponding value of r
+
+    surf_area = r2sa(r)
+    surf_area[0] = surf_area[1]  # this is just to prevent divide by zero errors at rho=0. Will be replaced later anyway
+
+    Qe = odeint(dQe_dr, Qe_0, r, hmax=0.1).T[0] / surf_area
+
+    # set the center value of Qi equal to the next point radially outward.
+    # Qe(0) is mathematically infinite, so this just gives us a reasonable representation.
+    Qe[0] = Qe[1]
 
     return Qe
 
@@ -203,9 +227,14 @@ def calc_coul_log(z1, z2, T_J, n2):
     return coul_log
 
 
-def calc_gamma(r, part_src_nbi, izn_rate, iol_adjusted=False, F_orb=None):
+def calc_gamma(r, part_src_nbi, izn_rate, r2sa, iol_adjusted=False, F_orb=None):
 
-    dgamma_dr_interp = interp1d(r, (izn_rate + part_src_nbi), fill_value='extrapolate')
+    if iol_adjusted:
+        diff_F_orb = UnivariateSpline(r, F_orb, k=1, s=0).derivative()(r)
+    else:
+        diff_F_orb = np.zeros(r.shape)
+
+    dgamma_dr_interp = interp1d(r, (izn_rate + part_src_nbi)*(1-diff_F_orb), fill_value='extrapolate')
 
     # continuity equation
     def dgamma_dr(gamma_0, r):
@@ -214,8 +243,17 @@ def calc_gamma(r, part_src_nbi, izn_rate, iol_adjusted=False, F_orb=None):
     # boundary condition at magnetic axis
     gamma_0 = part_src_nbi[0]  # or something like this
 
-    # solve ODE
-    gamma = odeint(dgamma_dr, gamma_0, r)
+    # solve ODE and divide by surface area
+    # note that r2sa is an interpolation function from core that calculates the
+    # surface area for a flux surface based on its corresponding value of r
+    surf_area = r2sa(r)
+    surf_area[0] = surf_area[1]  # this is just to prevent divide by zero errors at rho=0. Will be replaced later anyway
+
+    gamma = odeint(dgamma_dr, gamma_0, r).T[0] / surf_area
+
+    # set the center value of gamma equal to the next point radially outward.
+    # Gamma(0) is mathematically infinite, so this just gives us a reasonable representation.
+    gamma[0] = gamma[1]
 
     return gamma
 
@@ -380,6 +418,11 @@ def calc_visc_heat(a, R0_a, kappa, n, T, q95, vpol_D, gammahat, vtor_Dhat, B_p, 
     return visc_heat
 
 
+def calc_vr_pinch():
+    vr_pinch = 0  # TODO: Add the equation for vr_pinch
+    return vr_pinch
+
+
 def calc_nustar(nu_c, q95, R0_a, vpol):
     nustar = nu_c * abs(q95) * R0_a / vpol
     return nustar
@@ -416,7 +459,7 @@ class RadialTransport:
         beam_D3 = nbi.beams_1D.D3
 
         # prepare core and iol quantities
-        r = core.r[:, 0]    # TODO: Should this be a flux surface average?
+        r = core.r.T[0]    # TODO: Should this be a flux surface average?
         izn_rate = core.izn_rate_fsa  # TODO: Should this be a flux surface average or a flux surface total?
         cool_rate = core.cool_rate_fsa  # TODO: Should this be a flux surface average or a flux surface total?
         n = core.n_fsa
@@ -449,7 +492,7 @@ class RadialTransport:
         part_src_nbi = part_src_nbi_D + part_src_nbi_D2 + part_src_nbi_D3
 
         # calculate radial heat flux
-        self.gamma_D = calc_gamma(r, part_src_nbi, izn_rate, iol_adjusted=False, F_orb=None).T[0]
+        self.gamma_D = calc_gamma(r, part_src_nbi, izn_rate, core.r2sa, iol_adjusted=True, F_orb=F_orb_d)
         self.gamma_C = np.zeros(self.gamma_D.shape)
 
         ##############################################################
@@ -527,8 +570,8 @@ class RadialTransport:
         en_src_nbi_e = en_src_nbi_e_D + en_src_nbi_e_D2 + en_src_nbi_e_D3
 
         # calculate radial heat flux
-        self.Qi = calc_Qi(r, n, T, en_src_nbi_i, cool_rate, iol_adjusted=False, E_orb=None)  # previously called qheat
-        self.Qe = calc_Qe(r, n, T, en_src_nbi_e, cool_rate)
+        self.Qi = calc_Qi(r, n, T, en_src_nbi_i, cool_rate, core.r2sa, iol_adjusted=False, E_orb=None)  # previously called qheat
+        self.Qe = calc_Qe(r, n, T, en_src_nbi_e, cool_rate, core.r2sa)
 
         # # calculate chi
         # chi = calc_chi(r,
