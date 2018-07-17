@@ -234,7 +234,8 @@ def calc_gamma(r, part_src_nbi, izn_rate, r2sa, iol_adjusted=False, F_orb=None):
     else:
         diff_F_orb = np.zeros(r.shape)
 
-    dgamma_dr_interp = interp1d(r, (izn_rate + part_src_nbi)*(1-diff_F_orb), fill_value='extrapolate')
+    # the two is to account for the inward radial current, assumed to be deuterium as well
+    dgamma_dr_interp = interp1d(r, (izn_rate + part_src_nbi)*(1-2*diff_F_orb), fill_value='extrapolate')
 
     # continuity equation
     def dgamma_dr(gamma_0, r):
@@ -274,6 +275,7 @@ def calc_gamma(r, part_src_nbi, izn_rate, r2sa, iol_adjusted=False, F_orb=None):
 #         srprim = src_nbi[i] + 0.5 * (n.i[i] + n.i[i-1]) * xnuioni * (1 + fracz[i] * zbar2[i])
 #         gamma[i] = rho[i-1] / rho[i] * gamma[i-1] * xpon[i] + srprim * delma
 # return gamma
+
 
 def calc_mbal_rhs(mom_src_ext, z, n, B_p, gamma):
     """ The function formerly known as y11 and y22
@@ -427,6 +429,7 @@ def calc_nustar(nu_c, q95, R0_a, vpol):
     nustar = nu_c * abs(q95) * R0_a / vpol
     return nustar
 
+
 # def calc_xpartdot_old(beam, n, z_eff, rpts):  # TODO: wtf is xpartdot?
 #     atten = calc_atten(beam, n, z_eff, rpts)
 #     unatten = 1-atten  # might need to flip atten...
@@ -523,9 +526,8 @@ class RadialTransport:
 
         # calculate deuterium toroidal rotation
         self.vtor_D_intrin = calc_intrin_rot(M_orb_d, T.i.J, m_d)
-        try:
-            self.vtor_D_total = core.v_1D.tor.C
-        except:
+
+        if not core.v_1D.tor.C.any():  # if array is all zeros, then no input. Use perturbation theory.
             self.vtor_D_total = calc_vtor_d_pert(self.vtor_C_fluid,
                                                  self.vtor_C_intrin,
                                                  self.vtor_D_intrin,
@@ -534,6 +536,8 @@ class RadialTransport:
                                                  n,
                                                  B_p,
                                                  self.gamma_D)
+        else:
+            self.vtor_D_total = core.v_1D.tor.C
 
         self.vtor_fluid_D = self.vtor_D_total - self.vtor_D_intrin
 
