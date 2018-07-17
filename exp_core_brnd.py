@@ -256,6 +256,48 @@ def calc_fsa(x, R, Z):
     return fsa
 
 
+def calc_fs_int(x, R, Z):
+    R1 = R[:, :-1]
+    R2 = np.roll(R[:, :-1], -1, axis=1)
+    Z1 = Z[:, :-1]
+    Z2 = np.roll(Z[:, :-1], -1, axis=1)
+    x1 = x[:, :-1]
+    x2 = np.roll(x[:, :-1], -1, axis=1)
+
+    dl = np.sqrt((R2 - R1) ** 2 + (Z2 - Z1) ** 2)
+
+    R_av = (R1 + R2)/2
+
+    dA = dl * (2 * pi * R_av)
+
+    x_av = (x1 + x2)/2
+
+    fsa = np.sum(x_av * dA, axis=1)
+    #fsa[0] = x[0,0]
+    return fsa
+
+
+def calc_fs_perim_int(x, R, Z):
+    R1 = R[:, :-1]
+    R2 = np.roll(R[:, :-1], -1, axis=1)
+    Z1 = Z[:, :-1]
+    Z2 = np.roll(Z[:, :-1], -1, axis=1)
+    x1 = x[:, :-1]
+    x2 = np.roll(x[:, :-1], -1, axis=1)
+
+    dl = np.sqrt((R2 - R1) ** 2 + (Z2 - Z1) ** 2)
+
+    #R_av = (R1 + R2)/2
+
+    #dA = dl * (2 * pi * R_av)
+
+    x_av = (x1 + x2)/2
+
+    fsa = np.sum(x_av * dl, axis=1) # / np.sum(dl, axis=1)
+    fsa[0] = x[0,0]
+    return fsa
+
+
 def draw_contour_line(R, Z, array, val, pathnum):
     c = QuadContourGenerator.from_rectilinear(R[0], Z[:, 0], array)
 
@@ -936,8 +978,8 @@ class ExpCoreBrnd():
         )
 
         # initialize magnetic field-related quantities
-        B_pol_raw = np.sqrt((np.gradient(self.psi_data.psi, axis=1) / self.psi_data.R) ** 2 +
-                            (-np.gradient(self.psi_data.psi, axis=0) / self.psi_data.R) ** 2)
+        B_pol_raw = np.sqrt((np.gradient(self.psi_data.psi, self.psi_data.R[0], axis=1)/self.psi_data.R) ** 2 +
+                            (np.gradient(self.psi_data.psi, self.psi_data.Z.T[0], axis=0)/self.psi_data.R) ** 2)
 
         self.B_p = griddata(np.column_stack((raw_psi_R.flatten(), raw_psi_Z.flatten())),
                             B_pol_raw.flatten(),
@@ -947,6 +989,13 @@ class ExpCoreBrnd():
         self.B_t = inp.BT0 * self.pts.axis.mag[0] / self.R
         self.B_tot = np.sqrt(self.B_p**2 + self.B_t**2)
         self.f_phi = self.B_t/self.B_tot
+
+        # calculate q-profile
+        self.q_1D = inp.BT0 * self.pts.axis.mag[0] / (2*pi) * calc_fs_perim_int(1.0/(self.R**2 * self.B_p),self.R, self.Z)
+        self.q_1D[0] = self.q_1D[1]
+        self.q = np.repeat(self.q_1D[np.newaxis, :], self.rho.shape[1], axis=0).T
+        self.q0 = self.q_1D[0]
+        self.q95 = UnivariateSpline(self.psi_norm[:,0], self.q_1D, k=1, s=0)(0.95)
 
         # create Lz-related variables. These will remain zero unless set by the ImpRad module
         Lz_nt = namedtuple('Lz', 's t ddT')
