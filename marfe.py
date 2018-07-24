@@ -12,7 +12,7 @@ from imp_rad import ImpRad
 from collections import namedtuple
 import sys
 from exp_core_brnd import *
-
+from gtedge_LZ import calc_Lz_gtedge
 
 def calc_z_0(n):
     z_0 = n.C * 6.0 ** 2 / n.i
@@ -101,6 +101,9 @@ def calc_n_marfe(n, sv, T, L, Lz, chi_r):
     E_ion = calc_E_ion()
     Lz_t = Lz.t
     dLzdT = Lz.ddT
+    #Lz_t, dLzdT = calc_Lz_gtedge(T.i.kev*1E3)
+    #Lz_t = Lz_t * 1E-13  # now in Jm^3/s
+    #dLzdT = dLzdT * 1E-13  # now in Jm^3/s
     nu = 5 / 2
     fz = calc_fz(n)
     f0 = calc_f0(n)
@@ -108,8 +111,8 @@ def calc_n_marfe(n, sv, T, L, Lz, chi_r):
 
     print ' chi_r = ', chi_r
     print ' nu = ', nu
-    print ' L.T = ', L.T
-    print ' L.n = ', L.n
+    print ' L.T^-1 = ', 1/L.T
+    print ' L.n^-1 = ', 1/L.n
     print ' C2 = ', C2
     print ' fz = ', fz
     print ' f0 = ', f0
@@ -127,10 +130,15 @@ def calc_n_marfe(n, sv, T, L, Lz, chi_r):
     print ' n.e = ', n.e
     print
 
+    # term1 = chi_r * (nu * L.T**-2 + (C2 - 1.0) * L.T**-1 * L.n**-1)
+    # term2 = fz * ((nu + 1 - C2) * Lz_t / T.i.J - dLzdT)
+    # term3 = f0 * (E_ion * sv.ion / T.i.J * (nu - T.i.J / sv.ion * sv.ion_ddT))
+    # term4 = f0c * (3.0 / 2.0 * (sv.cx + sv.el) * (nu - 1.0 - T.i.J * (sv.cx_ddT + sv.el_ddT) / (sv.cx + sv.el)))
+
     term1 = chi_r * (nu * L.T**-2 + (C2 - 1.0) * L.T**-1 * L.n**-1)
-    term2 = fz * ((nu + 1 - C2) * Lz_t / T.i.J - dLzdT)
-    term3 = f0 * (E_ion * sv.ion / T.i.J * (nu - T.i.J / sv.ion * sv.ion_ddT))
-    term4 = f0c * (3.0 / 2.0 * (sv.cx + sv.el) * (nu - 1.0 - T.i.J * (sv.cx_ddT + sv.el_ddT) / (sv.cx + sv.el)))
+    term2 = fz * ((nu + 1 - C2) * Lz_t / (T.i.J+T.e.J)/2 - dLzdT)
+    term3 = f0 * (E_ion * sv.ion / T.i.J * (nu - (T.i.J+T.e.J)/2 / sv.ion * sv.ion_ddT))
+    term4 = f0c * (3.0 / 2.0 * (sv.cx + sv.el) * (nu - 1.0 - (T.i.J+T.e.J)/2 * (sv.cx_ddT + sv.el_ddT) / (sv.cx + sv.el)))
     print
     print 'term1 = ', term1
     print 'term2 = ', term2
@@ -146,6 +154,7 @@ def calc_n_marfe(n, sv, T, L, Lz, chi_r):
               )
 
     print 'n_marfe = ', n_marfe
+    print
     print 'MI = ', n.e / n_marfe
     return n_marfe, n.e / n_marfe
 
@@ -226,199 +235,3 @@ class Marfe:
             sys.exit()
 
         self.n_marfe, self.MI = calc_n_marfe(n, sv, T, L, Lz, chi_r)
-
-
-
-
-if __name__ == '__main__':
-
-    # Values for 92980.3600
-    nn_dict = {}
-    nn_dict['s'] = 0.0
-    nn_dict['t'] = 0.29 * 1E20 * 1.2E-3
-    nn = namedtuple('nn', nn_dict.keys())(*nn_dict.values())
-
-    n_dict = {}
-    n_dict['n'] = nn
-    n_dict['e'] = 0.29 * 1E20
-    n_dict['i'] = n_dict['e']
-    n_dict['C'] = n_dict['e'] * 0.015
-    n = namedtuple('n', n_dict.keys())(*n_dict.values())
-
-    Te_dict = {}
-    Te_dict['kev'] = np.array([0.03,0.05])
-    Te_dict['ev'] = Te_dict['kev'] * 1E3
-    Te_dict['J'] = Te_dict['kev'] * 1E3 * 1.6021E-19
-    Te = namedtuple('Te', Te_dict.keys())(*Te_dict.values())
-
-    Ti_dict = {}
-    Ti_dict['kev'] = 0.08
-    Ti_dict['ev'] = Ti_dict['kev'] * 1E3
-    Ti_dict['J'] = Ti_dict['kev'] * 1E3 * 1.6021E-19
-    Ti = namedtuple('Ti', Ti_dict.keys())(*Ti_dict.values())
-
-    Tn_dict = {}
-    Tn_dict['s'] = 0.002  # in kev
-    Tn_dict['t'] = Ti_dict['kev']  # in kev
-    Tn = namedtuple('Tn', Tn_dict.keys())(*Tn_dict.values())
-
-    T_dict = {}
-    T_dict['e'] = Te
-    T_dict['i'] = Ti
-    T_dict['n'] = Tn
-    T = namedtuple('T', T_dict.keys())(*T_dict.values())
-
-    sv_dict = {}
-    sv_dict['ion'] = calc_svion_st(T)[0]
-    sv_dict['ion_ddT'] = calc_svion_st(T)[1]
-    sv_dict['el'] = calc_svel_st(T)[0]
-    sv_dict['el_ddT'] = calc_svel_st(T)[1]
-    sv_dict['cx'] = calc_svcx_st(T)[0]
-    sv_dict['cx_ddT'] = calc_svcx_st(T)[1]
-    sv = namedtuple('sv', sv_dict.keys())(*sv_dict.values())
-
-    L_dict = {}
-    L_dict['n'] = 1 / 17.9
-    L_dict['T'] = 1 / 16.4
-    L = namedtuple('L', L_dict.keys())(*L_dict.values())
-
-    Lz_dict = {}
-    Lz_dict['t'] = calc_Lz(n, T)[0]
-    Lz_dict['ddT'] = calc_Lz(n, T)[1]
-    Lz = namedtuple('Lz', Lz_dict.keys())(*Lz_dict.values())
-
-    chi_r = 2.0
-
-    calc_n_marfe(n, sv, T, L, Lz, chi_r)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # n_e = 0.46 * 1E20  # complete
-    # n_i = n_e  # complete
-    # n_C = 0.013 * n_e  # complete
-    # nn_s = 0  # complete
-    # nn_t = n_i * 1E-3  # complete
-    #
-    # T_units_nt = namedtuple('T_units', '')
-    # T_nt = namedtuple('T', '')
-    #
-    # sv_ion = calc_svel_st(T)
-    # sv_ion_ddT =
-    # sv_el =
-    # sv_el_ddT =
-    # sv_cx =
-    # sv_cx_ddT =
-    #
-    # T_e_kev =
-    # T_e_ev = T_e_kev * 1E3
-    # T_e_J = T_e_kev * 1E3 * 1.6021E-19
-    #
-    # T_i_kev =
-    # T_i_ev = T_i_kev * 1E3
-    # T_i_J = T_i_kev * 1E3 * 1.6021E-19
-    #
-    # T_n_kev =
-    # T_n_ev = T_n_kev * 1E3
-    # T_n_J = T_n_kev * 1E3 * 1.6021E-19
-    #
-    # L_n =
-    # L_T =
-    #
-    # Lz_t =
-    # Lz_ddT =
-    #
-    # chi_r = 2.0
-    #
-    # nn_nt = namedtuple('nn', 's t')
-    # n_n = nn_nt(nn_s, nn_t)
-    #
-    # n_nt = namedtuple('n', 'n e i C')
-    # n = n_nt(n_n, n_e, n_i, n_C)
-    #
-    # sv_nt = namedtuple('sv', 'ion ion_ddT el el_ddT cx cx_ddT')
-    # sv = sv_nt(sv_ion, sv_ion_ddT, sv_el, sv_el_ddT, sv_cx, sv_cx_ddT)
-    #
-    # T_units_nt = namedtuple('T_units', 'kev ev J')
-    # T_i = T_units_nt(T_i_kev, T_i_ev, T_i_J)
-    # T_e = T_units_nt(T_e_kev, T_e_ev, T_e_J)
-    # T_n = T_units_nt(T_n_kev, T_n_ev, T_n_J)
-    #
-    # T_nt = namedtuple('T', 'e i n')
-    # T = T_nt(T_i, T_e, T_n)
-    #
-    # L_nt = namedtuple('L', 'n T')
-    # L = L_nt(L_n, L_T)
-    #
-    # Lz_nt = namedtuple('Lz', 't ddT')
-    # Lz = Lz_nt(Lz_t, Lz_ddT)
-    #
-    # inputs_nt = namedtuple('inputs', 'n sv T L Lz chi_r')
-    # inputs = inputs_nt(n, sv, T, L, Lz, chi_r)
-
-
-    # chi_r = 2.0
-    # sv_ion = core.sv_ion
-    # sv_cx = core.sv_cx
-    # sv_el = core.sv_el
-    # L_T = core.L_Ti_J
-    # L_n = core.L_ni
-    # T = core.Ti_J
-    # fz = core.nC / core.ni  # ne?
-    # f0 = core.n_n_total / core.ni
-    # f0c = core.n_n_slow / core.ni
-    # Lz = core.Lz_thermal
-    # dLzdT = core.dLzdT_thermal
-    # dsv_ion_dT = core.dsv_ion_dT
-    # dsv_cxel_dT = core.dsv_cx_dT + core.dsv_el_dT
-
-
-
-    # n_marfe_edge = np.where(core.psi_norm > 0.5, n_marfe, np.nan)
-    # n_marfe_met = np.where((core.ni > n_marfe) & (n_marfe > 0) & (core.psi_norm > 0.5), core.ni - n_marfe, np.nan)
-    #
-    # marfe_fig1 = plt.figure(figsize=(13, 6))
-    # ax1 = marfe_fig1.add_subplot(1, 3, 1)
-    # ax1.axis('equal')
-    # ax1.set_title(r'$n_{MARFE}$')
-    # cs1 = ax1.contourf(core.R, core.Z, n_marfe_edge, 500)
-    # ax1.plot(core.R[-1, :], core.Z[-1, :], lw=1, color='red')
-    # ax1.plot(inp.wall_exp[:, 0], inp.wall_exp[:, 1], lw=1, color='black')
-    # marfe_fig1.colorbar(cs1, ax=ax1)
-    #
-    # ax2 = marfe_fig1.add_subplot(1, 3, 2)
-    # ax2.axis('equal')
-    # ax2.set_title(r'$n_i$')
-    # cs2 = ax2.contourf(core.R, core.Z, core.ni, 500)
-    # ax2.plot(inp.wall_exp[:, 0], inp.wall_exp[:, 1], lw=1, color='black')
-    # marfe_fig1.colorbar(cs2, ax=ax2)
-    #
-    # ax3 = marfe_fig1.add_subplot(1, 3, 3)
-    # ax3.axis('equal')
-    # ax3.set_title('$n_i-n_{MARFE}$ where greater')
-    # cs3 = ax3.contourf(core.R, core.Z, n_marfe_met, 500)
-    # ax3.plot(core.R[-1, :], core.Z[-1, :], lw=1, color='red')
-    # ax3.plot(inp.wall_exp[:, 0], inp.wall_exp[:, 1], lw=1, color='black')
-    # marfe_fig1.colorbar(cs3, ax=ax3)
-    # plt.tight_layout()
