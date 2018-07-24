@@ -860,10 +860,6 @@ class ExpCoreBrnd():
                                                                       self.R0_a,
                                                                       self.a)
 
-        # populate q-profile from input data
-        # TODO: in the future, get this from psi data
-        self.q = UnivariateSpline(inp.q_data[:, 0], inp.q_data[:, 1], k=5, s=2.0)(self.rho)
-
         # initialize ionization rate arrays with zero
         self.izn_rate = namedtuple('izn_rate', 's t tot')(
             np.zeros(self.rho.shape),  # slow
@@ -977,6 +973,7 @@ class ExpCoreBrnd():
             namedtuple('v_spec', 'D C')(vtorD[:, 0], vtorC[:, 0]),
         )
 
+
         # initialize magnetic field-related quantities
         B_pol_raw = np.sqrt((np.gradient(self.psi_data.psi, self.psi_data.R[0], axis=1)/self.psi_data.R) ** 2 +
                             (np.gradient(self.psi_data.psi, self.psi_data.Z.T[0], axis=0)/self.psi_data.R) ** 2)
@@ -990,10 +987,16 @@ class ExpCoreBrnd():
         self.B_tot = np.sqrt(self.B_p**2 + self.B_t**2)
         self.f_phi = self.B_t/self.B_tot
 
-        # calculate q-profile
-        self.q_1D = inp.BT0 * self.pts.axis.mag[0] / (2*pi) * calc_fs_perim_int(1.0/(self.R**2 * self.B_p),self.R, self.Z)
-        self.q_1D[0] = self.q_1D[1]
-        self.q = np.repeat(self.q_1D[np.newaxis, :], self.rho.shape[1], axis=0).T
+        try:
+            # use input q profile if given
+            q_interp = UnivariateSpline(inp.q_data[:, 0], inp.q_data[:, 1], k=5, s=1.0)
+            self.q = q_interp(self.rho)
+            self.q_1D = q_interp(self.rho.T[0])
+        except:
+            # otherwise calculate q-profile from psi data
+            self.q_1D = inp.BT0 * self.pts.axis.mag[0] / (2*pi) * calc_fs_perim_int(1.0/(self.R**2 * self.B_p),self.R, self.Z)
+            self.q_1D[0] = self.q_1D[1]
+            self.q = np.repeat(self.q_1D[np.newaxis, :], self.rho.shape[1], axis=0).T
         self.q0 = self.q_1D[0]
         self.q95 = UnivariateSpline(self.psi_norm[:,0], self.q_1D, k=1, s=0)(0.95)
 
