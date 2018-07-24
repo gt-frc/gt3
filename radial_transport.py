@@ -528,12 +528,13 @@ class RadialTransport:
         self.vtor_D_intrin = calc_intrin_rot(M_orb_d, T.i.J, m_d)
 
         if not core.v_1D.tor.C.any():  # if array is all zeros, then no input. Use perturbation theory.
-            self.vtor_D_total = calc_vtor_d_pert(self.vtor_C_fluid,
+            self.vtor_D_total = calc_vtor_d_pert(self.vtor_C_total,
                                                  self.vtor_C_intrin,
                                                  self.vtor_D_intrin,
                                                  self.mom_src_tor_D_tot,
                                                  1,
                                                  n,
+                                                 T,
                                                  B_p,
                                                  self.gamma_D)
         else:
