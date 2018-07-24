@@ -56,17 +56,13 @@ er_file         = /118888_1525/gt3_118888_1525_er.dat
 fracz_file      = /118888_1525/gt3_118888_1525_fracz.dat
 vpolC_file      = /118888_1525/gt3_118888_1525_vpolC.dat
 vtorC_file      = /118888_1525/gt3_118888_1525_vtorC.dat
-vpolD_file      = /118888_1525/gt3_118888_1525_vpolD.dat
-vtorD_file      = /118888_1525/gt3_118888_1525_vtorD.dat
-q_file          = /118888_1525/gt3_118888_1525_q.dat
+#vpolD_file      = /118888_1525/gt3_118888_1525_vpolD.dat
+#vtorD_file      = /118888_1525/gt3_118888_1525_vtorD.dat
 
 2D QUANTITIES INPUT FILES
-bpol_file       = /118888_1525/gt3_118888_1525_bpol.dat
-btor_file       = /118888_1525/gt3_118888_1525_btor.dat
 psirz_file      = /118888_1525/gt3_118888_1525_psirz.dat
 
 2D LINE INPUT FILES
-sep_file        = /118888_1525/gt3_118888_1525_sep.dat
 wall_file        = /machine/gt3_diiid_wall.dat
 
 #PARAMETERS FOR MILLER BACKGROUND
