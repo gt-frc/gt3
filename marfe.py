@@ -167,59 +167,54 @@ class Marfe:
             if inputs is not None:
                 print 'ignoring \'inputs\' and attempting to use core instance'
             # use 'core' instance to create inputs for calc_n_marfe
-            nn_dict = {}
-            nn_dict['s'] = core.n.n.s
-            nn_dict['t'] = core.n.n.t
-            nn = namedtuple('nn', nn_dict.keys())(*nn_dict.values())
 
-            n_dict = {}
-            n_dict['n'] = nn
-            n_dict['e'] = core.n.e
-            n_dict['i'] = core.n.i
-            n_dict['C'] = core.n.C
-            n = namedtuple('n', n_dict.keys())(*n_dict.values())
+            n_xpt = namedtuple('n', 'n e i C')(
+                namedtuple('nn', 's t')(
+                    core.n.n.s,
+                    core.n.n.t
+                ),
+                core.n.e,
+                core.n.i,
+                core.n.C
+            )
 
-            Te_dict = {}
-            Te_dict['kev'] = core.T.e.kev
-            Te_dict['J'] = core.T.e.J
-            Te = namedtuple('Te', Te_dict.keys())(*Te_dict.values())
+            T_xpt = namedtuple('T', 'e i n')(
+                namedtuple('Te', 'kev ev J')(
+                    core.T.e.kev,
+                    core.T.e.ev,
+                    core.T.e.J
+                ),
+                namedtuple('Ti', 'kev ev J')(
+                    core.T.i.kev,
+                    core.T.i.ev,
+                    core.T.i.J
+                ),
+                namedtuple('Tn', 's t')(
+                    core.T.n.s,
+                    core.T.n.t
+                )
+            )
 
-            Ti_dict = {}
-            Ti_dict['kev'] = core.T.i.kev
-            Ti_dict['J'] = core.T.i.J
-            Ti = namedtuple('Ti', Ti_dict.keys())(*Ti_dict.values())
+            sv_xpt = namedtuple('sv', 'ion ion_ddT el el_ddT cx cx_ddT')(
+                core.sv.ion.st,
+                core.sv.ion.d_dT.st,
+                core.sv.el.st,
+                core.sv.el.d_dT.st,
+                core.sv.cx.st,
+                core.sv.cx.d_dT.st
+            )
 
-            Tn_dict = {}
-            Tn_dict['s'] = core.T.n.s  # in kev
-            Tn_dict['t'] = core.T.n.t  # in kev
-            Tn = namedtuple('Tn', Tn_dict.keys())(*Tn_dict.values())
+            L_xpt = namedtuple('L', 'n T')(
+                core.L.n.i,
+                core.L.T.i
+            )
 
-            T_dict = {}
-            T_dict['e'] = Te
-            T_dict['i'] = Ti
-            T_dict['n'] = Tn
-            T = namedtuple('T', T_dict.keys())(*T_dict.values())
+            Lz_xpt = namedtuple('Lz', 't ddT')(
+                core.Lz.t,
+                core.Lz.ddT.t
+            )
 
-            sv_dict = {}
-            sv_dict['ion'] = core.sv.ion.st
-            sv_dict['ion_ddT'] = core.sv.ion.d_dT.st
-            sv_dict['el'] = core.sv.el.st
-            sv_dict['el_ddT'] = core.sv.el.d_dT.st
-            sv_dict['cx'] = core.sv.cx.st
-            sv_dict['cx_ddT'] = core.sv.cx.d_dT.st
-            sv = namedtuple('sv', sv_dict.keys())(*sv_dict.values())
-
-            L_dict = {}
-            L_dict['n'] = core.L.n.i
-            L_dict['T'] = core.L.T.i
-            L = namedtuple('L', L_dict.keys())(*L_dict.values())
-
-            Lz_dict = {}
-            Lz_dict['t'] = core.Lz.t
-            Lz_dict['ddT'] = core.Lz.ddT.t
-            Lz = namedtuple('Lz', Lz_dict.keys())(*Lz_dict.values())
-
-            chi_r = core.chi_r
+            chi_r_xpt = core.chi_r
 
         elif inputs is not None:
             # use 'inputs' to create inputs for calc_n_marfe
