@@ -526,6 +526,7 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis):
 
     # if there is only one contour, then it's drawing one continuous line from ib strike point to ob strike point
     # if there are two contours, then it's drawing separate seperatrix and divertor legs
+
     if len(contour_new) == 1:
         contour = contour_new[0]
 
@@ -539,22 +540,47 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis):
         lcfs = contour[xpt_loc[0]:xpt_loc[1]]
         ob = contour[xpt_loc[1]:]
 
-    elif len(contour_new) == 2:
+    elif len(contour_new) > 1:
         for contour in contour_new:
-            # determine if contour is seperatrix or divertor legs by checking if
-            # the largest y value is larger than the y value of the magnetic axis
-            if np.amax(contour[:, 1]) > mag_axis[1]:  # we have the main seperatrix
-                lcfs = contour
+            # determine if contour is seperatrix, divertor legs, a main ib2ob line, or something else
 
-            else:  # we have the divertor legs
-                # make sure the line goes from inboard to outboard
-                if contour[-1, 0] < contour[0, 0]:
-                    contour = np.flipud(contour)
+            # Meaningless noise lines will not pass near the x-point, so check that first to elliminate them
+            if LineString(contour).distance(Point(xpt)) < 0.01:
+                # if the largest y value is larger than the y value of the magnetic axis AND the line
+                # intersects the wall twice, then it's an ib2ob line and there are more than one psi_norm=1
+                # contours because the others are noise. Treat this one the same way we would if there were
+                # only one contour.
 
-                # create ib and ob divertor legs, each starting at the x-point
-                xpt_loc = np.where((contour == xpt).all(axis=1))[0][0]
-                ob = contour[xpt_loc:]
-                ib = np.flipud(contour[:xpt_loc+1])
+                # count number of intersections with the wall
+                wall_ints = len(LineString(contour).intersection(wall))
+
+                if wall_ints >= 2 and np.amax(contour[:, 1]) > mag_axis[1]:
+                    # then we probably have an ib2ob line. Treat the same way as above
+
+                    # make sure the line goes from inboard to outboard
+                    if contour[-1, 0] < contour[0, 0]:
+                        contour = np.flipud(contour_new)
+
+                    xpt_loc = np.where((contour == xpt).all(axis=1))[0]
+
+                    ib = np.flipud(contour[:xpt_loc[0] + 1])
+                    lcfs = contour[xpt_loc[0]:xpt_loc[1]]
+                    ob = contour[xpt_loc[1]:]
+
+                # if the largest y value is larger than the y value of the magnetic axis
+                elif np.amax(contour[:, 1]) > mag_axis[1]:
+                    # we have the main seperatrix
+                    lcfs = contour
+
+                else:  # we have the divertor legs
+                    # make sure the line goes from inboard to outboard
+                    if contour[-1, 0] < contour[0, 0]:
+                        contour = np.flipud(contour)
+
+                    # create ib and ob divertor legs, each starting at the x-point
+                    xpt_loc = np.where((contour == xpt).all(axis=1))[0][0]
+                    ob = contour[xpt_loc:]
+                    ib = np.flipud(contour[:xpt_loc+1])
 
     # create lcfs lines
     lcfs_line = LineString(lcfs)
@@ -803,8 +829,7 @@ class ExpCoreBrnd():
         raw_dpsidZ = np.abs(np.gradient(raw_psi_norm, raw_psi_Z[:, 0], axis=0))
         raw_dpsidr = raw_dpsidR + raw_dpsidZ
 
-        psi_data_nt = namedtuple('psi_data', 'R Z psi psi_norm dpsidR dpsidZ dpsidr')
-        self.psi_data = psi_data_nt(
+        self.psi_data = namedtuple('psi_data', 'R Z psi psi_norm dpsidR dpsidZ dpsidr')(
             raw_psi_R,
             raw_psi_Z,
             raw_psi,
