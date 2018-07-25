@@ -418,7 +418,8 @@ class MilCoreBrnd():
         # TODO: This isn't technically correct because rho is not a constant function of normalized psi
         self.theta, self.rho = np.meshgrid(theta1d, rho1d)
         self.r = self.rho * inp.a
-
+        self.a = inp.a
+        self.R0_a = inp.R0_a
         # populate radial density and temperature profiles
         try:
             ni = UnivariateSpline(inp.ni_data[:, 0], inp.ni_data[:, 1], k=3, s=2.0)(self.rho)
@@ -538,6 +539,9 @@ class MilCoreBrnd():
             tri_lo = inp.tri_lo
             tri_up = inp.tri_up
 
+        self.kappa_vals = namedtuple('kappa', 'axis sep')(0, inp.kappa_up)
+        self.tri_vals = namedtuple('tri', 'axis sep')(0, inp.tri_up)
+
         tri = np.where(upperhalf,
                          tri_up * self.rho,
                          tri_lo * self.rho)
@@ -639,7 +643,9 @@ class MilCoreBrnd():
         self.R = R
         self.Z = Z
         self.BT = inp.BT0 * self.R[0, 0] / self.R
+        self.xpt_loc = np.where(self.Z == np.amin(self.Z))
 
+        self.shaf_shift = (self.R[0, 0] - inp.R0_a)/self.a
         # We want to calculate the poloidal field strength everywhere. The problem is that we've got two equations
         # in three unknowns. However, if we assume that the poloidal integral of the flux surface average of the
         # poloidal magnetic field is approximately the same as the poloidal integral of the actual poloidal magnetic
