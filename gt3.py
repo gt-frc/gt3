@@ -58,11 +58,11 @@ class gt3:
         elif mode == 'nbi':
             self.nbi = BeamDeposition(self.inp, self.core)
         elif mode == 'therm_instab':
-            self.nbi = BeamDeposition(self.inp, self.core)
-            self.ntrl = Neutrals(self.inp, self.core)
-            self.imp = ImpRad(z=None, core=self.core)
-            self.dl = dens_lim(self.inp, self.core, self.nbi, self.imp, self.ntrl)
-            self.mar = Marfe(self.inp, self.core, self.imp)
+            # self.nbi = BeamDeposition(self.inp, self.core)
+            # self.ntrl = Neutrals(self.inp, self.core)
+            # self.imp = ImpRad(z=None, core=self.core)
+            # self.dl = dens_lim(self.inp, self.core, self.nbi, self.imp, self.ntrl)
+            self.mar = Marfe(core=self.core)
         elif mode == 'allthethings':
             self.nbi = BeamDeposition(self.inp, self.core)
             self.iol = IOL(self.inp, self.core)

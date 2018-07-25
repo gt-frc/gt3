@@ -447,17 +447,19 @@ if __name__ == '__main__':
         nf = np.full(Tn.shape, 1E-4)
         #ax1.loglog(Te_kev, inst.Lz(np.log10(Tn), np.log10(nf), np.log10(Te_kev)))
 
-        for i,v in enumerate(np.logspace(-5,-1,5)):
-            nf = np.full(Tn.shape, v)
-            ax1.loglog(Te_kev, inst.Lz(np.log10(0.002), np.log10(nf), np.log10(Te_kev)))
+        #for i,v in enumerate(np.logspace(-5,-1,5)):
+            #nf = np.full(Tn.shape, v)
+            #if i==0:
+                #ax1.loglog(Te_kev, inst.Lz(np.log10(0.002), np.log10(nf), np.log10(Te_kev)))
         # clean up and show plot
-        plt.tight_layout()
-        fig.savefig('/home/max/Documents/{}_Lz.png'.format(element))
-        plt.show()
+        #plt.tight_layout()
+        #fig.savefig('/home/max/Documents/{}_Lz.png'.format(element))
+        #plt.show()
+        return Te_kev, inst.Lz(np.log10(0.002), np.log10(nf), np.log10(Te_kev))
 
 
     #element_plot(He_2,'Helium')
-    #element_plot(C_6,'Carbon')
+    element_plot(C_6,'Carbon')
     # element_plot(Ne_10,'Neon')
     # element_plot(Ar_18,'Argon')
     # element_plot(Kr_36,'Krypton')

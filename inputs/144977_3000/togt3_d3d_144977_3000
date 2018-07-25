@@ -56,15 +56,11 @@ er_file = /144977_3000/gt3_144977_3000_er.dat
 fracz_file = /144977_3000/gt3_144977_3000_fracz.dat
 vpolC_file = /144977_3000/gt3_144977_3000_vpolC.dat
 vtorC_file = /144977_3000/gt3_144977_3000_vtorC.dat
-q_file = /144977_3000/gt3_144977_3000_q.dat
 
 2D QUANTITIES INPUT FILES
-bpol_file = /144977_3000/gt3_144977_3000_bpol.dat
-btor_file = /144977_3000/gt3_144977_3000_btor.dat
 psirz_file = /144977_3000/gt3_144977_3000_psirz.dat
 
 2D LINE INPUT FILES
-#sep_file = /144977_3000/gt3_144977_3000_sep.dat
 wall_file = /machine/gt3_diiid_wall.dat
 
 #PARAMETERS FOR MILLER BACKGROUND
