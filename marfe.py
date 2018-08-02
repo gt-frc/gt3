@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from imp_rad import ImpRad
 from collections import namedtuple
 import sys
-from exp_core_brnd import *
+from core import *
 from gtedge_LZ import calc_Lz_gtedge
 
 def calc_z_0(n):
@@ -170,52 +170,55 @@ class Marfe:
 
             n_xpt = namedtuple('n', 'n e i C')(
                 namedtuple('nn', 's t')(
-                    core.n.n.s,
-                    core.n.n.t
+                    core.n.n.s[core.xpt_loc],
+                    core.n.n.t[core.xpt_loc]
                 ),
-                core.n.e,
-                core.n.i,
-                core.n.C
+                core.n.e[core.xpt_loc],
+                core.n.i[core.xpt_loc],
+                core.n.C[core.xpt_loc]
             )
 
             T_xpt = namedtuple('T', 'e i n')(
                 namedtuple('Te', 'kev ev J')(
-                    core.T.e.kev,
-                    core.T.e.ev,
-                    core.T.e.J
+                    core.T.e.kev[core.xpt_loc],
+                    core.T.e.ev[core.xpt_loc],
+                    core.T.e.J[core.xpt_loc]
                 ),
                 namedtuple('Ti', 'kev ev J')(
-                    core.T.i.kev,
-                    core.T.i.ev,
-                    core.T.i.J
+                    core.T.i.kev[core.xpt_loc],
+                    core.T.i.ev[core.xpt_loc],
+                    core.T.i.J[core.xpt_loc]
                 ),
                 namedtuple('Tn', 's t')(
-                    core.T.n.s,
-                    core.T.n.t
+                    core.T.n.s.kev[core.xpt_loc],
+                    core.T.n.t.kev[core.xpt_loc]
                 )
             )
 
             sv_xpt = namedtuple('sv', 'ion ion_ddT el el_ddT cx cx_ddT')(
-                core.sv.ion.st,
-                core.sv.ion.d_dT.st,
-                core.sv.el.st,
-                core.sv.el.d_dT.st,
-                core.sv.cx.st,
-                core.sv.cx.d_dT.st
+                core.sv.ion.st[core.xpt_loc],
+                core.sv.ion.d_dT.st[core.xpt_loc],
+                core.sv.el.st[core.xpt_loc],
+                core.sv.el.d_dT.st[core.xpt_loc],
+                core.sv.cx.st[core.xpt_loc],
+                core.sv.cx.d_dT.st[core.xpt_loc]
             )
 
             L_xpt = namedtuple('L', 'n T')(
-                core.L.n.i,
-                core.L.T.i
+                core.L.n.i[core.xpt_loc],
+                core.L.T.i[core.xpt_loc]
             )
 
             Lz_xpt = namedtuple('Lz', 't ddT')(
-                core.Lz.t,
-                core.Lz.ddT.t
+                core.Lz.t[core.xpt_loc],
+                core.Lz.ddT.t[core.xpt_loc]
             )
 
-            chi_r_xpt = core.chi_r
+            chi_r_xpt = core.chi_r[core.xpt_loc]
 
+            self.n_marfe, self.MI = calc_n_marfe(n_xpt, sv_xpt, T_xpt, L_xpt, Lz_xpt, chi_r_xpt)
+
+            print 'self.n_marfe = ',self.n_marfe
         elif inputs is not None:
             # use 'inputs' to create inputs for calc_n_marfe
             n = inputs.n
@@ -224,9 +227,10 @@ class Marfe:
             L = inputs.L
             Lz = inputs.Lz
             chi_r = inputs.chi_r
+            self.n_marfe, self.MI = calc_n_marfe(n, sv, T, L, Lz, chi_r)
         else:
             print 'you haven\'t provided any inputs'
             print 'stopping'
             sys.exit()
 
-        self.n_marfe, self.MI = calc_n_marfe(n, sv, T, L, Lz, chi_r)
+
