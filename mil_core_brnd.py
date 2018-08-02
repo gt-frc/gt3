@@ -9,11 +9,221 @@ from __future__ import division
 from math import pi, sin, acos, ceil
 import numpy as np
 from scipy.constants import mu_0, elementary_charge, k
-from scipy.interpolate import UnivariateSpline, interp1d, interp2d, griddata
+from scipy.interpolate import UnivariateSpline, interp1d, interp2d, griddata, Rbf
 from scipy.integrate import quad
 import matplotlib.pyplot as plt
 import sys
 from collections import namedtuple
+from scipy import constants
+
+e = constants.elementary_charge
+
+
+def calc_svfus(T, mode='dd'):
+    def sigv(T, mode):  # function takes T in kev
+        if mode == 'dt':
+            B_G = 34.3827
+            m_rc2 = 1124656
+
+            C1 = 1.17302E-9
+            C2 = 1.51361E-2
+            C3 = 7.51886E-2
+            C4 = 4.60643E-3
+            C5 = 1.35000E-2
+            C6 = -1.06750E-4
+            C7 = 1.36600E-5
+
+            theta = T / (1.0 - (T * (C2 + T * (C4 + T * C6))) / (1.0 + T * (C3 + T * (C5 + T * C7))))
+            xi = (B_G ** 2.0 / (4.0 * theta)) ** (1.0 / 3.0)
+            sigv = C1 * theta * np.sqrt(xi / (m_rc2 * T ** 3.0)) * np.exp(-3.0 * xi)
+            sigv = sigv / 1.0E6  # convert from cm^3/s to m^3/s
+
+        elif mode == 'dd':
+
+            B_G = 31.3970
+            m_rc2 = 937814
+
+            # first for the D(d, p)T reaction
+            C1_1 = 5.65718E-12
+            C2_1 = 3.41267E-3
+            C3_1 = 1.99167E-3
+            C4_1 = 0.0
+            C5_1 = 1.05060E-5
+            C6_1 = 0.0
+            C7_1 = 0.0
+
+            theta_1 = T / (
+                        1.0 - (T * (C2_1 + T * (C4_1 + T * C6_1))) / (1.0 + T * (C3_1 + T * (C5_1 + T * C7_1))))
+            xi_1 = (B_G ** 2.0 / (4.0 * theta_1)) ** (1.0 / 3.0)
+            sigv_1 = C1_1 * theta_1 * np.sqrt(xi_1 / (m_rc2 * T ** 3.0)) * np.exp(-3.0 * xi_1)
+
+            # then for the D(d, n)He3 reaction
+
+            C1_2 = 5.43360E-12
+            C2_2 = 5.85778E-3
+            C3_2 = 7.68222E-3
+            C4_2 = 0.0
+            C5_2 = -2.96400E-6
+            C6_2 = 0.0
+            C7_2 = 0.0
+
+            theta_2 = T / (
+                        1.0 - (T * (C2_2 + T * (C4_2 + T * C6_2))) / (1.0 + T * (C3_2 + T * (C5_2 + T * C7_2))))
+            xi_2 = (B_G ** 2.0 / (4.0 * theta_2)) ** (1.0 / 3.0)
+            sigv_2 = C1_2 * theta_2 * np.sqrt(xi_2 / (m_rc2 * T ** 3.0)) * np.exp(-3.0 * xi_2)
+
+            sigv = (0.5 * sigv_1 + 0.5 * sigv_2) / 1.0E6  # convert from cm^3/s to m^3/s
+        return sigv
+
+    # create logspace over the relevant temperature range
+    # (bosch hale technically only valid over 0.2 - 100 kev)
+    Ti_range = np.logspace(-1, 2, 1000)  # values in kev
+    sigv_fus_range = sigv(Ti_range, mode=mode)  # in m^3/s
+    sigv_fus_interp = UnivariateSpline(Ti_range * 1.0E3 * e, sigv_fus_range, s=0)  # converted to Joules
+    sv_fus = sigv_fus_interp(T.i.J)
+    dsv_fus_dT = sigv_fus_interp.derivative()(T.i.J)
+
+    return sv_fus, dsv_fus_dT
+
+
+def calc_svrec_st(n, T):
+    # # TODO: check this calculation. -MH
+    # znint = np.array([16, 18, 20, 21, 22])
+    # Tint = np.array([-1, 0, 1, 2, 3])
+    #
+    # rec = np.array([[-1.7523E+01, -1.6745E+01, -1.5155E+01, -1.4222E+01, -1.3301E+01],
+    #                 [-1.8409E+01, -1.8398E+01, -1.8398E+01, -1.7886E+01, -1.7000E+01],
+    #                 [-1.9398E+01, -1.9398E+01, -1.9398E+01, -1.9398E+01, -1.9398E+01],
+    #                 [-2.0155E+01, -2.0155E+01, -2.0155E+01, -2.0155E+01, -2.0155E+01],
+    #                 [-2.1000E+01, -2.1000E+01, -2.1000E+01, -2.1000E+01, -2.1000E+01]])
+    #
+    # interp1 = interp2d(znint, Tint, rec)
+    #
+    # zni_exps = np.linspace(16, 22, 100)
+    # Ti_exps = np.linspace(-1, 3, 100)
+    # svrec_vals = 10.0 ** (interp1(zni_exps, Ti_exps))  # in m^3/s
+    #
+    # zni_vals = np.logspace(16, 22, 100)
+    # Ti_vals = np.logspace(-1, 3, 100) * e  # in joules
+    #
+    # dsvrec_dTi_vals = np.gradient(svrec_vals, Ti_vals, axis=0)
+    #
+    # zni_vals2d, Ti_vals2d = np.meshgrid(zni_vals, Ti_vals)
+    #
+    # zni_mod = np.where(n.i > 1E22, 1E22, n.i)
+    # zni_mod = np.where(n.i < 1E16, 1E16, zni_mod)
+    # Ti_mod = np.where(T.i.ev > 1E3, 1E3 * e, T.i.ev * e)
+    # Ti_mod = np.where(T.i.ev < 1E-1, 1E-1 * e, Ti_mod)
+    #
+    # plt.semilogx(zni_vals2d.flatten(), Ti_vals2d.flatten())
+    # plt.show()
+    # print np.column_stack((zni_vals2d.flatten(), Ti_vals2d.flatten()))
+    # sys.exit()
+    # sv_rec = griddata(np.column_stack((zni_vals2d.flatten(), Ti_vals2d.flatten())),
+    #                   svrec_vals.flatten(),
+    #                   (zni_mod, Ti_mod),
+    #                   method='linear', rescale=False)
+    #
+    # dsv_rec_dT = griddata(np.column_stack((zni_vals2d.flatten(), Ti_vals2d.flatten())),
+    #                            dsvrec_dTi_vals.flatten(),
+    #                            (zni_mod, Ti_mod),
+    #                            method='linear', rescale=False)
+
+    # return sv_rec, dsv_rec_dT
+    return 0, 0
+
+
+def calc_svcx_st(T):
+    tint = np.array([-1, 0, 1, 2, 3])
+    tnnt = np.array([0, 1, 2])
+
+    cx = np.array([[-1.4097E+01, -1.3921E+01, -1.3553E+01, -1.4097E+01, -1.3921E+01],
+                   [-1.3553E+01, -1.3921E+01, -1.3824E+01, -1.3538E+01, -1.3553E+01],
+                   [-1.3538E+01, -1.3432E+01, -1.3553E+01, -1.3538E+01, -1.3432E+01]])
+
+    interp1 = interp2d(tint, tnnt, cx)
+
+    Ti_exps = np.linspace(-1, 3, 100)
+    Tn_exps = np.linspace(0, 2, 100)
+    svcx_vals = 10.0 ** (interp1(Ti_exps, Tn_exps))  # in m^3/s
+
+    Ti_vals = np.logspace(-1, 3, 100) * e  # in joules
+    Tn_vals = np.logspace(0, 2, 100) * e  # in joules
+
+    dsvcx_dTi_vals = np.gradient(svcx_vals, Ti_vals, axis=0)
+
+    Ti_vals2d, Tn_vals2d = np.meshgrid(Ti_vals, Tn_vals)
+
+    Ti_mod = np.where(T.i.ev > 1E3, 1E3 * e, T.i.ev * e)
+    Tn_mod = np.zeros(Ti_mod.shape) + 2.0 * e
+
+    sv_cx = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())),
+                          svcx_vals.flatten(),
+                          (Ti_mod, Tn_mod),
+                          method='linear', rescale=False)
+
+    dsv_cx_dT = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())),
+                              dsvcx_dTi_vals.flatten(),
+                              (Ti_mod, Tn_mod),
+                              method='linear', rescale=False)
+
+    return sv_cx, dsv_cx_dT
+
+
+def calc_svion_st(T):
+    # TODO: configure so it can use any of the cross section libraries
+    # currently using the Stacey-Thomas cross sections
+    T_exps_fit = np.array([-1, 0, 1, 2, 3, 4, 5])
+    sigv_exps_fit = np.array([-2.8523E+01, -1.7745E+01, -1.3620E+01,
+                              -1.3097E+01, -1.3301E+01, -1.3301E+01, -1.3301E+01])
+    interp1 = UnivariateSpline(T_exps_fit, sigv_exps_fit, s=0)
+
+    T_exps_range = np.linspace(-1, 5, 1000)
+    sigv_vals_range = 10.0 ** interp1(T_exps_range)  # in m^3/s
+
+    T_vals_range = np.logspace(-1, 5, 1000) * e  # in joules
+    interp2 = UnivariateSpline(T_vals_range, sigv_vals_range, s=0)
+
+    sv_ion = interp2(T.i.J)
+    dsv_ion_dT = interp2.derivative()(T.i.J)
+
+    return sv_ion, dsv_ion_dT
+
+
+def calc_svel_st(T):
+    tint = np.array([-1, 0, 1, 2, 3])
+    tnnt = np.array([0, 1, 2])
+
+    elast = np.array([[-1.3569E+01, -1.3337E+01, -1.3036E+01, -1.3569E+01, -1.3337E+01],
+                      [-1.3036E+01, -1.3337E+01, -1.3167E+01, -1.3046E+01, -1.3036E+01],
+                      [-1.3046E+01, -1.2796E+01, -1.3036E+01, -1.3046E+01, -1.2796E+01]])
+
+    interp1 = interp2d(tint, tnnt, elast)
+
+    Ti_exps = np.linspace(-1, 3, 100)
+    Tn_exps = np.linspace(0, 2, 100)
+    svel_vals = 10.0 ** (interp1(Ti_exps, Tn_exps))  # in m^3/s
+
+    Ti_vals = np.logspace(-1, 3, 100) * e  # in joules
+    Tn_vals = np.logspace(0, 2, 100) * e  # in joules
+
+    dsvel_dTi_vals = np.gradient(svel_vals, Ti_vals, axis=0)
+
+    Ti_vals2d, Tn_vals2d = np.meshgrid(Ti_vals, Tn_vals)
+
+    Ti_mod = np.where(T.i.ev > 1E3, 1E3 * e, T.i.ev * e)
+    Tn_mod = np.zeros(Ti_mod.shape) + 2.0 * e
+
+    sv_el = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())),
+                          svel_vals.flatten(),
+                          (Ti_mod, Tn_mod),
+                          method='linear', rescale=False)
+    dsv_el_dT = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())),
+                              dsvel_dTi_vals.flatten(),
+                              (Ti_mod, Tn_mod),
+                              method='linear', rescale=False)
+
+    return sv_el, dsv_el_dT
 
 
 def PolyArea(x, y):
@@ -154,212 +364,6 @@ def xmiller(kappa, rho, theta, inp):
     return kappa
 
 
-def calc_sigv_fus(T, mode='dd'):
-    def sigv(Ti, mode):  # function takes T in kev
-        if mode == 'dt':
-            B_G = 34.3827
-            m_rc2 = 1124656
-
-            C1 = 1.17302E-9
-            C2 = 1.51361E-2
-            C3 = 7.51886E-2
-            C4 = 4.60643E-3
-            C5 = 1.35000E-2
-            C6 = -1.06750E-4
-            C7 = 1.36600E-5
-
-            theta = Ti / (1.0 - (Ti * (C2 + Ti * (C4 + Ti * C6))) / (1.0 + Ti * (C3 + Ti * (C5 + Ti * C7))))
-            xi = (B_G ** 2.0 / (4.0 * theta)) ** (1.0 / 3.0)
-            sigv = C1 * theta * np.sqrt(xi / (m_rc2 * Ti ** 3.0)) * np.exp(-3.0 * xi)
-            sigv = sigv / 1.0E6  # convert from cm^3/s to m^3/s
-
-        elif mode == 'dd':
-
-            B_G = 31.3970
-            m_rc2 = 937814
-
-            # first for the D(d, p)T reaction
-            C1_1 = 5.65718E-12
-            C2_1 = 3.41267E-3
-            C3_1 = 1.99167E-3
-            C4_1 = 0.0
-            C5_1 = 1.05060E-5
-            C6_1 = 0.0
-            C7_1 = 0.0
-
-            theta_1 = Ti / (
-                        1.0 - (Ti * (C2_1 + Ti * (C4_1 + Ti * C6_1))) / (1.0 + Ti * (C3_1 + Ti * (C5_1 + Ti * C7_1))))
-            xi_1 = (B_G ** 2.0 / (4.0 * theta_1)) ** (1.0 / 3.0)
-            sigv_1 = C1_1 * theta_1 * np.sqrt(xi_1 / (m_rc2 * Ti ** 3.0)) * np.exp(-3.0 * xi_1)
-
-            # then for the D(d, n)He3 reaction
-
-            C1_2 = 5.43360E-12
-            C2_2 = 5.85778E-3
-            C3_2 = 7.68222E-3
-            C4_2 = 0.0
-            C5_2 = -2.96400E-6
-            C6_2 = 0.0
-            C7_2 = 0.0
-
-            theta_2 = Ti / (
-                        1.0 - (Ti * (C2_2 + Ti * (C4_2 + Ti * C6_2))) / (1.0 + Ti * (C3_2 + Ti * (C5_2 + Ti * C7_2))))
-            xi_2 = (B_G ** 2.0 / (4.0 * theta_2)) ** (1.0 / 3.0)
-            sigv_2 = C1_2 * theta_2 * np.sqrt(xi_2 / (m_rc2 * Ti ** 3.0)) * np.exp(-3.0 * xi_2)
-
-            sigv = (0.5 * sigv_1 + 0.5 * sigv_2) / 1.0E6  # convert from cm^3/s to m^3/s
-        return sigv
-
-    # create logspace over the relevant temperature range
-    # (bosch hale technically only valid over 0.2 - 100 kev)
-    Ti_range = np.logspace(-1, 2, 1000)  # values in kev
-    sigv_fus_range = sigv(Ti_range, mode=mode)  # in m^3/s
-    sigv_fus_interp = UnivariateSpline(Ti_range * 1.0E3 * 1.6021E-19, sigv_fus_range, s=0)  # converted to Joules
-
-    sv_fus = sigv_fus_interp(T.i.J)
-    dsv_fus_dT = sigv_fus_interp.derivative()(T.i.J)
-
-    return sv_fus, dsv_fus_dT
-
-
-def calc_sigv_ion(T):
-    # TODO: configure so it can use any of the cross section libraries
-    # currently using the Stacey-Thomas cross sections
-    T_exps_fit = np.array([-1, 0, 1, 2, 3, 4, 5])
-    sigv_exps_fit = np.array([-2.8523E+01, -1.7745E+01, -1.3620E+01,
-                              -1.3097E+01, -1.3301E+01, -1.3301E+01, -1.3301E+01])
-    interp1 = UnivariateSpline(T_exps_fit, sigv_exps_fit, s=0)
-
-    T_exps_range = np.linspace(-1, 5, 1000)
-    sigv_vals_range = 10.0 ** interp1(T_exps_range)  # in m^3/s
-
-    T_vals_range = np.logspace(-1, 5, 1000) * 1.6021E-19  # in joules
-    interp2 = UnivariateSpline(T_vals_range, sigv_vals_range, s=0)
-
-    sv_ion = interp2(T.i.J)
-    dsv_ion_dT = interp2.derivative()(T.i.J)
-
-    return sv_ion, dsv_ion_dT
-
-
-def calc_svel(T):
-    tint = np.array([-1, 0, 1, 2, 3])
-    tnnt = np.array([0, 1, 2])
-
-    elast = np.array([[-1.3569E+01, -1.3337E+01, -1.3036E+01, -1.3569E+01, -1.3337E+01],
-                      [-1.3036E+01, -1.3337E+01, -1.3167E+01, -1.3046E+01, -1.3036E+01],
-                      [-1.3046E+01, -1.2796E+01, -1.3036E+01, -1.3046E+01, -1.2796E+01]])
-
-    interp1 = interp2d(tint, tnnt, elast)
-
-    Ti_exps = np.linspace(-1, 3, 100)
-    Tn_exps = np.linspace(0, 2, 100)
-    svel_vals = 10.0 ** (interp1(Ti_exps, Tn_exps))  # in m^3/s
-
-    Ti_vals = np.logspace(-1, 3, 100) * 1.6021E-19  # in joules
-    Tn_vals = np.logspace(0, 2, 100) * 1.6021E-19  # in joules
-
-    dsvel_dTi_vals = np.gradient(svel_vals, Ti_vals, axis=0)
-
-    Ti_vals2d, Tn_vals2d = np.meshgrid(Ti_vals, Tn_vals)
-
-    Ti_mod = np.where(T.i.ev > 1E3, 1E3 * 1.6021E-19, T.i.ev * 1.6021E-19)
-    Tn_mod = np.zeros(Ti_mod.shape) + 2.0 * 1.6021E-19
-
-    sv_el = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())),
-                     svel_vals.flatten(),
-                     (Ti_mod, Tn_mod),
-                     method='linear', rescale=False)
-
-    dsv_el_dT = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())),
-                         dsvel_dTi_vals.flatten(),
-                         (Ti_mod, Tn_mod),
-                         method='linear', rescale=False)
-
-    return sv_el, dsv_el_dT
-
-
-def calc_svcx_st(T):
-    tint = np.array([-1, 0, 1, 2, 3])
-    tnnt = np.array([0, 1, 2])
-
-    cx = np.array([[-1.4097E+01, -1.3921E+01, -1.3553E+01, -1.4097E+01, -1.3921E+01],
-                   [-1.3553E+01, -1.3921E+01, -1.3824E+01, -1.3538E+01, -1.3553E+01],
-                   [-1.3538E+01, -1.3432E+01, -1.3553E+01, -1.3538E+01, -1.3432E+01]])
-
-    interp1 = interp2d(tint, tnnt, cx)
-
-    Ti_exps = np.linspace(-1, 3, 100)
-    Tn_exps = np.linspace(0, 2, 100)
-    svcx_vals = 10.0 ** (interp1(Ti_exps, Tn_exps))  # in m^3/s
-
-    Ti_vals = np.logspace(-1, 3, 100) * 1.6021E-19  # in joules
-    Tn_vals = np.logspace(0, 2, 100) * 1.6021E-19  # in joules
-
-    dsvcx_dTi_vals = np.gradient(svcx_vals, Ti_vals, axis=0)
-
-    Ti_vals2d, Tn_vals2d = np.meshgrid(Ti_vals, Tn_vals)
-
-    Ti_mod = np.where(T.i.ev > 1E3, 1E3 * 1.6021E-19, T.i.ev * 1.6021E-19)
-    Tn_mod = np.zeros(Ti_mod.shape) + 2.0 * 1.6021E-19
-
-    sv_cx = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())),
-                     svcx_vals.flatten(),
-                     (Ti_mod, Tn_mod),
-                     method='linear', rescale=False)
-
-    dsv_cx_dT = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())),
-                         dsvcx_dTi_vals.flatten(),
-                         (Ti_mod, Tn_mod),
-                         method='linear', rescale=False)
-
-    return sv_cx, dsv_cx_dT
-
-
-def calc_svrec_st(n, T):
-    # TODO: check this calculation. -MH
-    znint = np.array([16, 18, 20, 21, 22])
-    Tint = np.array([-1, 0, 1, 2, 3])
-
-    rec = np.array([[-1.7523E+01, -1.6745E+01, -1.5155E+01, -1.4222E+01, -1.3301E+01],
-                    [-1.8409E+01, -1.8398E+01, -1.8398E+01, -1.7886E+01, -1.7000E+01],
-                    [-1.9398E+01, -1.9398E+01, -1.9398E+01, -1.9398E+01, -1.9398E+01],
-                    [-2.0155E+01, -2.0155E+01, -2.0155E+01, -2.0155E+01, -2.0155E+01],
-                    [-2.1000E+01, -2.1000E+01, -2.1000E+01, -2.1000E+01, -2.1000E+01]])
-
-    interp1 = interp2d(znint, Tint, rec)
-
-    zni_exps = np.linspace(16, 22, 100)
-    Ti_exps = np.linspace(-1, 3, 100)
-    svrec_vals = 10.0 ** (interp1(zni_exps, Ti_exps))  # in m^3/s
-
-    zni_vals = np.logspace(16, 22, 100)
-    Ti_vals = np.logspace(-1, 3, 100) * 1.6021E-19  # in joules
-
-    dsvrec_dTi_vals = np.gradient(svrec_vals, Ti_vals, axis=0)
-
-    zni_vals2d, Ti_vals2d = np.meshgrid(zni_vals, Ti_vals)
-
-    zni_mod = np.where(n.i > 1E22, 1E22, n.i)
-    zni_mod = np.where(n.i < 1E16, 1E16, zni_mod)
-    Ti_mod = np.where(T.i.ev > 1E3, 1E3 * 1.6021E-19, T.i.ev * 1.6021E-19)
-    Ti_mod = np.where(T.i.ev < 1E-1, 1E-1 * 1.6021E-19, Ti_mod)
-
-    sv_rec = griddata(np.column_stack((zni_vals2d.flatten(), Ti_vals2d.flatten())),
-                      svrec_vals.flatten(),
-                      (zni_mod, Ti_mod),
-                      method='linear',
-                      rescale=False)
-
-    dsv_rec_dT = griddata(np.column_stack((zni_vals2d.flatten(), Ti_vals2d.flatten())),
-                          dsvrec_dTi_vals.flatten(),
-                          (zni_mod, Ti_mod),
-                          method='linear',
-                          rescale=False)
-
-    return sv_rec, dsv_rec_dT
-
-
 class MilCoreBrnd():
     """Calculates various plasma properties using a modified Miller geometry
     
@@ -457,21 +461,37 @@ class MilCoreBrnd():
             ni,
             ne,
             namedtuple('nn', 's t tot')(
-                np.zeros(self.rho.shape),  # slow
-                np.zeros(self.rho.shape),  # thermal
-                np.zeros(self.rho.shape)  # total
+                np.full(self.rho.shape, 1E-7 * ne),  # slow
+                np.full(self.rho.shape, 1E-3 * ne),  # thermal
+                np.full(self.rho.shape, 1E-3 * ne)  # total
             ),
             ne * fracz)
 
         # populate main temperature namedtuple
         self.T = namedtuple('T', 'i e n C')(
-            namedtuple('T', 'kev ev J')(Ti_kev, Ti_kev * 1E3, Ti_kev * 1E3 * 1.6021E-19),
-            namedtuple('T', 'kev ev J')(Te_kev, Te_kev * 1E3, Te_kev * 1E3 * 1.6021E-19),
-            namedtuple('Tn', 's t')(
-                namedtuple('T', 'kev ev J')(Tns_kev, Tns_kev * 1E3, Tns_kev * 1E3 * 1.6021E-19),
-                namedtuple('T', 'kev ev J')(Tnt_kev, Tnt_kev * 1E3, Tnt_kev * 1E3 * 1.6021E-19)
+            namedtuple('T', 'kev ev J')(
+                Ti_kev,
+                Ti_kev * 1E3,
+                Ti_kev * 1E3 * e
             ),
-            namedtuple('T', 'kev ev J')(TC_kev, TC_kev * 1E3, TC_kev * 1E3 * 1.6021E-19))
+            namedtuple('T', 'kev ev J')(
+                Te_kev,
+                Te_kev * 1E3,
+                Te_kev * 1E3 * e
+            ),
+            namedtuple('Tn', 's t')(
+                namedtuple('T', 'kev ev J')(
+                    Tns_kev,
+                    Tns_kev * 1E3,
+                    Tns_kev * 1E3 * e
+                ),
+                namedtuple('T', 'kev ev J')(
+                    Tnt_kev,
+                    Tnt_kev * 1E3,
+                    Tnt_kev * 1E3 * e
+                )
+            ),
+            namedtuple('T', 'kev ev J')(TC_kev, TC_kev * 1E3, TC_kev * 1E3 * e))
 
         # calculate pressure
         self.pressure = ni * k * Ti_K
@@ -532,7 +552,7 @@ class MilCoreBrnd():
 
         if inp.xmil==1:
             xpt = np.array([inp.xpt_R, inp.xpt_Z])
-            kappa = xmiller(kappa, inp)
+            kappa = xmiller(kappa, self.rho, self.theta, inp)
             tri_lo = sin(3*pi/2 - acos((xpt[0]-inp.R0_a)/inp.a))
             tri_up = inp.tri_up
         else:
@@ -674,13 +694,170 @@ class MilCoreBrnd():
         self.B_tot = np.sqrt(self.B_p ** 2 + self.B_t ** 2)
         self.f_phi = self.B_t / self.B_tot
 
+        # calculate cross sections on the main computational grid
+        svfus_dd, svfus_dd_ddT = calc_svfus(self.T, mode='dd')
+        svfus_dt, svfus_dt_ddT = calc_svfus(self.T, mode='dt')
+        svrec_st, svrec_st_ddT = calc_svrec_st(self.n, self.T)
+        svcx_st, svcx_st_ddT = calc_svcx_st(self.T)
+        svion_st, svion_st_ddT = calc_svion_st(self.T)
+        svel_st, svel_st_ddT = calc_svel_st(self.T)
 
-        # calculate cross sections
-        self.sv_fus, self.dsv_fus_dT = calc_sigv_fus(self.T, mode='dt')
-        self.sv_ion, self.dsv_ion_dT = calc_sigv_ion(self.T)
-        self.sv_el, self.dsv_el_dT = calc_svel(self.T)
-        self.sv_cx, self.dsv_cx_dT = calc_svcx_st(self.T)
+        self.sv = namedtuple('sv', 'fus rec cx ion el')(
+            namedtuple('sv_fus', 'dd dt d_dT')(
+                svfus_dd,
+                svfus_dt,
+                namedtuple('sv_fus_d_dT', 'dd dt')(
+                    svfus_dd_ddT,
+                    svfus_dt_ddT)),
+            namedtuple('sv_rec', 'st d_dT')(
+                svrec_st,
+                namedtuple('sv_rec_d_dT', 'st')(
+                    svrec_st_ddT)),
+            namedtuple('sv_cx', 'st d_dT')(
+                svcx_st,
+                namedtuple('sv_cx_d_dT', 'st')(
+                    svcx_st_ddT)),
+            namedtuple('sv_ion', 'st d_dT')(
+                svion_st,
+                namedtuple('sv_ion_d_dT', 'st')(
+                    svion_st_ddT)),
+            namedtuple('sv_el', 'st d_dT')(
+                svel_st,
+                namedtuple('sv_el_d_dT', 'st')(
+                    svel_st_ddT)))
 
+        # initialize spatial gradients and gradient scale lengths
+        # dX/dr = dpsi/dr * dX/dpsi
+
+        R_temp, Z_temp = np.meshgrid(np.linspace(np.amin(self.R), np.amax(self.R), 65),
+                                     np.linspace(np.amin(self.Z), np.amax(self.Z), 65))
+
+        psi_norm_grid = Rbf(self.R[1:,:-1], self.Z[1:,:-1], self.psi_norm[1:,:-1].flatten())(R_temp, Z_temp)
+        dpsidr = np.abs(np.gradient(psi_norm_grid, R_temp[0], axis=1)) + \
+                  np.abs(np.gradient(psi_norm_grid, Z_temp[:,0], axis=0))
+
+        dpsidr_maingrid = Rbf(R_temp, Z_temp, dpsidr)(self.R, self.Z)
+
+        dni_dr = dpsidr_maingrid * UnivariateSpline(self.psi_norm[:,0], self.n.i[:,0], k=3, s=0).derivative()(self.psi_norm)
+        dne_dr = dpsidr_maingrid * UnivariateSpline(self.psi_norm[:,0], self.n.e[:,0], k=3, s=0).derivative()(self.psi_norm)
+        dnC_dr = dpsidr_maingrid * UnivariateSpline(self.psi_norm[:,0], self.n.C[:,0], k=3, s=0).derivative()(self.psi_norm)
+        dTi_kev_dr = dpsidr_maingrid * UnivariateSpline(self.psi_norm[:,0], self.T.i.kev[:,0], k=3, s=0).derivative()(self.psi_norm)
+        dTi_ev_dr = dTi_kev_dr * 1E3
+        dTi_J_dr = dTi_kev_dr * 1E3 * e
+        dTe_kev_dr = dpsidr_maingrid * UnivariateSpline(self.psi_norm[:,0], self.T.e.kev[:,0], k=3, s=0).derivative()(self.psi_norm)
+        dTe_ev_dr = dTe_kev_dr * 1E3
+        dTe_J_dr = dTe_kev_dr * 1E3 * e
+
+        self.L = namedtuple('L', 'n T')(
+            namedtuple('Ln', 'i e')(
+                -dni_dr / self.n.i,
+                -dne_dr / self.n.e
+            ),
+            namedtuple('LT', 'i e')(
+                -dTi_kev_dr / self.T.i.kev,  # note: independent of units,
+                -dTe_kev_dr / self.T.e.kev  # note: independent of units
+            )
+        )
+
+        # create Lz-related variables. These will remain zero unless set by the ImpRad module
+        self.Lz = namedtuple('Lz', 's t ddT')(
+            np.zeros(self.rho.shape),
+            np.zeros(self.rho.shape),
+            namedtuple('Lz_ddT', 's t')(
+                np.zeros(self.rho.shape),
+                np.zeros(self.rho.shape)
+            )
+        )
+
+        # create chi. This is just using Bohm diffusion for now, which is entirely
+        # inadequate except for possibly along the seperatrix. All that it's currently being used for
+        # is to calculate chi at the x-point for the MARFE model. Eventually, this needs to be updated
+        # with values from the RadialTransport class.
+
+        self.chi_r = 5/32 * self.T.i.J / (e * self.B_tot)
+
+        # plt.contourf(self.R, self.Z, self.n.i,500)
+        # for i, row in enumerate(self.R):
+        #     plt.plot(self.R[i], self.Z[i],color='red')
+        # plt.axis('equal')
+        # plt.colorbar()
+        # plt.show()
+        # sys.exit()
+
+    def update_ntrl_data(self, data):
+        try:
+            n_n_s = griddata(np.column_stack((data.R, data.Z)),
+                             data.n_n_slow,
+                             (self.R, self.Z),
+                             method='linear')
+        except:
+            n_n_s = self.n.n.s
+
+        try:
+            n_n_t = griddata(np.column_stack((data.R, data.Z)),
+                             data.n_n_thermal,
+                             (self.R, self.Z),
+                             method='linear')
+        except:
+            n_n_t = self.n.n.t
+
+        try:
+            izn_rate_s = griddata(np.column_stack((data.R, data.Z)),
+                                  data.izn_rate_slow,
+                                  (self.R, self.Z),
+                                  method='linear')
+        except:
+            izn_rate_s = self.izn_rate.s
+
+        try:
+            izn_rate_t = griddata(np.column_stack((data.R, data.Z)),
+                                             data.izn_rate_thermal,
+                                             (self.R, self.Z),
+                                             method='linear')
+        except:
+            izn_rate_t = self.izn_rate.t
+
+        nn = namedtuple('nn', 's t tot')(
+            n_n_s,  # slow
+            n_n_t,  # thermal
+            n_n_s + n_n_t  # total
+        )
+
+        self.n = namedtuple('n', 'i e n C')(self.n.i, self.n.e, nn, self.n.C)
+
+        self.izn_rate = namedtuple('izn_rate', 's t tot')(
+            izn_rate_s,  # slow
+            izn_rate_t,  # thermal
+            izn_rate_s + izn_rate_t  # total
+        )
+
+    def update_Lz_data(self, z, Lz, dLzdT):
+
+        Lz_slow = Lz(np.log10(self.T.n.s.kev),
+                     np.log10(self.n.n.s / self.n.e),
+                     np.log10(self.T.e.kev))
+
+        dLzdT_slow = dLzdT(np.log10(self.T.n.s.kev),
+                           np.log10(self.n.n.s / self.n.e),
+                           np.log10(self.T.e.kev))
+
+        Lz_thermal = Lz(np.log10(self.T.n.t.kev),
+                        np.log10(self.n.n.t / self.n.e),
+                        np.log10(self.T.e.kev))
+
+        dLzdT_thermal = dLzdT(np.log10(self.T.n.t.kev),
+                              np.log10(self.n.n.t / self.n.e),
+                              np.log10(self.T.e.kev))
+
+        # replace Lz with new one.
+        self.Lz = namedtuple('Lz', 's t ddT')(
+            Lz_slow,
+            Lz_thermal,
+            namedtuple('Lz_ddT', 's t')(
+                dLzdT_slow,
+                dLzdT_thermal
+            )
+        )
 
     def miller(self, p):
 
