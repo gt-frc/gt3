@@ -1,5 +1,9 @@
-#FLUX SURFACES FROM MILLER OR EXPERIMENTAL PSI DATA (1 FOR EXPERIMENTAL, 0 FOR MILLER)
-exp_inp = 1
+#MAIN MESH PARAMETERS
+thetapts_approx = 50
+#rhopts = 10
+edge_rho = 0.7
+rhopts_edge = 100
+rhopts_core = 10
 
 #CURRENT- AND MAGNETIC FIELD-RELATED PARAMETERS
 j0 = 1.12E6
@@ -9,15 +13,8 @@ IP = 1.28
 q95 = 3.884
 BT0 = 2.11
 
-#MAIN MESH PARAMETERS
-thetapts_approx = 50
-#rhopts = 10
-edge_rho = 0.7
-rhopts_edge = 100
-rhopts_core = 10
-
 #NEUTRALS PARAMETERS
-neut_outfile = neutpy_cell_values.txt
+neut_outfile = gt3_144977_3000_neut.dat
 core_thetapts_ntrl = 50
 ib_thetapts_ntrl = 10
 ob_thetapts_ntrl = 10
@@ -67,11 +64,10 @@ wall_file = /machine/gt3_diiid_wall.dat
 #nbeams_loc = /home/max/Nextcloud/Max/max_phd/Codes/nbeams/bin/Release/
 ebeam = 76.91 
 abeam = 2 
-alphain = .6475 
+alphain = 0.6475
 pbeam = 2.186 
 rtang = 1.146
 
 #ION ORBIT LOSS CALCULATION
 numcos = 20
 R_loss = 0.5
-
