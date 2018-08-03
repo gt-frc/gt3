@@ -41,7 +41,7 @@ def cut(line, distance):
                 LineString(coords[:i] + [(cp.x, cp.y)]), 
                 LineString([(cp.x, cp.y)] + coords[i:])]
 
-class ExpPfrBrnd:
+class Pfr:
     def __init__(self, inp, core):
         
         R = inp.psirz_exp[:, 0].reshape(-1, 65)

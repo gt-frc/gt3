@@ -65,7 +65,7 @@ class IOL:
                                    np.ones(inp.numcos)[:, None, None],
                                    core.E_pot)[-1] * 1E3  # now in volts
 
-        xi0 = np.broadcast_arrays(np.ones(polpts)[:, None, None, None],
+        zeta0 = np.broadcast_arrays(np.ones(polpts)[:, None, None, None],
                                   self.coslist[:, None, None],
                                   np.ones(core.R.shape))[1]
 
@@ -107,7 +107,7 @@ class IOL:
         iol_params['f0'] = f0
         iol_params['psi0'] = psi0
         iol_params['phi0'] = phi0
-        iol_params['xi0'] = xi0
+        iol_params['zeta0'] = zeta0
         iol_params['R1'] = R1
         iol_params['f1'] = f1
         iol_params['B1'] = B1
@@ -168,8 +168,8 @@ class IOL:
     @staticmethod
     def calc_vsep(z, m, p):
         """Calculates V_sep"""
-        a = (np.abs(p.B1/p.B0)*p.f0/p.f1)**2 - 1 + (1 - p.xi0**2)*np.abs(p.B1/p.B0)
-        b = 2*z*e*(p.psi0-p.psi1)/(p.R1*m*p.f1) * np.abs(p.B1/p.B0)*p.f0/p.f1*p.xi0
+        a = (np.abs(p.B1/p.B0)*p.f0/p.f1*p.zeta0)**2 - 1 + (1 - p.zeta0**2)*np.abs(p.B1/p.B0)
+        b = 2*z*e*(p.psi0-p.psi1)/(p.R1*m*p.f1) * np.abs(p.B1/p.B0)*p.f0/p.f1*p.zeta0
         c = (z*e*(p.psi0-p.psi1)/(p.R1*m*p.f1))**2 - 2*z*e*(p.phi0-p.phi1)/m
 
         v_sep_1 = (-b + np.sqrt(b**2 - 4*a*c))/(2*a)

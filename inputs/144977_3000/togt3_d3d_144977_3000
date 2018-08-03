@@ -41,7 +41,7 @@ xi_ob_pts = 10
 ib_trim_off = 0.1
 ob_trim_off = 0.1
 
-PFR PARAMETERS:
+#PFR PARAMETERS:
 pfr_ni_val = 1.0E14
 pfr_ne_val = 1.0E14
 pfr_Ti_val = 0.002
@@ -63,50 +63,6 @@ psirz_file = /144977_3000/gt3_144977_3000_psirz.dat
 2D LINE INPUT FILES
 wall_file = /machine/gt3_diiid_wall.dat
 
-#PARAMETERS FOR MILLER BACKGROUND
-#a = 0.59
-#R0_a = 1.677
-#Z0 = -0.047
-#kappa_up = 1.67
-#kappa_lo = 1.2
-#s_k_up = 0.1 
-#s_k_lo = 0.0 
-#tri_up = 0.23 
-#tri_lo = 0.0
-
-#PARAMETERS FOR X-MILLER OPTION
-#xmil = 1
-#xpt_R = 1.44951
-#xpt_Z = -1.10807
-#xtheta1 = 3.6
-#xtheta2 = 2.7
-#xtheta3 = 0.1
-#xtheta4 = -1.0
-#sep_gamma1 = 3.8
-#sep_gamma2 = 1.25
-
-#BACKGROUND DENSITY AND TEMPERATURE PARAMETERS (IF NOT READING FROM INPUT FILE)
-#ni0 = 3.629E19
-#ni9 = 1.523E19
-#ni_sep = 0.3E19
-#ni_dp = 1E17
-#nu_ni = 3.0
-#ne0 = 3.629E19
-#ne9 = 1.523E19
-#ne_sep = 0.3E19
-#ne_dp = 1E17
-#nu_ne = 2.5
-#Ti0 = 35
-#Ti9 = 6
-#Ti_sep = 0.6
-#Ti_dp = 0.03
-#nu_Ti = 3.5
-#Te0 = 36
-#Te9 = 6
-#Te_sep = 0.6
-#Te_dp = 0.01
-#nu_Te = 3.5
-
 #NEUTRAL BEAM DEPOSITION
 #nbeams_loc = /home/max/Nextcloud/Max/max_phd/Codes/nbeams/bin/Release/
 ebeam = 76.91 
@@ -114,17 +70,6 @@ abeam = 2
 alphain = .6475 
 pbeam = 2.186 
 rtang = 1.146
-
-#IMPURITY CALCULATION
-#adpak_loc = /home/max/Nextcloud/Max/max_phd/Codes/adpak/
-z_imp = 6
-laden = 1
-ladtip = 1
-leci = 1
-ldrmlt = 2
-ncxopt = 1
-anneut = 1.0E9
-vneut = 0.001
 
 #ION ORBIT LOSS CALCULATION
 numcos = 20

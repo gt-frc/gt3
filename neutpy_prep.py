@@ -20,9 +20,9 @@ import re
 import time
 from subprocess import call
 import matplotlib.pyplot as plt
-from exp_core_brnd import ExpCoreBrnd
-from exp_sol_brnd import ExpSolBrnd
-from exp_pfr_brnd import ExpPfrBrnd
+from core import Core
+from sol import Sol
+from pfr import Pfr
 import pickle
 from contours.quad import QuadContourGenerator
 

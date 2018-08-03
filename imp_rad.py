@@ -52,7 +52,7 @@ class ImpRad:
     """
     def __init__(self, z=None, core=None):
         sys.dont_write_bytecode = True
-        print 'imp_rad init'
+
         # list of impurity names and pickled impurity interpolation object filenames, if they exist. Will be used later.
         imp_names = {}
         imp_names[2] = 'Helium'
@@ -81,12 +81,11 @@ class ImpRad:
                 core.update_Lz_data(6, Lz, dLzdT)
 
         elif z is not None:
-            print 'z is not none'
             try:  # before running adpak, try to find a pickled interpolator somewhere in the main directory.
                 print 'trying to find interpolation object'
                 self.Lz, self.dLzdT = self.find_interp(z, imp_names)
             except:
-                print 'didn\tt work'
+                print 'didn\'t work'
                 print 'Pickled interpolater not found for {}. Running adpak.'.format(imp_names[z])
                 self.Lz, self.dLzdT = self.run_adpak(z, imp_names)
         else:
@@ -100,8 +99,6 @@ class ImpRad:
         Lz_pkl_file = imp_names[z]+'_Lz.pkl'
         dLzdT_pkl_file = imp_names[z]+'_dLzdT.pkl'
 
-        print 'Lz_pkl_file = ',Lz_pkl_file
-        print 'dLzdT_pkl_file = ',dLzdT_pkl_file
         # search for pkl_file
         outfile_found = 0
         for root, subdirs, files in os.walk(os.getcwd()):
@@ -121,7 +118,6 @@ class ImpRad:
                     dLzdT_interp = pickle.load(pickle_in)
                     pickle_in.close()
         if Lz_found and dLzdT_found:
-            print 'found \'em'
             return Lz_interp, dLzdT_interp
         else:
             # pickle file was not found. Bummer.
