@@ -1,5 +1,9 @@
-#FLUX SURFACES FROM MILLER OR EXPERIMENTAL PSI DATA (1 FOR EXPERIMENTAL, 0 FOR MILLER)
-exp_inp = 1
+#MAIN MESH PARAMETERS
+thetapts_approx = 50
+#rhopts = 200
+edge_rho = 0.7
+rhopts_edge = 100
+rhopts_core = 10
 
 #CURRENT- AND MAGNETIC FIELD-RELATED PARAMETERS
 j0 = 2.85E6
@@ -8,13 +12,6 @@ nu_j = 3.0
 IP = 1.38
 q95 = 3.57
 BT0 = 2.004
-
-#MAIN MESH PARAMETERS
-thetapts_approx = 50
-#rhopts = 200
-edge_rho = 0.7
-rhopts_edge = 100
-rhopts_core = 10
 
 #NEUTRALS PARAMETERS
 neut_outfile = gt3_118888_1525_neut.dat
@@ -30,7 +27,7 @@ wall_ne_min = 1.0E15
 wall_Ti_min = 0.005
 wall_Te_min = 0.005
 tri_min_angle = 20
-tri_min_area  = 0.01
+tri_min_area = 0.01
 
 #SOL PARAMETERS
 sollines_psi_max = 1.07
@@ -48,66 +45,20 @@ pfr_Ti_val = 0.002
 pfr_Te_val = 0.002
 
 #1D PROFILE INPUT FILES
-ne_file         = /118888_1525/gt3_118888_1525_ne.dat
-ni_file         = /118888_1525/gt3_118888_1525_ni.dat
-Te_file         = /118888_1525/gt3_118888_1525_Te.dat
-Ti_file         = /118888_1525/gt3_118888_1525_Ti.dat
-er_file         = /118888_1525/gt3_118888_1525_er.dat
-fracz_file      = /118888_1525/gt3_118888_1525_fracz.dat
-vpolC_file      = /118888_1525/gt3_118888_1525_vpolC.dat
-vtorC_file      = /118888_1525/gt3_118888_1525_vtorC.dat
-#vpolD_file      = /118888_1525/gt3_118888_1525_vpolD.dat
-#vtorD_file      = /118888_1525/gt3_118888_1525_vtorD.dat
+ne_file = /118888_1525/gt3_118888_1525_ne.dat
+ni_file = /118888_1525/gt3_118888_1525_ni.dat
+Te_file = /118888_1525/gt3_118888_1525_Te.dat
+Ti_file = /118888_1525/gt3_118888_1525_Ti.dat
+er_file = /118888_1525/gt3_118888_1525_er.dat
+fracz_file = /118888_1525/gt3_118888_1525_fracz.dat
+vpolC_file = /118888_1525/gt3_118888_1525_vpolC.dat
+vtorC_file = /118888_1525/gt3_118888_1525_vtorC.dat
 
 2D QUANTITIES INPUT FILES
-psirz_file      = /118888_1525/gt3_118888_1525_psirz.dat
+psirz_file = /118888_1525/gt3_118888_1525_psirz.dat
 
 2D LINE INPUT FILES
-wall_file        = /machine/gt3_diiid_wall.dat
-
-#PARAMETERS FOR MILLER BACKGROUND
-#a = 0.598
-#R0_a = 1.699
-#Z0 = -0.028
-#kappa_up = 1.615
-#kappa_lo = 1.2
-#s_k_up = 0.3
-#s_k_lo = 0.0
-#tri_up = 0.25
-#tri_lo = 0.0
-
-#PARAMETERS FOR X-MILLER OPTION
-#xmil = 1
-#xpt_R = 1.480
-#xpt_Z = -1.138
-#xtheta1 = 3.6
-#xtheta2 = 2.7
-#xtheta3 = 0.1
-#xtheta4 = -1.0
-#sep_gamma1 = 3.8
-#sep_gamma2 = 1.25
-
-#BACKGROUND DENSITIES AND TEMPERATURES (IF NOT READING FROM INPUT FILE)
-#ni0 = 3.629E19
-#ni9 = 1.523E19
-#ni_sep = 0.3E19
-#ni_dp = 1E17
-#nu_ni = 3.0
-#ne0 = 3.629E19
-#ne9 = 1.523E19
-#ne_sep = 0.3E19
-#ne_dp = 1E17
-#nu_ne = 2.5
-#Ti0 = 35
-#Ti9 = 6
-#Ti_sep = 0.6
-#Ti_dp = 0.03
-#nu_Ti = 3.5
-#Te0 = 36
-#Te9 = 6
-#Te_sep = 0.6
-#Te_dp = 0.01
-#nu_Te = 3.5
+wall_file = /machine/gt3_diiid_wall.dat
 
 #NEUTRAL BEAM DEPOSITION
 #nbeams_loc = /home/max/Nextcloud/Max/max_phd/Codes/nbeams/bin/Release/
@@ -117,18 +68,6 @@ alphain = 0.6475
 pbeam = 4.6
 rtang = 1.09
 
-#IMPURITY CALCULATION
-#adpak_loc = /home/max/Nextcloud/Max/max_phd/Codes/adpak/
-z_imp = 6
-laden = 1
-ladtip = 1
-leci = 1
-ldrmlt = 2
-ncxopt = 1
-anneut = 1.0E9
-vneut = 0.001
-
 #ION ORBIT LOSS CALCULATION
 numcos = 20
 R_loss = 0.5
-
