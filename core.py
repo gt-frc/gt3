@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 # import matplotlib._cntr as cntr
 from scipy.interpolate import griddata, UnivariateSpline, interp1d, interp2d, Rbf
 from scipy.constants import elementary_charge
-from shapely.geometry import Point, MultiPoint, LineString, LinearRing
+from shapely.geometry import Point, MultiPoint, LineString, LinearRing, Polygon
 from shapely.ops import polygonize, linemerge
 import sys
 from math import atan2, pi, ceil, sin, cos
@@ -412,7 +412,6 @@ def calc_kappa_elong(psi_data, sep_pts):
     tri = namedtuple('tri', 'axis sep')(tri_0, tri_a)
     return kappa, tri
 
-
 def calc_rho1d(edge_rho=None, rhopts_core=None, rhopts_edge=None, rhopts=None):
     # define rho points
     try:
@@ -428,6 +427,7 @@ def calc_rho1d(edge_rho=None, rhopts_core=None, rhopts_edge=None, rhopts=None):
 
 
 def find_xpt_mag_axis(R, Z, psi):
+
     # calculate gradients of psi in R and Z directions
     dpsidR = np.gradient(psi, R[0, :], axis=1)
     dpsidZ = np.gradient(psi, Z[:, 0], axis=0)
@@ -521,7 +521,8 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis):
     contour_new = []
     for contour in contours:
         dist = np.sqrt((contour[:, 0] - xpt[0])**2 + (contour[:, 1] - xpt[1])**2)
-        contour[dist < 0.05] = xpt
+        # TODO: Put this distance in the input file or make distance selection smarter
+        contour[dist < 0.1] = xpt
         contour_new.append(contour[np.where((contour != np.roll(contour, -1, axis=0)).all(axis=1))])
 
     # if there is only one contour, then it's drawing one continuous line from ib strike point to ob strike point
@@ -535,7 +536,6 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis):
             contour = np.flipud(contour_new)
 
         xpt_loc = np.where((contour == xpt).all(axis=1))[0]
-
         ib = np.flipud(contour[:xpt_loc[0]+1])
         lcfs = contour[xpt_loc[0]:xpt_loc[1]]
         ob = contour[xpt_loc[1]:]
@@ -622,14 +622,6 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis):
     lines_nt = namedtuple('lines', 'sep sep_closed div ib2ob')
     lines = lines_nt(lcfs_line, lcfs_line_closed, div_lines, entire_sep_line)
 
-    # plt.contourf(psi_data.R, psi_data.Z, psi_data.psi_norm, 500)
-    # plt.colorbar()
-    # plt.plot(ib[:,0],ib[:,1],color='blue')
-    # plt.plot(ob[:,0],ob[:,1],color='red')
-    # plt.plot(lcfs[:,0],lcfs[:,1],color='yellow')
-    # plt.scatter(xpt[0],xpt[1],color='black')
-    # plt.show()
-
     return pts, lines
 
 
@@ -696,6 +688,9 @@ def calc_RZ(rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
 
     R = np.zeros(rho.shape)
     Z = np.zeros(rho.shape)
+
+    line_length = 5.0
+
     for i, psi_norm_val in enumerate(psi_norm[:, 0]):
         if i == 0:
             R[i] = pts.axis.mag[0]
@@ -720,8 +715,8 @@ def calc_RZ(rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
             for j, thetaval in enumerate(theta[0]):
                 if psi_norm_val < 1.0:
                     thetaline = LineString([Point(fs_pts.axis),
-                                            Point([3.0 * cos(thetaval) + fs_pts.axis[0],
-                                                   3.0 * sin(thetaval) + fs_pts.axis[1]])])
+                                            Point([line_length * cos(thetaval) + fs_pts.axis[0],
+                                                   line_length * sin(thetaval) + fs_pts.axis[1]])])
                     int_pt = fs_line.intersection(thetaline)
                 else:
                     if thetaval == theta_xpt:
@@ -729,8 +724,8 @@ def calc_RZ(rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
 
                     else:
                         thetaline = LineString([Point(pts.axis.geo),
-                                                Point([3.0 * cos(thetaval) + pts.axis.geo[0],
-                                                       3.0 * sin(thetaval) + pts.axis.geo[1]])])
+                                                Point([line_length * cos(thetaval) + pts.axis.geo[0],
+                                                       line_length * sin(thetaval) + pts.axis.geo[1]])])
                         int_pt = LineString(sep_pts).intersection(thetaline)
 
                 R[i, j] = int_pt.x
@@ -752,12 +747,6 @@ def calc_nT_grad(rho, quant, psi, R, Z, psi_data):
     dval_dpsi = d_dpsi_fit(psi)
 
     # calculate dpsi_norm_dr everywhere on the main computational grid
-
-    #plt.contourf(psi_data.R, psi_data.Z, psi_data.dpsidr, 500)
-
-    #plt.show()
-    #sys.exit()
-
     dpsi_dr = griddata(np.column_stack((psi_data.R.flatten(),
                                         psi_data.Z.flatten())),
                        psi_data.dpsidr.flatten(),
@@ -765,12 +754,6 @@ def calc_nT_grad(rho, quant, psi, R, Z, psi_data):
                        method='linear')
 
     dval_dr = dval_dpsi * dpsi_dr
-
-    #plt.plot(rhovals, vals,label='rho')
-    #plt.plot(psivals, vals,label='psi')
-    #plt.legend()
-    #plt.show()
-    #sys.exit()
 
     return dval_dr
 
@@ -789,11 +772,31 @@ def create_surf_area_interp(rho2psi, psi_data, sep_pts, R0_a, a):
         else:
             surf_area[i+1] = LineString(sep_pts).length * 2*pi*R0_a
 
-    r2sa = interp1d(r_vals, surf_area)
-    rho2sa = interp1d(rho_vals, surf_area)
-    psi2sa = interp1d(psi_vals, surf_area)
+    r2sa = UnivariateSpline(r_vals, surf_area, k=3, s=0)
+    rho2sa = UnivariateSpline(rho_vals, surf_area, k=3, s=0)
+    psi2sa = UnivariateSpline(psi_vals, surf_area, k=3, s=0)
 
     return r2sa, rho2sa, psi2sa
+
+def create_vol_interp(rho2psi, psi_data, sep_pts, R0_a, a):
+    rho_vals = np.linspace(0, 1, 50, endpoint=True)
+    r_vals = rho_vals * a
+    psi_vals = rho2psi(rho_vals)
+
+    vol = np.zeros(rho_vals.shape)
+    # skip the first value. First value is zero.
+    for i,psi_val in enumerate(psi_vals[1:]):
+        if psi_val < 1:
+            fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, psi_val, sep_pts)
+            vol[i+1] = Polygon(fs_line).area * 2*pi*fs_pts.axis[0]
+        else:
+            vol[i+1] = Polygon(LineString(sep_pts)).area * 2*pi*R0_a
+
+    r2vol = UnivariateSpline(r_vals, vol, k=3, s=0)
+    rho2vol = UnivariateSpline(rho_vals, vol, k=3, s=0)
+    psi2vol = UnivariateSpline(psi_vals, vol, k=3, s=0)
+
+    return r2vol, rho2vol, psi2vol
 
 def calc_rho2psi_interp(pts, psi_data):
     rhovals = np.linspace(0, 1, 100)
@@ -815,14 +818,18 @@ def calc_rho2psi_interp(pts, psi_data):
     return rho2psi, psi2rho
 
 
-class ExpCoreBrnd():
+class Core():
     def __init__(self, inp):
 
-        raw_psi_R = inp.psirz_exp[:, 0].reshape(-1, 65)
-        raw_psi_Z = inp.psirz_exp[:, 1].reshape(-1, 65)
-        raw_psi = inp.psirz_exp[:, 2].reshape(-1, 65)
+        # this assumes that psi is given as a square array
+        psi_shape = int(np.sqrt(inp.psirz_exp[:, 0].shape[0]))
+
+        raw_psi_R = inp.psirz_exp[:, 0].reshape(-1, psi_shape)
+        raw_psi_Z = inp.psirz_exp[:, 1].reshape(-1, psi_shape)
+        raw_psi = inp.psirz_exp[:, 2].reshape(-1, psi_shape)
 
         xpt, mag_axis = find_xpt_mag_axis(raw_psi_R, raw_psi_Z, raw_psi)
+
         raw_psi_norm = calc_psi_norm(raw_psi_R, raw_psi_Z, raw_psi, xpt, mag_axis)
 
         raw_dpsidR = np.abs(np.gradient(raw_psi_norm, raw_psi_R[0, :], axis=1))
@@ -846,7 +853,6 @@ class ExpCoreBrnd():
         # TODO: Figure out which of these is the definition of 'a'
         # self.a = self.pts.obmp[0] - self.pts.axis.geo
         self.a = self.pts.obmp[0] - self.pts.axis.mag[0]
-        self.vol = (pi*self.a**2) * 2 * pi * self.R0_a  # TODO: This is only a rough estimate. Replace later.
 
         self.shaf_shift = (self.pts.axis.mag[0] - self.pts.axis.geo[0]) / self.a
 
@@ -874,16 +880,30 @@ class ExpCoreBrnd():
 
         self.R, self.Z = calc_RZ(self.rho, self.theta, theta_xpt, self.pts, self.psi_data, self.psi_norm, self.lines)
 
+        self.xpt_loc = np.where(self.Z == np.amin(self.Z))
+
         # estimate elongation and triangularity
         self.kappa_vals, self.tri_vals = calc_kappa_elong(self.psi_data, np.asarray(self.lines.sep_closed.coords))
 
         # create interpolation functions to convert rho to psi and vice versa
         self.rho2psi, self.psi2rho = calc_rho2psi_interp(self.pts, self.psi_data)
+
+        #create interpolation functions to obtain the flux surface surface area for any value of r, rho, or psi_norm
         self.r2sa, self.rho2sa, self.psi2sa = create_surf_area_interp(self.rho2psi,
                                                                       self.psi_data,
                                                                       np.asarray(self.lines.sep_closed.coords),
                                                                       self.R0_a,
                                                                       self.a)
+
+        #create interpolation functions to obtain the plasma volume for any value of r, rho, or psi_norm
+        self.r2vol, self.rho2vol, self.psi2vol = create_vol_interp(self.rho2psi,
+                                                                      self.psi_data,
+                                                                      np.asarray(self.lines.sep_closed.coords),
+                                                                      self.R0_a,
+                                                                      self.a)
+
+        # initialize total plasma volume
+        self.vol = self.rho2vol(1.0)
 
         # initialize ionization rate arrays with zero
         self.izn_rate = namedtuple('izn_rate', 's t tot')(
@@ -899,11 +919,18 @@ class ExpCoreBrnd():
         fracz = UnivariateSpline(inp.fracz_data[:, 0], inp.fracz_data[:, 1], k=5, s=2.0)(self.rho)
         ni = UnivariateSpline(inp.ni_data[:, 0], inp.ni_data[:, 1], k=3, s=2.0)(self.rho)
         ne = UnivariateSpline(inp.ne_data[:, 0], inp.ne_data[:, 1], k=3, s=2.0)(self.rho)
-        nC = ne * fracz
+        try:
+            nC = UnivariateSpline(inp.nC_data[:, 0], inp.nC_data[:, 1], k=3, s=2.0)(self.rho)
+        except AttributeError:
+            try:
+                nC = ne * fracz
+            except AttributeError:
+                print 'neither nC nor fracz specified. Using fracz = 0.025.'
+                nC = ne * 0.025
         nn = namedtuple('nn', 's t tot')(
-            np.zeros(self.rho.shape),  # slow
-            np.zeros(self.rho.shape),  # thermal
-            np.zeros(self.rho.shape)   # total
+            ne * 1E-7,  # slow
+            ne * 1E-7,  # thermal
+            2 * ne * 1E-7   # total
         )
         self.n = namedtuple('n', 'i e n C')(ni, ne, nn, nC)
         self.z_0 = nC*6.0**2 / ni
@@ -951,17 +978,16 @@ class ExpCoreBrnd():
         dTe_ev_dr = dTe_kev_dr * 1E3
         dTe_J_dr = dTe_kev_dr * 1E3 * e
 
-        L_ni = -dni_dr / self.n.i
-        L_ne = -dne_dr / self.n.e
-        L_Ti = -dTi_kev_dr / self.T.i.kev  # note: independent of units
-        L_Te = -dTe_kev_dr / self.T.e.kev  # note: independent of units
-
-        Ln_nt = namedtuple('Ln', 'i e')
-        LT_nt = namedtuple('LT', 'i e')
-        L_nt = namedtuple('L', 'n T')
-
-        self.L = L_nt(Ln_nt(L_ni, L_ne),
-                 LT_nt(L_Ti, L_Te))
+        self.L = namedtuple('L', 'n T')(
+            namedtuple('Ln', 'i e')(
+                -dni_dr / self.n.i,
+                -dne_dr / self.n.e
+            ),
+            namedtuple('LT', 'i e')(
+                -dTi_kev_dr / self.T.i.kev,  # note: independent of units,
+                - dTe_kev_dr / self.T.e.kev  # note: independent of units
+            )
+        )
 
         # initialize E_r and the corresponding electric potential
         E_r_fit = UnivariateSpline(inp.er_data[:, 0], inp.er_data[:, 1], k=5, s=2.0)
@@ -1026,10 +1052,14 @@ class ExpCoreBrnd():
         self.q95 = UnivariateSpline(self.psi_norm[:,0], self.q_1D, k=1, s=0)(0.95)
 
         # create Lz-related variables. These will remain zero unless set by the ImpRad module
-        Lz_nt = namedtuple('Lz', 's t ddT')
-        Lz_ddT_nt = namedtuple('Lz_ddT', 's t')
-        Lz_ddT = Lz_ddT_nt(np.zeros(self.rho.shape), np.zeros(self.rho.shape))
-        self.Lz = Lz_nt(np.zeros(self.rho.shape), np.zeros(self.rho.shape), Lz_ddT)
+        self.Lz = namedtuple('Lz', 's t ddT')(
+            np.zeros(self.rho.shape),
+            np.zeros(self.rho.shape),
+            namedtuple('Lz_ddT', 's t')(
+                np.zeros(self.rho.shape),
+                np.zeros(self.rho.shape)
+            )
+        )
 
         # calculate cross sections on the main computational grid
         svfus_dd, svfus_dd_ddT = calc_svfus(self.T, mode='dd')
@@ -1039,39 +1069,29 @@ class ExpCoreBrnd():
         svion_st, svion_st_ddT = calc_svion_st(self.T)
         svel_st, svel_st_ddT = calc_svel_st(self.T)
 
-        sv_nt = namedtuple('sv', 'fus rec cx ion el')
-
-        sv_fus_nt = namedtuple('sv_fus', 'dd dt d_dT')
-        sv_fus_d_dT_nt = namedtuple('sv_fus_d_dT', 'dd dt')
-
-        sv_rec_nt = namedtuple('sv_rec', 'st d_dT')
-        sv_rec_d_dT_nt = namedtuple('sv_rec_d_dT', 'st')
-
-        sv_cx_nt = namedtuple('sv_cx', 'st d_dT')
-        sv_cx_d_dT_nt = namedtuple('sv_cx_d_dT', 'st')
-
-        sv_ion_nt = namedtuple('sv_ion', 'st d_dT')
-        sv_ion_d_dT_nt = namedtuple('sv_ion_d_dT', 'st')
-
-        sv_el_nt = namedtuple('sv_el', 'st d_dT')
-        sv_el_d_dT_nt = namedtuple('sv_el_d_dT', 'st')
-
-        sv_fus_d_dT = sv_fus_d_dT_nt(svfus_dd_ddT, svfus_dt_ddT)
-        sv_fus = sv_fus_nt(svfus_dd, svfus_dt, sv_fus_d_dT)
-
-        sv_rec_d_dT = sv_rec_d_dT_nt(svrec_st_ddT)
-        sv_rec = sv_rec_nt(svrec_st, sv_rec_d_dT)
-
-        sv_cx_d_dT = sv_cx_d_dT_nt(svcx_st_ddT)
-        sv_cx = sv_cx_nt(svcx_st, sv_cx_d_dT)
-
-        sv_ion_d_dT = sv_ion_d_dT_nt(svion_st_ddT)
-        sv_ion = sv_ion_nt(svion_st, sv_ion_d_dT)
-
-        sv_el_d_dT = sv_el_d_dT_nt(svel_st_ddT)
-        sv_el = sv_el_nt(svel_st, sv_el_d_dT)
-
-        self.sv = sv_nt(sv_fus, sv_rec, sv_cx, sv_ion, sv_el)
+        self.sv = namedtuple('sv', 'fus rec cx ion el')(
+            namedtuple('sv_fus', 'dd dt d_dT')(
+                svfus_dd,
+                svfus_dt,
+                namedtuple('sv_fus_d_dT', 'dd dt')(
+                    svfus_dd_ddT,
+                    svfus_dt_ddT)),
+            namedtuple('sv_rec', 'st d_dT')(
+                svrec_st,
+                namedtuple('sv_rec_d_dT', 'st')(
+                    svrec_st_ddT)),
+            namedtuple('sv_cx', 'st d_dT')(
+                svcx_st,
+                namedtuple('sv_cx_d_dT', 'st')(
+                    svcx_st_ddT)),
+            namedtuple('sv_ion', 'st d_dT')(
+                svion_st,
+                namedtuple('sv_ion_d_dT', 'st')(
+                    svion_st_ddT)),
+            namedtuple('sv_el', 'st d_dT')(
+                svel_st,
+                namedtuple('sv_el_d_dT', 'st')(
+                    svel_st_ddT)))
 
         # Calculate some 1D Flux-surface averaged quantities
         self.izn_rate_fsa_s = calc_fsa(self.izn_rate.s, self.R, self.Z)
@@ -1122,8 +1142,8 @@ class ExpCoreBrnd():
                 TC_kev_fsa * 1E3,
                 TC_kev_fsa * 1E3 * e))
 
-        # initialize chi_r. This might get updated later
-        self.chi_r = np.full(self.rho.shape, 2.0)
+        # initialize chi_r using Bohm diffusion. This might get updated later
+        self.chi_r = 5/32*self.T.i.J/(e * self.B_tot)
     
     def update_ntrl_data(self, data):
         try:
@@ -1174,21 +1194,30 @@ class ExpCoreBrnd():
 
     def update_Lz_data(self, z, Lz, dLzdT):
 
-        self.Lz_slow = Lz(np.log10(self.T.n.s),
+        Lz_slow = Lz(np.log10(self.T.n.s.kev),
                           np.log10(self.n.n.s / self.n.e),
                           np.log10(self.T.e.kev))
 
-        self.dLzdT_slow = dLzdT(np.log10(self.T.n.s),
+        dLzdT_slow = dLzdT(np.log10(self.T.n.s.kev),
                           np.log10(self.n.n.s / self.n.e),
                           np.log10(self.T.e.kev))
 
-        self.Lz_thermal = Lz(np.log10(self.T.n.t),
+        Lz_thermal = Lz(np.log10(self.T.n.t.kev),
                           np.log10(self.n.n.t / self.n.e),
                           np.log10(self.T.e.kev))
 
-        self.dLzdT_thermal = dLzdT(np.log10(self.T.n.t),
+        dLzdT_thermal = dLzdT(np.log10(self.T.n.t.kev),
                           np.log10(self.n.n.t / self.n.e),
                           np.log10(self.T.e.kev))
+
+        self.Lz = namedtuple('Lz', 's t ddT')(
+            Lz_slow,
+            Lz_thermal,
+            namedtuple('Lz_ddT', 's t')(
+                dLzdT_slow,
+                dLzdT_thermal
+            )
+        )
 
 
 
