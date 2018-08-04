@@ -14,6 +14,7 @@ import matplotlib as mpl
 import matplotlib.ticker as mtick
 from scipy.stats import maxwell
 from scipy.special import gammaincc
+from scipy.interpolate import interp1d
 from collections import namedtuple
 import sys
 
@@ -165,6 +166,18 @@ class IOL:
         self.morb_a_fast_1D = self.morb_a_fast[:, 0]
         self.eorb_a_fast_1D = self.eorb_a_fast[:, 0]
 
+        # Calculate IOL for neutral deuterium beams
+        v_beam = sqrt(2*80.0E3*1.6021E-19/m_d)
+        zeta_beam = -0.96
+        self.forb_d_nbi, self.morb_d_nbi, self.eorb_d_nbi = self.calc_iol_beams(1, m_d, iol_p, core.thetapts, v_beam, zeta_beam)
+        # currently applying R_loss to fast alphas as well as thermal, although I'm skeptical of this. -MH
+        self.forb_d_nbi = inp.R_loss * self.forb_d_nbi
+        self.morb_d_nbi = inp.R_loss * self.morb_d_nbi
+        self.eorb_d_nbi = inp.R_loss * self.eorb_d_nbi
+        self.forb_d_nbi_1D = self.forb_d_nbi[:, 0]
+        self.morb_d_nbi_1D = self.morb_d_nbi[:, 0]
+        self.eorb_d_nbi_1D = self.eorb_d_nbi[:, 0]
+
     @staticmethod
     def calc_vsep(z, m, p):
         """Calculates V_sep"""
@@ -249,24 +262,54 @@ class IOL:
             zeta_matrix[:, indx] = self.coslist[indx]
 
         # F_orb calculation
-        integrand_f = np.where(v_sep_min <= v_mono, 1.0, 0)
+        #integrand_f = np.where(v_sep_min <= v_mono, 1.0, 0)
+        integrand_f = np.heaviside(v_mono - v_sep_min, 1)
         F_orb_1D = np.sum(integrand_f, axis=1) * (2 / self.numcos) / 2
         F_orb_1D = np.nan_to_num(F_orb_1D)
         F_orb = np.repeat(F_orb_1D.reshape(-1, 1), thetapts, axis=1)
 
         # M_orb calculation
-        integrand_m = zeta_matrix * np.where(v_sep_min <= v_mono, 1, 0)
+        #integrand_m = zeta_matrix * np.where(v_sep_min <= v_mono, 1, 0)
+        integrand_m = zeta_matrix * np.heaviside(v_mono - v_sep_min, 1)
         M_orb_1D = np.sum(integrand_m, axis=1) * (2 / self.numcos) / 2
         M_orb_1D = np.nan_to_num(M_orb_1D)
         M_orb = np.repeat(M_orb_1D.reshape(-1, 1), thetapts, axis=1)
 
         # E_orb calculation
         # E_orb is mathematically identical to F_orb for monoenergetic, isotropic launch angle species
-        E_orb_1D = F_orb_1D
         E_orb = F_orb
 
         return F_orb, M_orb, E_orb
 
+    def calc_iol_beams(self, z, m, param, thetapts, v_mono, zeta_beam):
+        """calculates IOL for a monoenergetic species with a single known launch angle (i.e. beam ions)"""
+
+        v_sep, v_sep_min = self.calc_vsep(z, m, param)
+
+        # Obtain v_sep_min(zeta_beam) for each rho value
+        v_sep_min_zeta = np.zeros(len(v_sep_min))
+
+        for i,v in enumerate(v_sep_min):
+            # create interpolation function of v_sep_min(rho) vs zeta
+            v_sep_min_zeta_interp = interp1d(self.coslist, v, fill_value='extrapolate')
+            # get v_sep_min(zeta_beam)
+            v_sep_min_zeta[i] = v_sep_min_zeta_interp(zeta_beam)
+
+        # F_orb calculation
+        F_orb_1D = np.heaviside(v_mono - v_sep_min_zeta, 1)
+        F_orb_1D = np.nan_to_num(F_orb_1D)
+        F_orb = np.repeat(F_orb_1D.reshape(-1, 1), thetapts, axis=1)
+
+        # M_orb calculation
+        M_orb_1D = zeta_beam * np.heaviside(v_mono - v_sep_min_zeta, 1)
+        M_orb_1D = np.nan_to_num(M_orb_1D)
+        M_orb = np.repeat(M_orb_1D.reshape(-1, 1), thetapts, axis=1)
+
+        # E_orb calculation
+        # E_orb is mathematically identical to F_orb for monoenergetic, monodirectional species
+        E_orb = F_orb
+
+        return F_orb, M_orb, E_orb
 
 # iolplot=1
 #if iolplot==1:
