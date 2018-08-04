@@ -20,6 +20,10 @@ from contours.quad import QuadContourGenerator
 from scipy import constants
 
 e = constants.elementary_charge
+m_d = 3.343583719e-27
+m_t = 5.006e-27
+m_c = 1.9926467e-26
+m_a = 6.643e-27
 
 def calc_svfus(T, mode='dd'):
     def sigv(T, mode):  # function takes T in kev
@@ -678,6 +682,11 @@ def calc_psi(rho, pts, psi_data):
     psi = interp1d(rho[:,0], psi_vals)(rho)
     psi_norm = interp1d(rho[:, 0], psi_norm_vals)(rho)
 
+    # If rho goes all the way to 1 (the usual case) then force the last psi_norm value to be 1.
+    # Otherwise things break later.
+    if rho[-1,0]==1.0:
+        psi_norm[-1] = 1.0
+
     return psi, psi_norm
 
 
@@ -727,14 +736,12 @@ def calc_RZ(rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
                                                 Point([line_length * cos(thetaval) + pts.axis.geo[0],
                                                        line_length * sin(thetaval) + pts.axis.geo[1]])])
                         int_pt = LineString(sep_pts).intersection(thetaline)
-
                 R[i, j] = int_pt.x
                 Z[i, j] = int_pt.y
-
     return R, Z
 
 
-def calc_nT_grad(rho, quant, psi, R, Z, psi_data):
+def calc_grad(rho, quant, psi, R, Z, psi_data):
     rhovals = rho[:,0]
     psivals = psi[:,0]
     vals = quant[:,0]
@@ -816,6 +823,31 @@ def calc_rho2psi_interp(pts, psi_data):
     psi2rho = interp1d(psivals, rhovals)
 
     return rho2psi, psi2rho
+
+
+
+def calc_chi_jet(T, L, a, q, B_T, m_i, rho):
+    def calc_bohm(T, L, a, q, B_T, m_i, rho):
+        """"""
+        cs = np.sqrt(T.i.J / m_i)  # sound speed
+        rho_s = cs * m_i / (e * B_T)  # gyroradius
+
+        Te_interp = UnivariateSpline(rho[:, 0], T.e.J[:, 0], k=3, s=0)
+        delta_Te = (Te_interp(0.8) - Te_interp(1.0)) / Te_interp(1.0)
+        chi_bohm = rho_s * cs * q ** 2 * a * L.p.e * delta_Te
+        return chi_bohm
+
+    def calc_gyro_bohm(T, L, B_T, m_i):
+        cs = np.sqrt(T.i.J / m_i)  # sound speed
+        rho_s = cs * m_i / (e * B_T)  # gyroradius
+        chi_gyro_bohm = rho_s**2 * cs * L.T.e
+        return chi_gyro_bohm
+
+    chi_bohm = calc_bohm(T, L, a, q, B_T, m_i, rho)
+    chi_gyro_bohm = calc_gyro_bohm(T, L, B_T, m_i)
+    chi_i_jet = 1.6E-4 * chi_bohm + 1.75E-2 * chi_gyro_bohm
+    chi_e_jet = 8E-5 * chi_bohm + 3.5E-2 * chi_gyro_bohm
+    return chi_i_jet, chi_e_jet
 
 
 class Core():
@@ -916,25 +948,75 @@ class Core():
         self.cool_rate = np.zeros(self.rho.shape)
 
         # initialize main density object
-        fracz = UnivariateSpline(inp.fracz_data[:, 0], inp.fracz_data[:, 1], k=5, s=2.0)(self.rho)
-        ni = UnivariateSpline(inp.ni_data[:, 0], inp.ni_data[:, 1], k=3, s=2.0)(self.rho)
-        ne = UnivariateSpline(inp.ne_data[:, 0], inp.ne_data[:, 1], k=3, s=2.0)(self.rho)
+
+        # deuterium density
+        try:
+            nD = UnivariateSpline(inp.nD_data[:, 0], inp.nD_data[:, 1], k=3, s=2.0)(self.rho)
+        except AttributeError:
+            nD = np.zeros(self.rho.shape)
+
+        # tritium density
+        try:
+            nT = UnivariateSpline(inp.nT_data[:, 0], inp.nT_data[:, 1], k=3, s=2.0)(self.rho)
+        except AttributeError:
+            nT = np.zeros(self.rho.shape)
+
+        ni = nD + nT
+
+        # electron density
+        try:
+            ne = UnivariateSpline(inp.nT_data[:, 0], inp.ne_data[:, 1], k=3, s=2.0)(self.rho)
+        except AttributeError:
+            ne = np.zeros(self.rho.shape)
+
+        # carbon density
         try:
             nC = UnivariateSpline(inp.nC_data[:, 0], inp.nC_data[:, 1], k=3, s=2.0)(self.rho)
         except AttributeError:
             try:
-                nC = ne * fracz
+                frac_C = UnivariateSpline(inp.frac_C_data[:, 0], inp.frac_C_data[:, 1], k=5, s=2.0)(self.rho)
+                nC = ne * frac_C
             except AttributeError:
-                print 'neither nC nor fracz specified. Using fracz = 0.025.'
-                nC = ne * 0.025
+                nC = np.zeros(self.rho.shape)
+
+        # tungsten density
+        try:
+            nW = UnivariateSpline(inp.nC_data[:, 0], inp.nW_data[:, 1], k=3, s=2.0)(self.rho)
+        except AttributeError:
+            try:
+                frac_W = UnivariateSpline(inp.frac_W_data[:, 0], inp.frac_W_data[:, 1], k=5, s=2.0)(self.rho)
+                nW = ne * frac_W
+            except AttributeError:
+                nW = np.zeros(self.rho.shape)
+
+        # beryllium density
+        try:
+            nBe = UnivariateSpline(inp.nBe_data[:, 0], inp.nBe_data[:, 1], k=3, s=2.0)(self.rho)
+        except AttributeError:
+            try:
+                frac_Be = UnivariateSpline(inp.frac_Be_data[:, 0], inp.frac_Be_data[:, 1], k=5, s=2.0)(self.rho)
+                nBe = ne * frac_Be
+            except AttributeError:
+                nBe = np.zeros(self.rho.shape)
+
+        # alpha density
+        try:
+            na = UnivariateSpline(inp.na_data[:, 0], inp.na_data[:, 1], k=3, s=2.0)(self.rho)
+        except AttributeError:
+            try:
+                frac_a = UnivariateSpline(inp.frac_a_data[:, 0], inp.frac_a_data[:, 1], k=5, s=2.0)(self.rho)
+                na = ne * frac_a
+            except AttributeError:
+                na = np.zeros(self.rho.shape)
+
         nn = namedtuple('nn', 's t tot')(
             ne * 1E-7,  # slow
             ne * 1E-7,  # thermal
             2 * ne * 1E-7   # total
         )
-        self.n = namedtuple('n', 'i e n C')(ni, ne, nn, nC)
-        self.z_0 = nC*6.0**2 / ni
-        self.z_eff = (ni*1.0**2 + nC*6.0**2) / ne
+        self.n = namedtuple('n', 'D T i e C W Be a n')(nD, nT, ni, ne, nC, nW, nBe, na, nn)
+        self.z_0 = nC*6.0**2 / (nD + nT)  # TODO: Update this calculation
+        self.z_eff = ((nD + nT)*1.0**2 + nC*6.0**2) / ne  # TODO: Update this calculation
 
         # populate temperature namedtuples, including the main T object
         Ti_kev = UnivariateSpline(inp.Ti_data[:, 0], inp.Ti_data[:, 1], k=5, s=2.0)(self.rho)
@@ -967,25 +1049,38 @@ class Core():
                 TC_kev * 1E3,
                 TC_kev * 1E3 * e))
 
+        # initialize pressures
+        self.p = namedtuple('p', 'i e C')(
+            self.n.i * self.T.i.J,
+            self.n.e * self.T.e.J,
+            self.n.C * self.T.C.J)
+
         # initialize spatial gradients and gradient scale lengths
-        dni_dr = calc_nT_grad(self.rho, self.n.i, self.psi_norm, self.R, self.Z, self.psi_data)
-        dne_dr = calc_nT_grad(self.rho, self.n.e, self.psi_norm, self.R, self.Z, self.psi_data)
-        dnC_dr = calc_nT_grad(self.rho, self.n.C, self.psi_norm, self.R, self.Z, self.psi_data)
-        dTi_kev_dr = calc_nT_grad(self.rho, self.T.i.kev, self.psi_norm, self.R, self.Z, self.psi_data)
+        dni_dr = calc_grad(self.rho, self.n.i, self.psi_norm, self.R, self.Z, self.psi_data)
+        dne_dr = calc_grad(self.rho, self.n.e, self.psi_norm, self.R, self.Z, self.psi_data)
+        dnC_dr = calc_grad(self.rho, self.n.C, self.psi_norm, self.R, self.Z, self.psi_data)
+        dTi_kev_dr = calc_grad(self.rho, self.T.i.kev, self.psi_norm, self.R, self.Z, self.psi_data)
         dTi_ev_dr = dTi_kev_dr * 1E3
         dTi_J_dr = dTi_kev_dr * 1E3 * e
-        dTe_kev_dr = calc_nT_grad(self.rho, self.T.i.kev, self.psi_norm, self.R, self.Z, self.psi_data)
+        dTe_kev_dr = calc_grad(self.rho, self.T.i.kev, self.psi_norm, self.R, self.Z, self.psi_data)
         dTe_ev_dr = dTe_kev_dr * 1E3
         dTe_J_dr = dTe_kev_dr * 1E3 * e
 
-        self.L = namedtuple('L', 'n T')(
+        dpi_dr = calc_grad(self.rho, self.n.i * self.T.i.J, self.psi_norm, self.R, self.Z, self.psi_data)
+        dpe_dr = calc_grad(self.rho, self.n.e * self.T.e.J, self.psi_norm, self.R, self.Z, self.psi_data)
+
+        self.L = namedtuple('L', 'n T p')(
             namedtuple('Ln', 'i e')(
                 -dni_dr / self.n.i,
                 -dne_dr / self.n.e
             ),
             namedtuple('LT', 'i e')(
                 -dTi_kev_dr / self.T.i.kev,  # note: independent of units,
-                - dTe_kev_dr / self.T.e.kev  # note: independent of units
+                -dTe_kev_dr / self.T.e.kev  # note: independent of units
+            ),
+            namedtuple('Lp', 'i e')(
+                -dpi_dr / self.p.i,  # note: independent of units,
+                -dpe_dr / self.p.e  # note: independent of units
             )
         )
 
@@ -1143,8 +1238,21 @@ class Core():
                 TC_kev_fsa * 1E3 * e))
 
         # initialize chi_r using Bohm diffusion. This might get updated later
-        self.chi_r = 5/32*self.T.i.J/(e * self.B_tot)
-    
+        chi_bohm = 5/32*self.T.i.J/(e * self.B_tot)
+
+        # calculate chi using the JET Bohm-GyroBohm model
+        chi_i_jet, chi_e_jet = calc_chi_jet(self.T, self.L, self.a, self.q, self.B_t, m_d, self.rho)
+
+        self.chi = namedtuple('chi', 'bohm jet')(
+            chi_bohm,
+            namedtuple('jet', 'i e')(
+                chi_i_jet,
+                chi_e_jet
+            )
+        )
+        # TODO: Verify this fus_rate calculation. I think it's wrong.
+        self.fus_rate = 1/4*self.n.D*self.n.D*self.sv.fus.dd + 1/4*self.n.D*self.n.T*self.sv.fus.dt
+
     def update_ntrl_data(self, data):
         try:
             n_n_s = griddata(np.column_stack((data.R, data.Z)),
