@@ -79,6 +79,22 @@ def calc_svfus(T, mode='dd'):
             sigv_2 = C1_2 * theta_2 * np.sqrt(xi_2 / (m_rc2 * T ** 3.0)) * np.exp(-3.0 * xi_2)
 
             sigv = (0.5 * sigv_1 + 0.5 * sigv_2) / 1.0E6  # convert from cm^3/s to m^3/s
+        elif mode == 'dHe3':
+            B_G = 68.7508
+            m_rc2 = 1124572
+
+            C1 = 5.51036E-10
+            C2 = 6.41918E-3
+            C3 = -2.02896E-3
+            C4 = -1.91080E-5
+            C5 = 1.35776E-4
+            C6 = 0
+            C7 = 0
+
+            theta = T / (1.0 - (T * (C2 + T * (C4 + T * C6))) / (1.0 + T * (C3 + T * (C5 + T * C7))))
+            xi = (B_G ** 2.0 / (4.0 * theta)) ** (1.0 / 3.0)
+            sigv = C1 * theta * np.sqrt(xi / (m_rc2 * T ** 3.0)) * np.exp(-3.0 * xi)
+            sigv = sigv / 1.0E6  # convert from cm^3/s to m^3/s
         return sigv
 
     # create logspace over the relevant temperature range
@@ -484,6 +500,12 @@ def find_xpt_mag_axis(R, Z, psi):
     pts_xpts_array = np.asarray(MultiPoint(pot_xpts))
     xpt = pts_xpts_array[pts_xpts_array[:, 1].argsort()][-1]
 
+    # plt.contourf(R, Z, psi)
+    # for pt in pts_xpts_array:
+    #     plt.scatter(pt[0], pt[1], color='yellow')
+    # plt.scatter(xpt[0], xpt[1],marker='+',color='black')
+    # plt.show()
+    # sys.exit()
     return xpt, mag_axis
 
 
@@ -598,7 +620,7 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis):
     ob_strike = ob_line.intersection(wall)
 
     ib_line_cut = cut(ib_line, ib_line.project(ib_strike, normalized=True))[0]
-    ob_line_cut = cut(ob_line, ib_line.project(ob_strike, normalized=True))[0]
+    ob_line_cut = cut(ob_line, ob_line.project(ob_strike, normalized=True))[0]
 
     entire_sep = np.vstack((np.flipud(ib), lcfs[1:], ob))
     entire_sep_line = LineString(entire_sep)
@@ -819,8 +841,8 @@ def calc_rho2psi_interp(pts, psi_data):
                         ptsRZ,
                         method='linear')
 
-    rho2psi = interp1d(rhovals, psivals)
-    psi2rho = interp1d(psivals, rhovals)
+    rho2psi = interp1d(rhovals, psivals, fill_value='extrapolate')
+    psi2rho = interp1d(psivals, rhovals, fill_value='extrapolate')
 
     return rho2psi, psi2rho
 
@@ -850,7 +872,7 @@ def calc_chi_jet(T, L, a, q, B_T, m_i, rho):
     return chi_i_jet, chi_e_jet
 
 
-class Core():
+class Core:
     def __init__(self, inp):
 
         # this assumes that psi is given as a square array
@@ -881,7 +903,7 @@ class Core():
         # calculate some important points and lines
         self.pts, self.lines = calc_pts_lines(self.psi_data, xpt, inp.wall_line, mag_axis)
         self.R0_a = self.pts.axis.geo[0]
-
+        print 'xpt = ',xpt
         # TODO: Figure out which of these is the definition of 'a'
         # self.a = self.pts.obmp[0] - self.pts.axis.geo
         self.a = self.pts.obmp[0] - self.pts.axis.mag[0]
@@ -913,12 +935,17 @@ class Core():
         self.R, self.Z = calc_RZ(self.rho, self.theta, theta_xpt, self.pts, self.psi_data, self.psi_norm, self.lines)
 
         self.xpt_loc = np.where(self.Z == np.amin(self.Z))
+        self.obmp_loc = np.where(self.R == np.amax(self.R))
+        self.ibmp_loc = np.where(self.R == np.amin(self.R))
+        self.top_loc = np.where(self.Z == np.amax(self.Z))
 
         # estimate elongation and triangularity
         self.kappa_vals, self.tri_vals = calc_kappa_elong(self.psi_data, np.asarray(self.lines.sep_closed.coords))
 
         # create interpolation functions to convert rho to psi and vice versa
         self.rho2psi, self.psi2rho = calc_rho2psi_interp(self.pts, self.psi_data)
+
+        np.savetxt('psi2rho.txt', np.column_stack((np.linspace(0,1,100), self.psi2rho(np.linspace(0,1,100)))))
 
         #create interpolation functions to obtain the flux surface surface area for any value of r, rho, or psi_norm
         self.r2sa, self.rho2sa, self.psi2sa = create_surf_area_interp(self.rho2psi,
@@ -933,6 +960,12 @@ class Core():
                                                                       np.asarray(self.lines.sep_closed.coords),
                                                                       self.R0_a,
                                                                       self.a)
+
+        # initialize volume as a function of rho
+        self.vol_rho = self.rho2vol(self.rho)
+
+        # initialize dVdrho interpolator
+        self.dVdrho = UnivariateSpline(np.linspace(0,1,100), self.rho2vol(np.linspace(0,1,100)), k=3, s=0).derivative()
 
         # initialize total plasma volume
         self.vol = self.rho2vol(1.0)
@@ -965,7 +998,7 @@ class Core():
 
         # electron density
         try:
-            ne = UnivariateSpline(inp.nT_data[:, 0], inp.ne_data[:, 1], k=3, s=2.0)(self.rho)
+            ne = UnivariateSpline(inp.ne_data[:, 0], inp.ne_data[:, 1], k=3, s=2.0)(self.rho)
         except AttributeError:
             ne = np.zeros(self.rho.shape)
 
@@ -981,7 +1014,7 @@ class Core():
 
         # tungsten density
         try:
-            nW = UnivariateSpline(inp.nC_data[:, 0], inp.nW_data[:, 1], k=3, s=2.0)(self.rho)
+            nW = UnivariateSpline(inp.nW_data[:, 0], inp.nW_data[:, 1], k=3, s=2.0)(self.rho)
         except AttributeError:
             try:
                 frac_W = UnivariateSpline(inp.frac_W_data[:, 0], inp.frac_W_data[:, 1], k=5, s=2.0)(self.rho)
@@ -1015,6 +1048,7 @@ class Core():
             2 * ne * 1E-7   # total
         )
         self.n = namedtuple('n', 'D T i e C W Be a n')(nD, nT, ni, ne, nC, nW, nBe, na, nn)
+
         self.z_0 = nC*6.0**2 / (nD + nT)  # TODO: Update this calculation
         self.z_eff = ((nD + nT)*1.0**2 + nC*6.0**2) / ne  # TODO: Update this calculation
 
@@ -1085,11 +1119,16 @@ class Core():
         )
 
         # initialize E_r and the corresponding electric potential
-        E_r_fit = UnivariateSpline(inp.er_data[:, 0], inp.er_data[:, 1], k=5, s=2.0)
-        self.E_r = E_r_fit(self.rho)
-        self.E_pot = np.zeros(self.rho.shape)
-        for i, rhoval in enumerate(rho1d):
-            self.E_pot[i] = E_r_fit.integral(rhoval, 1.0)
+        try:
+            E_r_fit = UnivariateSpline(inp.er_data[:, 0], inp.er_data[:, 1], k=5, s=2.0)
+            self.E_r = E_r_fit(self.rho)
+            self.E_pot = np.zeros(self.rho.shape)
+            for i, rhoval in enumerate(rho1d):
+                self.E_pot[i] = E_r_fit.integral(rhoval, 1.0)
+        except:
+            print 'Er data not supplied. Setting E_r and E_pot to zero.'
+            self.E_r = np.zeros(self.rho.shape)
+            self.E_pot = np.zeros(self.rho.shape)
 
         # initialize rotation velocities from data
         try:
@@ -1243,6 +1282,10 @@ class Core():
         # calculate chi using the JET Bohm-GyroBohm model
         chi_i_jet, chi_e_jet = calc_chi_jet(self.T, self.L, self.a, self.q, self.B_t, m_d, self.rho)
 
+        # chi hybrid
+        # this chi uses the JET chi up to rho = 0.9 and then linearly interpolates to the value of chi_bohm
+        # at the seperatrix
+
         self.chi = namedtuple('chi', 'bohm jet')(
             chi_bohm,
             namedtuple('jet', 'i e')(
@@ -1285,6 +1328,12 @@ class Core():
                                              method='linear')
         except:
             izn_rate_t = self.izn_rate.t
+
+        print 'n_n_t_xpt = ', n_n_t[self.xpt_loc]
+        # plt.contourf(self.R, self.Z, n_n_t)
+        # plt.colorbar()
+        # plt.show()
+        # sys.exit()
 
         nn = namedtuple('nn', 's t tot')(
             n_n_s,  # slow
