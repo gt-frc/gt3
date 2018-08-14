@@ -18,7 +18,7 @@ import sys
 import os
 import re
 import time
-from subprocess import call
+from subprocess import call, Popen, PIPE
 import matplotlib.pyplot as plt
 from core import Core
 from sol import Sol
@@ -247,7 +247,7 @@ def create_tri_segs(inp, lines, pts):
                           ib_div_segs + len(sep_segs),
                           ob_div_segs + len(ib_div_segs) + len(sep_segs) + 1,
                           core_segs + len(ob_div_segs) + len(ib_div_segs) + len(sep_segs) + 1 + 1,
-                          sol_segs + len(core_segs) + len(ob_div_segs) + len(ib_div_segs) + len(sep_segs)  + 1 + 1,
+                          sol_segs + len(core_segs) + len(ob_div_segs) + len(ib_div_segs) + len(sep_segs) + 1 + 1,
                           wall_segs + len(sol_segs) + len(core_segs) + len(ob_div_segs) + len(ib_div_segs) + len(sep_segs) + 1 + 1 + inp.num_sollines
                           ))
 
@@ -343,44 +343,41 @@ class Neutrals:
         # Try to read in specified neutrals data file. If it's not there, then prepare inputs for and run neutpy
         try:
             ntrl_data = np.loadtxt(inp.neutfile_loc, delimiter=',', skiprows=1)
-            ntrl_dict = {}
-            ntrl_dict['R'] = ntrl_data[:, 1]
-            ntrl_dict['Z'] = ntrl_data[:, 2]
-            ntrl_dict['n_n_slow'] = ntrl_data[:, 3]
-            ntrl_dict['n_n_thermal'] = ntrl_data[:, 4]
-            ntrl_dict['izn_rate_slow'] = ntrl_data[:, 5]
-            ntrl_dict['izn_rate_thermal'] = ntrl_data[:, 6]
-
-            self.data = namedtuple('data', ntrl_dict.keys())(*ntrl_dict.values())
+            self.data = namedtuple('data', 'R Z n_n_slow n_n_thermal izn_rate_slow izn_rate_thermal')(
+                ntrl_data[:, 1],
+                ntrl_data[:, 2],
+                ntrl_data[:, 3],
+                ntrl_data[:, 4],
+                ntrl_data[:, 6],
+                ntrl_data[:, 7]
+            )
         except:
             # instantiate sol and pfr
-            sol = ExpSolBrnd(inp, core)
-            pfr = ExpPfrBrnd(inp, core)
+            sol = Sol(inp, core)
+            pfr = Pfr(inp, core)
 
             # assemble lines for neutrals calculation
-            lines_dict = {}
-            lines_dict['core'] = calc_core_lines_ntrl(core)
-            lines_dict['sep'] = core.lines.sep
-            lines_dict['sol'] = sol.sol_lines_cut
-            lines_dict['pfr'] = pfr.pfr_line
-            lines_dict['ib_div'] = core.lines.div.ib
-            lines_dict['ob_div'] = core.lines.div.ob
-            lines_dict['wall'] = inp.wall_line
-            lines = namedtuple('lines', lines_dict.keys())(*lines_dict.values())
+            lines = namedtuple('lines', 'core sep sol pfr ib_div ob_div wall')(
+                calc_core_lines_ntrl(core),
+                core.lines.sep,
+                sol.sol_lines_cut,
+                pfr.pfr_line,
+                core.lines.div.ib,
+                core.lines.div.ob,
+                inp.wall_line
+            )
 
             # assemble density and temperature points and values for neutrals calculation
-            core_nT_dict = {}
-            core_nT_dict['ni'] = np.column_stack((core.R.flatten(), core.Z.flatten(), core.n.i.flatten()))
-            core_nT_dict['ne'] = np.column_stack((core.R.flatten(), core.Z.flatten(), core.n.e.flatten()))
-            core_nT_dict['Ti'] = np.column_stack((core.R.flatten(), core.Z.flatten(), core.T.i.kev.flatten()))
-            core_nT_dict['Te'] = np.column_stack((core.R.flatten(), core.Z.flatten(), core.T.e.kev.flatten()))
-            core_nT = namedtuple('core_nT', core_nT_dict.keys())(*core_nT_dict.values())
-
-            nT_dict = {}
-            nT_dict['core'] = core_nT
-            nT_dict['sol'] = sol.sol_nT
-            nT_dict['wall'] = sol.wall_nT
-            nT = namedtuple('nT', nT_dict.keys())(*nT_dict.values())
+            nT = namedtuple('nT', 'core sol wall')(
+                namedtuple('core_nT', 'ni ne Ti Te')(
+                    np.column_stack((core.R.flatten(), core.Z.flatten(), core.n.i.flatten())),
+                    np.column_stack((core.R.flatten(), core.Z.flatten(), core.n.e.flatten())),
+                    np.column_stack((core.R.flatten(), core.Z.flatten(), core.T.i.kev.flatten())),
+                    np.column_stack((core.R.flatten(), core.Z.flatten(), core.T.e.kev.flatten()))
+                ),
+                sol.sol_nT,
+                sol.wall_nT
+            )
 
             # get points from those lines
             pts, core_ring = create_tri_pts(inp, lines)
@@ -394,9 +391,28 @@ class Neutrals:
             # specify triangle options based on input file specs
             triangle_opts = create_triangle_opts(inp)
 
-            print 'running triangle'
+
             # run triangle
-            call(['triangle', triangle_opts, triangle_infile])
+            print 'running triangle'
+
+            # set the name of the executable based on the operating system
+            if os.name == 'nt':
+                triangle_name = 'triangle.exe'
+            elif os.name == 'posix':
+                triangle_name = 'triangle'
+            else:
+                print 'Not sure what os you\'re running. If mac, you might need to add some code \
+                        to the neutpy_prep module to help it find and run triangle.'
+                sys.exit()
+            try:
+                p = Popen([triangle_name, triangle_opts, triangle_infile], stdin=PIPE, stdout=PIPE).wait()
+                #call(['triangle', triangle_opts, triangle_infile])
+            except:
+                try:
+                    p = Popen([inp.triangle_loc, triangle_opts, triangle_infile], stdin=PIPE, stdout=PIPE).wait()
+                    #call([inp.triangle_loc, triangle_opts, triangle_infile])
+                except:
+                    print 'Unable to find triangle executable. Stopping.'
 
             midpts, toneutpy = self.create_neutpy_input(inp, core, lines, nT, core_ring)
 
@@ -409,15 +425,14 @@ class Neutrals:
             #print 'calling plot_cell_vals from NeutpyTools'
             #self.ntools.plot_cell_vals
 
-            dict = {}
-            dict['R'] = midpts[:, 0]
-            dict['Z'] = midpts[:, 1]
-            dict['n_n_slow'] = self.neutpy_inst.nn.s
-            dict['n_n_thermal'] = self.neutpy_inst.nn.t
-            dict['izn_rate_slow'] = self.neutpy_inst.izn_rate.s
-            dict['izn_rate_thermal'] = self.neutpy_inst.izn_rate.t
-
-            self.data = namedtuple('data', dict.keys())(*dict.values())
+            self.data = namedtuple('data', 'R Z n_n_slow n_n_thermal izn_rate_slow izn_rate_thermal')(
+                midpts[:, 0],
+                midpts[:, 1],
+                self.neutpy_inst.nn.s,
+                self.neutpy_inst.nn.t,
+                self.neutpy_inst.izn_rate.s,
+                self.neutpy_inst.izn_rate.t
+            )
 
         try:
             core.update_ntrl_data(self.data)

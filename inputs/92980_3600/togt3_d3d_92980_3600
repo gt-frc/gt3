@@ -10,11 +10,11 @@ j0 = 1.12E6
 j_sep = 0 
 nu_j = 1
 IP = 1.28 
-q95 = 3.884
-BT0 = 2.11
+q95 = 5.794
+BT0 = 2.124
 
 #NEUTRALS PARAMETERS
-neut_outfile = gt3_144977_3000_neut.dat
+neut_outfile = gt3_92980_3600_neut.dat
 core_thetapts_ntrl = 50
 ib_thetapts_ntrl = 10
 ob_thetapts_ntrl = 10
@@ -45,17 +45,15 @@ pfr_Ti_val = 0.002
 pfr_Te_val = 0.002
 
 #1D PROFILE INPUT FILES
-ne_file = /144977_3000/gt3_144977_3000_ne2.dat
-nD_file = /144977_3000/gt3_144977_3000_ne2.dat
-Te_file = /144977_3000/gt3_144977_3000_Te.dat
-Ti_file = /144977_3000/gt3_144977_3000_Ti.dat
-er_file = /144977_3000/gt3_144977_3000_er.dat
-fracz_file = /144977_3000/gt3_144977_3000_fracz.dat
-vpolC_file = /144977_3000/gt3_144977_3000_vpolC.dat
-vtorC_file = /144977_3000/gt3_144977_3000_vtorC.dat
+ne_file = /92980_3600/gt3_92980_3600_ne_rescaled.dat
+nD_file = /92980_3600/gt3_92980_3600_nD_rescaled.dat
+Te_file = /92980_3600/gt3_92980_3600_Te_rescaled.dat
+Ti_file = /92980_3600/gt3_92980_3600_Ti_rescaled.dat
+er_file = /92980_3600/gt3_92980_3600_er.dat
+fracz_file = /92980_3600/gt3_92980_3600_fracz.dat
 
 2D QUANTITIES INPUT FILES
-psirz_file = /144977_3000/gt3_144977_3000_psirz.dat
+psirz_file = /92980_3600/gt3_92980_3600_psirz.dat
 
 2D LINE INPUT FILES
 wall_file = /machine/gt3_diiid_wall.dat

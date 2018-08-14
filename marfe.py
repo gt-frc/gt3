@@ -99,16 +99,17 @@ def calc_n_marfe(n, sv, T, L, Lz, chi_r):
     """
     C2 = calc_C2(n)
     E_ion = calc_E_ion()
-    Lz_t = Lz.t
-    dLzdT = Lz.ddT
-    #Lz_t, dLzdT = calc_Lz_gtedge(T.i.kev*1E3)
-    #Lz_t = Lz_t * 1E-13  # now in Jm^3/s
-    #dLzdT = dLzdT * 1E-13  # now in Jm^3/s
+    # Lz_t = Lz.t
+    # dLzdT = Lz.ddT
+    Lz_t, dLzdT = calc_Lz_gtedge(T.i.kev*1E3)
+    Lz_t = Lz_t * 1E-13  # now in Jm^3/s
+    dLzdT = dLzdT * 1E-13  # now in Jm^3/s
     nu = 5 / 2
     fz = calc_fz(n)
     f0 = calc_f0(n)
     f0c = calc_f0c(n)
 
+    print 'MARFE Index Parameters'
     print ' chi_r = ', chi_r
     print ' nu = ', nu
     print ' L.T^-1 = ', 1/L.T
@@ -130,11 +131,6 @@ def calc_n_marfe(n, sv, T, L, Lz, chi_r):
     print ' n.e = ', n.e
     print
 
-    # term1 = chi_r * (nu * L.T**-2 + (C2 - 1.0) * L.T**-1 * L.n**-1)
-    # term2 = fz * ((nu + 1 - C2) * Lz_t / T.i.J - dLzdT)
-    # term3 = f0 * (E_ion * sv.ion / T.i.J * (nu - T.i.J / sv.ion * sv.ion_ddT))
-    # term4 = f0c * (3.0 / 2.0 * (sv.cx + sv.el) * (nu - 1.0 - T.i.J * (sv.cx_ddT + sv.el_ddT) / (sv.cx + sv.el)))
-
     term1 = chi_r * (nu * L.T**-2 + (C2 - 1.0) * L.T**-1 * L.n**-1)
     term2 = fz * ((nu + 1 - C2) * Lz_t / (T.i.J+T.e.J)/2 - dLzdT)
     term3 = f0 * (E_ion * sv.ion / T.i.J * (nu - (T.i.J+T.e.J)/2 / sv.ion * sv.ion_ddT))
@@ -152,10 +148,6 @@ def calc_n_marfe(n, sv, T, L, Lz, chi_r):
                       term3 +
                       term4
               )
-
-    print 'n_marfe = ', n_marfe
-    print
-    print 'MI = ', n.e / n_marfe
     return n_marfe, n.e / n_marfe
 
 
@@ -176,6 +168,26 @@ class Marfe:
                 core.n.e[core.xpt_loc],
                 core.n.i[core.xpt_loc],
                 core.n.C[core.xpt_loc]
+            )
+
+            n_obmp = namedtuple('n', 'n e i C')(
+                namedtuple('nn', 's t')(
+                    core.n.n.s[core.obmp_loc],
+                    core.n.n.t[core.obmp_loc]
+                ),
+                core.n.e[core.obmp_loc],
+                core.n.i[core.obmp_loc],
+                core.n.C[core.obmp_loc]
+            )
+
+            n_av = namedtuple('n', 'n e i C')(
+                namedtuple('nn', 's t')(
+                    (n_xpt.n.s + n_obmp.n.s) / 2,
+                    (n_xpt.n.t + n_obmp.n.t) / 2
+                ),
+                (n_xpt.e + n_obmp.e) / 2,
+                (n_xpt.i + n_obmp.i) / 2,
+                (n_xpt.C + n_obmp.C) / 2
             )
 
             T_xpt = namedtuple('T', 'e i n')(
@@ -209,16 +221,50 @@ class Marfe:
                 core.L.T.i[core.xpt_loc]
             )
 
+            L_xpt = namedtuple('L', 'n T')(
+                1.0/25.0,
+                1.0/38.0
+            )
+
+            # L_xpt = namedtuple('L', 'n T')(
+            #     1.0/15.6,
+            #     1.0/14.2
+            # )
+
+            L_obmp = namedtuple('L', 'n T')(
+                core.L.n.i[core.obmp_loc],
+                core.L.T.i[core.obmp_loc]
+            )
+
+            L_ibmp = namedtuple('L', 'n T')(
+                core.L.n.i[core.ibmp_loc],
+                core.L.T.i[core.ibmp_loc]
+            )
+
+            L_top = namedtuple('L', 'n T')(
+                core.L.n.i[core.top_loc],
+                core.L.T.i[core.top_loc]
+            )
+
+            print 'L_xpt.n^-1 = ',1/L_xpt.n
+            print 'L_xpt.T^-1 = ',1/L_xpt.T
+            print 'L_obmp.n^-1 = ',1/L_obmp.n
+            print 'L_obmp.T^-1 = ',1/L_obmp.T
+            print 'L_top.n^-1 = ',1/L_top.n
+            print 'L_top.T^-1 = ',1/L_top.T
+            print 'L_ibmp.n^-1 = ',1/L_ibmp.n
+            print 'L_ibmp.T^-1 = ',1/L_ibmp.T
+            # sys.exit()
+
             Lz_xpt = namedtuple('Lz', 't ddT')(
                 core.Lz.t[core.xpt_loc],
                 core.Lz.ddT.t[core.xpt_loc]
             )
 
-            chi_r_xpt = core.chi_r[core.xpt_loc]
+            chi_r_xpt = core.chi.bohm[core.xpt_loc]
 
-            self.n_marfe, self.MI = calc_n_marfe(n_xpt, sv_xpt, T_xpt, L_xpt, Lz_xpt, chi_r_xpt)
+            self.n_marfe, self.MI = calc_n_marfe(n_av, sv_xpt, T_xpt, L_xpt, Lz_xpt, chi_r_xpt)
 
-            print 'self.n_marfe = ',self.n_marfe
         elif inputs is not None:
             # use 'inputs' to create inputs for calc_n_marfe
             n = inputs.n
@@ -233,4 +279,20 @@ class Marfe:
             print 'stopping'
             sys.exit()
 
-
+        print
+        print '######################################'
+        print
+        print 'ni = ', n_xpt.i
+        print 'ne = ', n_xpt.e
+        print 'self.n_marfe = ',self.n_marfe
+        print
+        print 'Ti(ev) = ', T_xpt.i.ev
+        print 'Te(ev) = ', T_xpt.e.ev
+        print
+        print 'nC / ne = ', n_xpt.C / n_xpt.e
+        print 'nn / ne (xpt) = ', (n_xpt.n.s + n_xpt.n.t) / n_xpt.e
+        print 'nn / ne (obmp) = ', (n_obmp.n.s + n_obmp.n.t) / n_obmp.e
+        print 'self.MI = ', self.MI
+        print
+        print '######################################'
+        print

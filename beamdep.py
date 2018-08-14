@@ -8,7 +8,7 @@ Created on Sun Mar 18 21:51:19 2018
 from __future__ import division
 import numpy as np
 from scipy.interpolate import interp1d
-from subprocess import call, PIPE
+from subprocess import call, Popen, PIPE
 import os
 import re
 import sys
@@ -35,7 +35,7 @@ def calc_pwr_frac(ebeam):
 
 def prep_nbi_infile(inp, core):
     pwr_frac = calc_pwr_frac(inp.ebeam)
-    pwr_frac = [0.7, 0.2, 0.1]
+    # pwr_frac = [0.7, 0.2, 0.1]
 
     # f1=open(inp.nbeams_loc+"inbeams.dat", "w")
     f = open("inbeams.dat", "w")
@@ -477,34 +477,43 @@ class BeamDeposition:
         # When integrated over r, this should equal P_beam, or at least the amount
         # that is deposited in the plasma.
 
-
-
-
         try:
             nbi_vals = calc_nbi_vals(inp, core)
             # If no deposition profile is provided, then prepare nbeams input file and run nbeams
         except:
+
+            # set the name of the executable based on the operating system
+            if os.name == 'nt':
+                nbeams_name = 'nbeams.exe'
+            elif os.name == 'posix':
+                nbeams_name = 'nbeams'
+            else:
+                print 'not sure what os you\'re running. If mac, you might need to add some code \
+                        to the beamdep module to help it find and run nbeams.'
+                sys.exit()
+
             try:
                 #prepare nbeams input file
                 prep_nbi_infile(inp, core)
 
-                #call nbeams. Note to those familiar with the old nbeams, I modified
-                #the source code to take the input file as a commandline argument. - MH
+                # call nbeams. Note to those familiar with the old nbeams, I modified
+                # the source code to take the input file as a commandline argument. - MH
+
                 try:
-                    call([inp.nbeams_loc+'nbeams', os.getcwd()+'/inbeams.dat'], stdout=PIPE)
+                    # try to find nbeams in the system path
+                    p = Popen([nbeams_name, os.getcwd()+'/inbeams.dat'], stdin=PIPE, stdout=PIPE).wait()
                 except:
                     try:
-                        call(['nbeams', os.getcwd()+'/inbeams.dat'], stdout=PIPE)
+                        # otherwise use the location specified in the input file
+                        p = Popen([inp.nbeams_loc, os.getcwd()+'/inbeams.dat'], stdin=PIPE, stdout=PIPE).wait()
                     except:
                         print 'Unable to find nbeams executable. Stopping.'
                         sys.exit()
-
                 # instantiate class with nbeams output file information
                 nbi_vals = read_nbi_outfile(inp, core)
             except:
                 print 'unable to create beam deposition information. Stopping.'
                 sys.exit()
-
 
         # create beams object
         self.beams = namedtuple('beam', 'D1 D2 D3')(

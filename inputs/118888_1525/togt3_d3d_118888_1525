@@ -46,7 +46,7 @@ pfr_Te_val = 0.002
 
 #1D PROFILE INPUT FILES
 ne_file = /118888_1525/gt3_118888_1525_ne.dat
-ni_file = /118888_1525/gt3_118888_1525_ni.dat
+nD_file = /118888_1525/gt3_118888_1525_nD.dat
 Te_file = /118888_1525/gt3_118888_1525_Te.dat
 Ti_file = /118888_1525/gt3_118888_1525_Ti.dat
 er_file = /118888_1525/gt3_118888_1525_er.dat

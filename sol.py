@@ -45,7 +45,6 @@ def cut(line, distance):
 
 class Sol:
     def __init__(self, inp, core):
-        
         R = inp.psirz_exp[:, 0].reshape(-1, 65)
         Z = inp.psirz_exp[:, 1].reshape(-1, 65)
         
@@ -58,14 +57,65 @@ class Sol:
         self.sol_lines = []
         self.sol_lines_cut = []
 
+        #
+        # first we need to make sure that the inp.sollines_psi_max specified in the input file doesn't
+        # go outside of the first wall. For now, we will check for this as follows:
+        #   1. draw the contours for psi_norm = inp.sollines_psi_max
+        #   2. if there is only 1, make sure it only intersects the first wall no more than twice
+        #   3. if there is only 1 and it intersects the first wall more than twice, raise an error
+        #       that tells the user to reduce their sollines_psi_max value in the input file
+        #   4. if there is more than 1 contour, then we need to determine which one is the correct one.
+        #       for now, we will check that it's largest y value is higher than the magnetic axis,
+        #       it's largest x value is to the right of the magnetic axis, it's lowest y value is lower
+        #       than the magnetic axis, and it's lowest x value is to the left of the magnetic axis.
+        #   5. Once the correct contour has been identified, do steps 2 and 3.
+        #
+
+        sollines_psi_max_contours = c.contour(inp.sollines_psi_max)
+        num_lines = len(sollines_psi_max_contours)
+        if num_lines == 1:
+            # then this is probably the correct line. Check to see how many times it intersects
+            # with the first wall
+            num_wall_ints = len(LineString(sollines_psi_max_contours[0]).intersection(inp.wall_line))
+            if num_wall_ints > 2:
+                print 'It looks like your sollines_psi_max value might be intersecting the wall.' \
+                      'Try reducing it. Stopping.'
+                sys.exit()
+        else:
+            for i, line in enumerate(sollines_psi_max_contours):
+                max_x = np.amax(line[:,0])
+                min_x = np.amin(line[:,0])
+                max_y = np.amax(line[:,1])
+                min_y = np.amin(line[:,1])
+                if min_x < core.pts.axis.mag[0] < max_x and min_y < core.pts.axis.mag[1] < max_y:
+                    # then this is probably the correct line. Check to see how many times it intersects
+                    # with the first wall
+                    num_wall_ints = len(LineString(line).intersection(inp.wall_line))
+                    if num_wall_ints > 2:
+                        print 'It looks like your sollines_psi_max value might be intersecting the wall.' \
+                              'Try reducing it. Stopping.'
+                        sys.exit()
+                    else:
+                        break
+
         psi_pts = np.linspace(1, inp.sollines_psi_max, inp.num_sollines+1, endpoint=True)[1:]
+
         for i, v in enumerate(psi_pts):
             num_lines = len(c.contour(v))
             if num_lines == 1:
+                # this is probably the correct line
                 self.sol_lines.append(LineString(c.contour(v)[0]))
             else:
-                # TODO:
-                pass
+                # we need to determine which contour to use
+                for line in c.contour(v):
+                    max_x = np.amax(line[:, 0])
+                    min_x = np.amin(line[:, 0])
+                    max_y = np.amax(line[:, 1])
+                    min_y = np.amin(line[:, 1])
+                    if min_x < core.pts.axis.mag[0] < max_x and min_y < core.pts.axis.mag[1] < max_y:
+                        # then this is probably the correct line.
+                        self.sol_lines.append(LineString(line))
+
         for line in self.sol_lines:
             # find intersection points with the wall
             int_pts = line.intersection(inp.wall_line)
@@ -108,10 +158,12 @@ class Sol:
         sep_flx_surf = 0.98
 
         # calculate dni/dpsi and dTi/dpsi at the seperatrix
-        ni_psi_fit = UnivariateSpline(core.rho2psi(inp.ni_data[:, 0]), inp.ni_data[:, 1], k=3, s=2.0)
-        ne_psi_fit = UnivariateSpline(core.rho2psi(inp.ne_data[:, 0]), inp.ne_data[:, 1], k=3, s=2.0)
-        Ti_psi_fit = UnivariateSpline(core.rho2psi(inp.Ti_data[:, 0]), inp.Ti_data[:, 1], k=3, s=2.0)
-        Te_psi_fit = UnivariateSpline(core.rho2psi(inp.Te_data[:, 0]), inp.Te_data[:, 1], k=3, s=2.0)
+        # TODO: include both deuterium and tritium here
+        # ni_psi_fit = UnivariateSpline(core.rho2psi(inp.nD_data[:, 0]), inp.nD_data[:, 1], k=3, s=2.0)
+        ni_psi_fit = UnivariateSpline(core.rho2psi(core.rho[:, 0]), core.n.i[:, 0], k=3, s=2.0)
+        ne_psi_fit = UnivariateSpline(core.rho2psi(core.rho[:, 0]), core.n.e[:, 0], k=3, s=2.0)
+        Ti_psi_fit = UnivariateSpline(core.rho2psi(core.rho[:, 0]), core.T.i.kev[:, 0], k=3, s=2.0)
+        Te_psi_fit = UnivariateSpline(core.rho2psi(core.rho[:, 0]), core.T.e.kev[:, 0], k=3, s=2.0)
         dni_dpsi_sep = ni_psi_fit.derivative()(sep_flx_surf)
         dTi_dpsi_sep = Ti_psi_fit.derivative()(sep_flx_surf)
 
@@ -162,25 +214,39 @@ class Sol:
 
         # define densities and temperatures along divertor legs
         # TODO: Specify these things in the input file
-        ni_ib_wall = ni_sep_cut[0] * 1.5
-        ni_ob_wall = ni_sep_cut[-1] * 1.5
+        ni_ib_wall = ni_sep_cut[0] * 10
+        ni_ob_wall = ni_sep_cut[-1] * 10
         ni_ib = np.linspace(ni_ib_wall, ni_sep_cut[0], inp.xi_ib_pts, endpoint=False)
         ni_ob = np.linspace(ni_sep_cut[-1], ni_ob_wall, inp.xi_ob_pts, endpoint=True)
         
-        ne_ib_wall = ne_sep_cut[0] * 1.5
-        ne_ob_wall = ne_sep_cut[-1] * 1.5
+        ne_ib_wall = ne_sep_cut[0] * 10
+        ne_ob_wall = ne_sep_cut[-1] * 10
         ne_ib = np.linspace(ne_ib_wall, ne_sep_cut[0], inp.xi_ib_pts, endpoint=False)
         ne_ob = np.linspace(ne_sep_cut[-1], ne_ob_wall, inp.xi_ob_pts, endpoint=True)
         
-        Ti_ib_wall = Ti_sep_cut[0] * 1.5
-        Ti_ob_wall = Ti_sep_cut[-1] * 1.5
+        Ti_ib_wall = Ti_sep_cut[0] / 4
+        Ti_ob_wall = Ti_sep_cut[-1] / 4
         Ti_ib = np.linspace(Ti_ib_wall, Ti_sep_cut[0], inp.xi_ib_pts, endpoint=False)
         Ti_ob = np.linspace(Ti_sep_cut[-1], Ti_ob_wall, inp.xi_ob_pts, endpoint=True)
 
-        Te_ib_wall = Te_sep_cut[0] * 1.5
-        Te_ob_wall = Te_sep_cut[-1] * 1.5
+        Te_ib_wall = Te_sep_cut[0] / 4
+        Te_ob_wall = Te_sep_cut[-1] / 4
         Te_ib = np.linspace(Te_ib_wall, Te_sep_cut[0], inp.xi_ib_pts, endpoint=False)
         Te_ob = np.linspace(Te_sep_cut[-1], Te_ob_wall, inp.xi_ob_pts, endpoint=True)
+
+        print
+        print '#####################################'
+        print ' divertor values'
+        print ' ni_ib_wall = ', ni_ib_wall
+        print ' ni_ob_wall = ', ni_ob_wall
+        print ' ne_ib_wall = ', ne_ib_wall
+        print ' ne_ob_wall = ', ne_ob_wall
+        print ' Ti_ib_wall(ev) = ', Ti_ib_wall / 1.6021E-19
+        print ' Ti_ob_wall(ev) = ', Ti_ob_wall / 1.6021E-19
+        print ' Te_ib_wall(ev) = ', Te_ib_wall / 1.6021E-19
+        print ' Te_ob_wall(ev) = ', Te_ob_wall / 1.6021E-19
+        print '#####################################'
+        print
 
         # define density and temperature gradients along the inboard and outboard divertor legs
         dnidr_ib_wall = dnidr_sep_cut[0]
@@ -258,10 +324,41 @@ class Sol:
 
         # now calculate densities and temperatures radially outward from the seperatrix for a distance
         # long enough that the wall is enclosed, so we can get densities and temperatures along the wall
-        # r_max~0.5 is enough for DIII-D. May not be enough for ITER.
-        # TODO: calculate the maximum wall distance before setting this parameter
 
-        r_max = 0.5
+        # first draw wall line through 2d strip model to get n, T along the line
+        # we do this first so we can find the farthest point and make sure that we
+        # make our SOL strip wide enough to go all the way to even the farthest point
+        # on the wall
+        wall_pts = np.asarray(inp.wall_line.xy).T
+        ib_int_pt = np.asarray(core.lines.div.ib.intersection(inp.wall_line).xy).T
+        ob_int_pt = core.lines.div.ob.intersection(inp.wall_line)
+        wall_start_pos = np.where((wall_pts == ib_int_pt).all(axis=1))[0][0]
+        wall_line_rolled = LineString(np.roll(wall_pts, -wall_start_pos, axis=0))
+        wall_line_cut = cut(wall_line_rolled,
+                            wall_line_rolled.project(ob_int_pt, normalized=True))[0]
+        # add points to wall line for the purpose of getting n, T along the wall. These points
+        # won't be added to the main wall line or included in the triangulation.
+        # for i, v in enumerate(np.linspace(0, 1, 300)):
+        #    #interpolate along wall_line_cut to find point to add
+        #    pt = wall_line_cut.interpolate(v, normalized=True)
+        #    #add point to wall_line_cut
+        #    union = wall_line_cut.union(pt)
+        #    result = [geom for geom in polygonize(union)][0]
+        #    wall_line_cut = LineString(result.exterior.coords)
+
+        wall_nT_pts = np.asarray(wall_line_cut)
+        num_wall_pts = len(wall_nT_pts)
+        wall_pos_norm = np.zeros(num_wall_pts)
+        wall_dist = np.zeros(num_wall_pts)
+
+        for i, pt in enumerate(wall_nT_pts):
+            wall_pt = Point(pt)
+            sep_pt_pos = core.lines.ib2ob.project(Point(wall_pt), normalized=True)
+            sep_pt = core.lines.ib2ob.interpolate(sep_pt_pos, normalized=True)
+            wall_pos_norm[i] = wall_line_cut.project(wall_pt, normalized=True)
+            wall_dist[i] = wall_pt.distance(sep_pt)
+
+        r_max = np.amax(wall_dist)*1.1  # the 1.1 multiplication just ensures that we go a bit farther than necessary
         twoptdiv_r_pts = 20
         
         r_pts = np.linspace(0, r_max, twoptdiv_r_pts)
@@ -272,7 +369,6 @@ class Sol:
         sol_Te = Te_xi * np.exp(-r/delta_sol_T)
 
         # set some minimum values
-
         min_n = 1E15
         min_T = 2.0*1.6021E-19
         sol_ni = np.where(sol_ni < min_n, min_n, sol_ni)
@@ -331,35 +427,7 @@ class Sol:
         sol_nT_dict['Te'] = pts_Te_sol
         self.sol_nT = namedtuple('sol_nT', sol_nT_dict.keys())(*sol_nT_dict.values())
 
-        # draw wall line through 2d strip model to get n, T along the line
-        wall_pts = np.asarray(inp.wall_line.xy).T
-        ib_int_pt = np.asarray(core.lines.div.ib.intersection(inp.wall_line).xy).T
-        ob_int_pt = core.lines.div.ob.intersection(inp.wall_line)
-        wall_start_pos = np.where((wall_pts == ib_int_pt).all(axis=1))[0][0]
-        wall_line_rolled = LineString(np.roll(wall_pts, -wall_start_pos, axis=0))
-        wall_line_cut = cut(wall_line_rolled, 
-                            wall_line_rolled.project(ob_int_pt, normalized=True))[0]
-        # add points to wall line for the purpose of getting n, T along the wall. These points
-        # won't be added to the main wall line or included in the triangulation.
-        # for i, v in enumerate(np.linspace(0, 1, 300)):
-        #    #interpolate along wall_line_cut to find point to add
-        #    pt = wall_line_cut.interpolate(v, normalized=True)
-        #    #add point to wall_line_cut
-        #    union = wall_line_cut.union(pt)
-        #    result = [geom for geom in polygonize(union)][0]
-        #    wall_line_cut = LineString(result.exterior.coords)
-        
-        wall_nT_pts = np.asarray(wall_line_cut)
-        num_wall_pts = len(wall_nT_pts)
-        wall_pos_norm = np.zeros(num_wall_pts)
-        wall_dist = np.zeros(num_wall_pts)
 
-        for i, pt in enumerate(wall_nT_pts):
-            wall_pt = Point(pt)
-            sep_pt_pos = core.lines.ib2ob.project(Point(wall_pt), normalized=True)
-            sep_pt = core.lines.ib2ob.interpolate(sep_pt_pos, normalized=True)
-            wall_pos_norm[i] = wall_line_cut.project(wall_pt, normalized=True)
-            wall_dist[i] = wall_pt.distance(sep_pt)
         
         wall_ni = griddata(np.column_stack((xi.flatten(), r.flatten())), 
                            sol_ni.flatten(), 
@@ -391,7 +459,8 @@ class Sol:
         wall_nT_dict['Te'] = pts_Te_wall
         self.wall_nT = namedtuple('wall_nT', wall_nT_dict.keys())(*wall_nT_dict.values())
 
-        # plt.contourf(xi, r, sol_Ti, 500)
+        # # uncomment this if you're debugging
+        # plt.contourf(xi, r, sol_ni, 500)
         # plt.colorbar()
         # for i, v in enumerate(self.sol_lines_cut):
         #     plt.plot(xi_pts, sol_line_dist[:, i])

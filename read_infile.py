@@ -160,6 +160,7 @@ class ReadInfile:
         # NEUTRAL BEAM CALCULATION
         self.invars['nbeams_loc'] = ['str', r0ds]
         self.invars['adpak_loc'] = ['str', r0ds]
+        self.invars['triangle_loc'] = ['str', r0ds]
         self.invars['ebeam'] = ['float', r0df]
         self.invars['abeam'] = ['float', r0df]
         self.invars['alphain'] = ['float', r0df]
@@ -170,10 +171,15 @@ class ReadInfile:
         self.in_prof['er_file'] = ['str', r0ds, 'er_data']
         self.in_prof['jr_file'] = ['str', r0ds, 'jr_data']
         self.in_prof['ne_file'] = ['str', r0ds, 'ne_data']
-        self.in_prof['ni_file'] = ['str', r0ds, 'ni_data']
+        self.in_prof['nD_file'] = ['str', r0ds, 'nD_data']
+        self.in_prof['nT_file'] = ['str', r0ds, 'nT_data']
+        self.in_prof['nW_file'] = ['str', r0ds, 'nW_data']
+        self.in_prof['nBe_file'] = ['str', r0ds, 'nBe_data']
+        self.in_prof['na_file'] = ['str', r0ds, 'na_data']
         self.in_prof['nC_file'] = ['str', r0ds, 'nC_data']
         self.in_prof['Te_file'] = ['str', r0ds, 'Te_data']
         self.in_prof['Ti_file'] = ['str', r0ds, 'Ti_data']
+        self.in_prof['TC_file'] = ['str', r0ds, 'TC_data']
         self.in_prof['fracz_file'] = ['str', r0ds, 'fracz_data']
         self.in_prof['vpolC_file'] = ['str', r0ds, 'vpolC_data']
         self.in_prof['vtorC_file'] = ['str', r0ds, 'vtorC_data']
@@ -231,8 +237,11 @@ class ReadInfile:
         for infile in self.in_prof:
             try:
                 exec("filename = self.%s"%(infile))
-                filepath = os.getcwd()+'/inputs/'+ filename
-                exec("self.%s = np.loadtxt('%s')"%(self.in_prof[infile][2], filepath))
+                filepath = os.getcwd()+'/inputs'+ filename
+                try:
+                    exec("self.%s = np.loadtxt('%s')"%(self.in_prof[infile][2], filepath))
+                except Exception as e:
+                    print 'Something may have gone wrong: ', e
             except:
                 pass
             
@@ -241,7 +250,10 @@ class ReadInfile:
 
                 exec("filename = self.%s"%(infile))
                 filepath = os.getcwd()+'/inputs/'+ filename
-                exec("self.%s = np.loadtxt('%s')"%(self.in_map2d[infile][2], filepath))
+                try:
+                    exec("self.%s = np.loadtxt('%s')"%(self.in_map2d[infile][2], filepath))
+                except Exception as e:
+                    print 'Something may have gone wrong: ', e
             except:
                 pass
             
@@ -249,7 +261,10 @@ class ReadInfile:
             try:
                 exec("filename = self.%s"%(infile))
                 filepath = os.getcwd()+'/inputs/'+ filename
-                exec("self.%s = np.loadtxt('%s')"%(self.in_line2d[infile][2], filepath))
+                try:
+                    exec("self.%s = np.loadtxt('%s')"%(self.in_line2d[infile][2], filepath))
+                except Exception as e:
+                    print 'Something may have gone wrong: ',e
             except:
                 pass
         self.wall_line = LineString(self.wall_exp)
