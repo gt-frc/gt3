@@ -45,20 +45,21 @@ class gt3:
         elif mode == 'thermaliol':
             self.iol = IOL(self.inp, self.core)
         elif mode == 'fulliol':
-            self.nbi = BeamDeposition(self.inp, self.core)
+
             self.iol = IOL(self.inp, self.core)
         elif mode == 'imp':
             self.imp = ImpRad(self.inp, self.core)
         elif mode == 'ntrls':
             self.ntrl = Neutrals(self.inp, self.core)
         elif mode == 'ntrlsandiol':
-            self.ntrl = Neutrals(self.inp, self.core)
+            self.nbi = BeamDeposition(self.inp, self.core)
             self.iol = IOL(self.inp, self.core)
+            self.ntrl = Neutrals(self.inp, self.core)
         elif mode == 'nbi':
             self.nbi = BeamDeposition(self.inp, self.core)
         elif mode == 'therm_instab':
             self.nbi = BeamDeposition(self.inp, self.core)
-            # self.ntrl = Neutrals(self.inp, self.core)
+            self.ntrl = Neutrals(self.inp, self.core)
             self.imp = ImpRad(z=None, core=self.core)
             self.dl = DensityLimit(self.core, self.nbi)
             self.mar = Marfe(core=self.core)
