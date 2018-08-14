@@ -158,14 +158,16 @@ class ReadInfile:
         self.invars['ntrl_thetapts'] = ['int', r0di]
         
         # NEUTRAL BEAM CALCULATION
-        self.invars['nbeams_loc'] = ['str', r0ds]
-        self.invars['adpak_loc'] = ['str', r0ds]
-        self.invars['triangle_loc'] = ['str', r0ds]
         self.invars['ebeam'] = ['float', r0df]
         self.invars['abeam'] = ['float', r0df]
         self.invars['alphain'] = ['float', r0df]
         self.invars['pbeam'] = ['float', r0df]
         self.invars['rtang'] = ['float', r0df]
+
+        # EXECUTABLE LOCATIONS
+        self.invars['nbeams_loc'] = ['str', r0ds]
+        self.invars['adpak_loc'] = ['str', r0ds]
+        self.invars['triangle_loc'] = ['str', r0ds]
 
         self.in_prof = {}
         self.in_prof['er_file'] = ['str', r0ds, 'er_data']

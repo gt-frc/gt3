@@ -1057,7 +1057,10 @@ class Core:
         Te_kev = UnivariateSpline(inp.Te_data[:, 0], inp.Te_data[:, 1], k=5, s=2.0)(self.rho)
         Tns_kev = np.full(self.rho.shape, 0.002)
         Tnt_kev = Ti_kev
-        TC_kev = Ti_kev
+        try:
+            TC_kev = UnivariateSpline(inp.TC_data[:, 0], inp.TC_data[:, 1], k=5, s=2.0)(self.rho)
+        except:
+            TC_kev = Ti_kev
 
         self.T = namedtuple('T', 'i e n C')(
             namedtuple('Ti', 'kev ev J')(
