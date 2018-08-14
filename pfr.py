@@ -53,19 +53,19 @@ class Pfr:
     def pfr_lines(self, inp, core):
 
         c = QuadContourGenerator.from_rectilinear(core.psi_data.R[0], core.psi_data.Z[:, 0], core.psi_data.psi_norm)
-        contours = c.contour(0.99)
-        print contours
+        contours = c.contour(0.999)
+
         if len(contours) == 1:
             # then we're definitely dealing with a surface inside the seperatrix
             print 'Did not find PFR flux surface. Stopping.'
             sys.exit()
         else:
             # we need to find the surface that is contained within the private flux region
-            print 'len(contours) = ',len(contours)
-
             for j, contour in enumerate(contours):
-
-                if np.amax(contour[:, 1]) < core.pts.xpt[1]:
+                # if the contour is entirely below the x-point and contour extends to both the left and the
+                # right of the x-point horizontally, then the contour is almost certainly the desired PFR contour
+                if np.amax(contour[:, 1]) < core.pts.xpt[1] and \
+                        np.amin(contour[:, 0]) < core.pts.xpt[0] < np.amax(contour[:, 0]):
                     # then it's a probably a pfr flux surface, might need to add additional checks later
 
                     # make sure the line goes from inboard to outboard
@@ -131,7 +131,7 @@ class Pfr:
         brnd_pfr_dict['ne'] = pts_ne_pfr
         brnd_pfr_dict['Ti'] = pts_Ti_pfr
         brnd_pfr_dict['Te'] = pts_Te_pfr
-        
+
         #grid_x, grid_y = np.mgrid[1:2.5:500j, -1.5:1.5:500j]
         #ni_for_plot = griddata(self.ni_pts[:, :-1], self.ni_pts[:, -1], (grid_x, grid_y))
         #Ti_for_plot = griddata(self.Ti_kev_pts[:, :-1], self.Ti_kev_pts[:, -1], (grid_x, grid_y))
