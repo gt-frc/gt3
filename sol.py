@@ -129,12 +129,12 @@ class Sol:
         # end of the flux line isn't exactly on top of the wall line.
 
         # add inboard seperatrix strike point
-        union = inp.wall_line.union(core.lines.div.ib)
+        union = inp.wall_line.union(core.lines.div.ib_long)
         result = [geom for geom in polygonize(union)][0]
         inp.wall_line = LineString(result.exterior.coords)
 
         # add outboard seperatrix strike point
-        union = inp.wall_line.union(core.lines.div.ob)
+        union = inp.wall_line.union(core.lines.div.ob_long)
         result = [geom for geom in polygonize(union)][0]
         inp.wall_line = LineString(result.exterior.coords)  
         
@@ -329,12 +329,17 @@ class Sol:
         # make our SOL strip wide enough to go all the way to even the farthest point
         # on the wall
         wall_pts = np.asarray(inp.wall_line.xy).T
-        ib_int_pt = np.asarray(core.lines.div.ib.intersection(inp.wall_line).xy).T
-        ob_int_pt = core.lines.div.ob.intersection(inp.wall_line)
+        # ib_int_pt = np.asarray(core.lines.div.ib.intersection(inp.wall_line).xy).T
+        # ob_int_pt = core.lines.div.ob.intersection(inp.wall_line)
+        ib_int_pt = np.asarray(core.pts.strike.ib)
+        ob_int_pt = np.asarray(core.pts.strike.ob)
+
         wall_start_pos = np.where((wall_pts == ib_int_pt).all(axis=1))[0][0]
         wall_line_rolled = LineString(np.roll(wall_pts, -wall_start_pos, axis=0))
+
         wall_line_cut = cut(wall_line_rolled,
-                            wall_line_rolled.project(ob_int_pt, normalized=True))[0]
+                            wall_line_rolled.project(Point(ob_int_pt), normalized=True))[0]
+
         # add points to wall line for the purpose of getting n, T along the wall. These points
         # won't be added to the main wall line or included in the triangulation.
         # for i, v in enumerate(np.linspace(0, 1, 300)):
@@ -458,11 +463,11 @@ class Sol:
         wall_nT_dict['Te'] = pts_Te_wall
         self.wall_nT = namedtuple('wall_nT', wall_nT_dict.keys())(*wall_nT_dict.values())
 
-        # # uncomment this if you're debugging
-        # plt.contourf(xi, r, sol_ni, 500)
-        # plt.colorbar()
-        # for i, v in enumerate(self.sol_lines_cut):
-        #     plt.plot(xi_pts, sol_line_dist[:, i])
-        # plt.plot(np.linspace(0, 1, num_wall_pts), wall_dist, color='black')
-        # plt.show()
-        # sys.exit()
+        # uncomment this if you're debugging
+        plt.contourf(xi, r, sol_Ti, 500)
+        plt.colorbar()
+        for i, v in enumerate(self.sol_lines_cut):
+            plt.plot(xi_pts, sol_line_dist[:, i])
+        plt.plot(np.linspace(0, 1, num_wall_pts), wall_dist, color='black')
+        plt.show()
+        sys.exit()

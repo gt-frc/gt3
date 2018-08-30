@@ -182,7 +182,7 @@ class ReadInfile:
         self.in_prof['Te_file'] = ['str', r0ds, 'Te_data']
         self.in_prof['Ti_file'] = ['str', r0ds, 'Ti_data']
         self.in_prof['TC_file'] = ['str', r0ds, 'TC_data']
-        self.in_prof['fracz_file'] = ['str', r0ds, 'fracz_data']
+        self.in_prof['frac_C_file'] = ['str', r0ds, 'frac_C_data']
         self.in_prof['vpolC_file'] = ['str', r0ds, 'vpolC_data']
         self.in_prof['vtorC_file'] = ['str', r0ds, 'vtorC_data']
         self.in_prof['vpolD_file'] = ['str', r0ds, 'vpolD_data']
@@ -241,7 +241,7 @@ class ReadInfile:
                 exec("filename = self.%s"%(infile))
                 filepath = os.getcwd()+'/inputs'+ filename
                 try:
-                    exec("self.%s = np.loadtxt('%s')"%(self.in_prof[infile][2], filepath))
+                    exec("self.%s = np.genfromtxt('%s',comments='#')"%(self.in_prof[infile][2], filepath))
                 except Exception as e:
                     print 'Something may have gone wrong: ', e
             except:
@@ -253,7 +253,7 @@ class ReadInfile:
                 exec("filename = self.%s"%(infile))
                 filepath = os.getcwd()+'/inputs/'+ filename
                 try:
-                    exec("self.%s = np.loadtxt('%s')"%(self.in_map2d[infile][2], filepath))
+                    exec("self.%s = np.genfromtxt('%s',comments='#')"%(self.in_map2d[infile][2], filepath))
                 except Exception as e:
                     print 'Something may have gone wrong: ', e
             except:
@@ -264,11 +264,12 @@ class ReadInfile:
                 exec("filename = self.%s"%(infile))
                 filepath = os.getcwd()+'/inputs/'+ filename
                 try:
-                    exec("self.%s = np.loadtxt('%s')"%(self.in_line2d[infile][2], filepath))
+                    exec("self.%s = np.genfromtxt('%s',comments='#')"%(self.in_line2d[infile][2], filepath))
                 except Exception as e:
                     print 'Something may have gone wrong: ',e
             except:
                 pass
+
         self.wall_line = LineString(self.wall_exp)
         
     def set_ntrl_switch(self):

@@ -14,7 +14,7 @@ from scipy.constants import elementary_charge
 from shapely.geometry import Point, MultiPoint, LineString, LinearRing, Polygon
 from shapely.ops import polygonize, linemerge
 import sys
-from math import atan2, pi, ceil, sin, cos
+from math import atan2, pi, ceil, sin, cos, sqrt
 from collections import namedtuple
 from contours.quad import QuadContourGenerator
 from scipy import constants
@@ -632,21 +632,31 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis):
     bot_pt = lcfs[np.argmin(lcfs, axis=0)[1]]
     axis_geo = [(obmp_pt[0] + ibmp_pt[0]) / 2, (obmp_pt[1] + ibmp_pt[1]) / 2]
 
-    axis_nt = namedtuple('axis', 'geo mag')
-    axis = axis_nt(axis_geo, mag_axis)
-
-    strike_nt = namedtuple('strike', 'ib ob')
-    strike = strike_nt(ib_strike, ob_strike)
-
-    pts_nt = namedtuple('pts', 'ibmp obmp top bottom xpt axis strike')
-    pts = pts_nt(ibmp_pt, obmp_pt, top_pt, bot_pt, xpt, axis, strike)
+    pts = namedtuple('pts', 'ibmp obmp top bottom xpt axis strike')(
+        ibmp_pt,
+        obmp_pt,
+        top_pt,
+        bot_pt,
+        xpt,
+        namedtuple('axis', 'geo mag')(
+            axis_geo,
+            mag_axis),
+        namedtuple('strike', 'ib ob')(
+            ib_strike,
+            ob_strike))
 
     # create lines object
-    div_lines_nt = namedtuple('div_lines', 'ib ob')
-    div_lines = div_lines_nt(ib_line_cut, ob_line_cut)
+    div_lines = namedtuple('div_lines', 'ib ob ib_long ob_long')(
+        ib_line_cut,
+        ob_line_cut,
+        ib_line,
+        ob_line)
 
-    lines_nt = namedtuple('lines', 'sep sep_closed div ib2ob')
-    lines = lines_nt(lcfs_line, lcfs_line_closed, div_lines, entire_sep_line)
+    lines = namedtuple('lines', 'sep sep_closed div ib2ob')(
+        lcfs_line,
+        lcfs_line_closed,
+        div_lines,
+        entire_sep_line)
 
     return pts, lines
 
@@ -787,7 +797,7 @@ def calc_grad(rho, quant, psi, R, Z, psi_data):
     return dval_dr
 
 
-def create_surf_area_interp(rho2psi, psi_data, sep_pts, R0_a, a):
+def create_surf_area_interp(rho2psi, psi2rho, psi_data, sep_pts, R0_a, a):
     rho_vals = np.linspace(0, 1, 50, endpoint=True)
     r_vals = rho_vals * a
     psi_vals = rho2psi(rho_vals)
@@ -796,18 +806,30 @@ def create_surf_area_interp(rho2psi, psi_data, sep_pts, R0_a, a):
     # skip the first value. First value is zero.
     for i,psi_val in enumerate(psi_vals[1:]):
         if psi_val < 1:
-            fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, psi_val, sep_pts)
-            surf_area[i+1] = fs_line.length * 2*pi*fs_pts.axis[0]
+            try:
+                # try to get the actual length of the fs trace
+                fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, psi_val, sep_pts)
+                surf_area[i + 1] = fs_line.length * 2 * pi * fs_pts.axis[0]
+            except:
+                # if too close to the seperatrix, it may return None. In this case, estimate perimeter using Ramanujan
+                # TODO: Improve this estimation. Also, see comments in draw_core_line
+                rho_val = psi2rho(psi_val)
+                a_el = rho_val * a  # a of the ellipse
+                b_el = rho_val * a * 1.5  # b of the ellipse, assumed kappa of 1.5. This needs to be improved
+
+                surf_area[i + 1] = pi * (3*(a_el+b_el) - sqrt((3*a_el + b_el)*(a_el+3*b_el)))
+
         else:
             surf_area[i+1] = LineString(sep_pts).length * 2*pi*R0_a
 
     r2sa = UnivariateSpline(r_vals, surf_area, k=3, s=0)
+
     rho2sa = UnivariateSpline(rho_vals, surf_area, k=3, s=0)
     psi2sa = UnivariateSpline(psi_vals, surf_area, k=3, s=0)
 
     return r2sa, rho2sa, psi2sa
 
-def create_vol_interp(rho2psi, psi_data, sep_pts, R0_a, a):
+def create_vol_interp(rho2psi, psi2rho, psi_data, sep_pts, R0_a, a):
     rho_vals = np.linspace(0, 1, 50, endpoint=True)
     r_vals = rho_vals * a
     psi_vals = rho2psi(rho_vals)
@@ -816,8 +838,16 @@ def create_vol_interp(rho2psi, psi_data, sep_pts, R0_a, a):
     # skip the first value. First value is zero.
     for i,psi_val in enumerate(psi_vals[1:]):
         if psi_val < 1:
-            fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, psi_val, sep_pts)
-            vol[i+1] = Polygon(fs_line).area * 2*pi*fs_pts.axis[0]
+            try:
+                fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, psi_val, sep_pts)
+                vol[i+1] = Polygon(fs_line).area * 2*pi*fs_pts.axis[0]
+            except:
+                # if too close to the seperatrix, it may return None. In this case, estimate volume
+                # TODO: Improve this estimation. Also, see comments in draw_core_line
+                rho_val = psi2rho(psi_val)
+                a_el = rho_val * a  # a of the ellipse
+                b_el = rho_val * a * 1.5  # b of the ellipse, assumed kappa of 1.5. This needs to be improved
+                vol[i + 1] = pi*a_el*b_el * 2 * pi * R0_a
         else:
             vol[i+1] = Polygon(LineString(sep_pts)).area * 2*pi*R0_a
 
@@ -839,7 +869,10 @@ def calc_rho2psi_interp(pts, psi_data):
     psivals = griddata(np.column_stack((psi_data.R.flatten(), psi_data.Z.flatten())),
                         psi_data.psi_norm.flatten(),
                         ptsRZ,
-                        method='linear')
+                        method='cubic')
+
+    psivals[0] = 0
+    psivals[-1] = 1
 
     rho2psi = interp1d(rhovals, psivals, fill_value='extrapolate')
     psi2rho = interp1d(psivals, rhovals, fill_value='extrapolate')
@@ -902,6 +935,12 @@ class Core:
 
         # calculate some important points and lines
         self.pts, self.lines = calc_pts_lines(self.psi_data, xpt, inp.wall_line, mag_axis)
+
+        # plt.plot(np.asarray(self.lines.sep.coords)[:,0], np.asarray(self.lines.sep.coords)[:,1], color='red')
+        # plt.plot(np.asarray(self.lines.div.ib.coords)[:,0], np.asarray(self.lines.div.ib.coords)[:,1], color='green')
+        # plt.plot(np.asarray(self.lines.div.ob)[:,0], np.asarray(self.lines.div.ob)[:,1], color='blue')
+        # plt.show()
+
         self.R0_a = self.pts.axis.geo[0]
         print 'xpt = ',xpt
         # TODO: Figure out which of these is the definition of 'a'
@@ -949,6 +988,7 @@ class Core:
 
         #create interpolation functions to obtain the flux surface surface area for any value of r, rho, or psi_norm
         self.r2sa, self.rho2sa, self.psi2sa = create_surf_area_interp(self.rho2psi,
+                                                                      self.psi2rho,
                                                                       self.psi_data,
                                                                       np.asarray(self.lines.sep_closed.coords),
                                                                       self.R0_a,
@@ -956,10 +996,11 @@ class Core:
 
         #create interpolation functions to obtain the plasma volume for any value of r, rho, or psi_norm
         self.r2vol, self.rho2vol, self.psi2vol = create_vol_interp(self.rho2psi,
-                                                                      self.psi_data,
-                                                                      np.asarray(self.lines.sep_closed.coords),
-                                                                      self.R0_a,
-                                                                      self.a)
+                                                                   self.psi2rho,
+                                                                   self.psi_data,
+                                                                   np.asarray(self.lines.sep_closed.coords),
+                                                                   self.R0_a,
+                                                                   self.a)
 
         # initialize volume as a function of rho
         self.vol_rho = self.rho2vol(self.rho)
@@ -1053,12 +1094,12 @@ class Core:
         self.z_eff = ((nD + nT)*1.0**2 + nC*6.0**2) / ne  # TODO: Update this calculation
 
         # populate temperature namedtuples, including the main T object
-        Ti_kev = UnivariateSpline(inp.Ti_data[:, 0], inp.Ti_data[:, 1], k=5, s=2.0)(self.rho)
-        Te_kev = UnivariateSpline(inp.Te_data[:, 0], inp.Te_data[:, 1], k=5, s=2.0)(self.rho)
+        Ti_kev = UnivariateSpline(inp.Ti_data[:, 0], inp.Ti_data[:, 1], k=3, s=0.0)(self.rho)
+        Te_kev = UnivariateSpline(inp.Te_data[:, 0], inp.Te_data[:, 1], k=3, s=0.0)(self.rho)
         Tns_kev = np.full(self.rho.shape, 0.002)
         Tnt_kev = Ti_kev
         try:
-            TC_kev = UnivariateSpline(inp.TC_data[:, 0], inp.TC_data[:, 1], k=5, s=2.0)(self.rho)
+            TC_kev = UnivariateSpline(inp.TC_data[:, 0], inp.TC_data[:, 1], k=3, s=0.0)(self.rho)
         except:
             TC_kev = Ti_kev
 
@@ -1238,6 +1279,7 @@ class Core:
 
         self.z_eff_fsa = calc_fsa(self.z_eff, self.R, self.Z)
         self.B_p_fsa = calc_fsa(self.B_p, self.R, self.Z)
+        self.B_t_fsa = calc_fsa(self.B_t, self.R, self.Z)
 
         self.n_fsa = namedtuple('n', 'i e n C')(
             calc_fsa(self.n.i, self.R, self.Z),
