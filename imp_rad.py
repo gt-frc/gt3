@@ -58,6 +58,7 @@ class ImpRad:
         imp_names[2] = 'Helium'
         imp_names[4] = 'Beryllium'
         imp_names[6] = 'Carbon'
+        imp_names[8] = 'Oxygen'
         imp_names[10] = 'Neon'
         imp_names[18] = 'Argon'
         imp_names[36] = 'Krypton'
@@ -101,6 +102,7 @@ class ImpRad:
 
         # search for pkl_file
         outfile_found = 0
+        print os.getcwd()
         for root, subdirs, files in os.walk(os.getcwd()):
             for filename in files:
                 if filename == Lz_pkl_file:
@@ -193,7 +195,10 @@ class ImpRad:
                 f.write('\n' + '  imode = ' + str(inp2.imode))
                 f.write('\n' + '  nte = ' + str(inp2.nte))
                 f.write('\n' + '  nne = ' + str(inp2.nne))
-                f.write('\n' + '  tei = ' + ' '.join(map(str, inp2.tei)))
+                # f.write('\n' + '  tei = ' + ' '.join(map(str, inp2.tei)))
+                # f.write('\n' + '  tei = ' +  np.array2string(inp2.tei, precision=3, separator=' ',suppress_small = False))
+                print np.array2string(inp2.tei, formatter={'float_kind': lambda x: "%.5f" % x})[1:-1]
+                f.write('\n' + '  tei = ' + np.array2string(inp2.tei, formatter={'float_kind': lambda x: "%.5f" % x})[1:-1])
                 f.write('\n' + '  anei = ' + ' '.join(map(str, inp2.anei)))
                 f.write('\n' + '  nmin = ' + str(inp2.nmin_T))
                 f.write('\n' + '  nmax = ' + str(inp2.nmax_T))
@@ -201,7 +206,7 @@ class ImpRad:
                 f.write('\n' + '')
                 f.write('\n')
                 f.close()
-
+                #sys.exit()
                 # call adpak
                 try:
                     call([inp2.adpak_loc+'adpak', os.getcwd()+'/toadpak'])
@@ -247,16 +252,7 @@ class ImpRad:
                     alrecr[cs, :, :] = np.asarray(result.split(), dtype=float).reshape(-1, inp2.nte)
 
                 # assemble data to pass to Lz and charge state density calculations
-                d = {
-                    'altei': altei,
-                    'alnei': alnei,
-                    'alinzr': alinzr,
-                    'alradr': alradr,
-                    'alrecr': alrecr
-                    }
-
-                # convert dictionary to named tuple so keys can be accessed as normal attributes
-                data = namedtuple("data", d.keys())(*d.values())
+                data = namedtuple("data", 'altei alnei alinzr alradr alrecr')(altei, alnei, alinzr, alradr, alrecr)
 
                 # calculate impurity charge state densities. Uncomment the following line if desired.
                 # self.calc_nz_cs = self.nz_cs(inp, data)
@@ -372,25 +368,44 @@ class ImpRad:
 
         frac_abun = np.zeros((inp.nne, inp.nte, inp.z_imp + 1))
 
+        # for i, dens in enumerate(inp.anei):
+        #     for j, temp in enumerate(inp.tei):
+        #         for (cs, col), value in np.ndenumerate(M):
+        #             if cs == 0:  # do the first row differently
+        #                 M[cs, cs] = -(10**data.alinzr[cs, i, j] + 10**data.alrecr[cs, i, j])
+        #                 M[cs, cs + 1] = 10 ** data.alrecr[cs + 1, i, j]
+        #             elif cs == inp.z_imp:  # do the last row differently
+        #                 M[cs, cs - 1] = 10 ** data.alinzr[cs - 1, i, j]
+        #                 M[cs, cs] = -(10 ** data.alinzr[cs, i, j] + 10 ** data.alrecr[cs, i, j])
+        #             else:
+        #                 M[cs, cs - 1] = 10 ** data.alinzr[cs - 1, i, j]
+        #                 M[cs, cs] = -(10 ** data.alinzr[cs, i, j] + 10 ** data.alrecr[cs, i, j])
+        #                 M[cs, cs + 1] = 10 ** data.alrecr[cs + 1, i, j]
+
         for i, dens in enumerate(inp.anei):
             for j, temp in enumerate(inp.tei):
+
                 for (cs, col), value in np.ndenumerate(M):
                     if cs == 0:  # do the first row differently
-                        M[cs, cs] = -(10 ** data.alinzr[cs, i, j] + 10 ** data.alrecr[cs, i, j])
-                        M[cs, cs + 1] = 10 ** data.alrecr[cs + 1, i, j]
+                        M[cs, cs] = -(10**data.alinzr[cs, i, j])
+                        M[cs, cs + 1] = 10**data.alrecr[cs + 1, i, j]
                     elif cs == inp.z_imp:  # do the last row differently
-                        M[cs, cs - 1] = 10 ** data.alinzr[cs - 1, i, j]
-                        M[cs, cs] = -(10 ** data.alinzr[cs, i, j] + 10 ** data.alrecr[cs, i, j])
+                        M[cs, cs - 1] = 10**data.alinzr[cs - 1, i, j]
+                        M[cs, cs] = -(10**data.alrecr[cs, i, j])
                     else:
-                        M[cs, cs - 1] = 10 ** data.alinzr[cs - 1, i, j]
-                        M[cs, cs] = -(10 ** data.alinzr[cs, i, j] + 10 ** data.alrecr[cs, i, j])
-                        M[cs, cs + 1] = 10 ** data.alrecr[cs + 1, i, j]
-
+                        M[cs, cs - 1] = 10**data.alinzr[cs - 1, i, j]
+                        M[cs, cs] = -(10**data.alinzr[cs, i, j] + 10**data.alrecr[cs, i, j])
+                        M[cs, cs + 1] = 10**data.alrecr[cs + 1, i, j]
                 # the following line may help convergence. Uncomment it if necessary. Everything
                 # gets normalized anyway.
-                # M = M*1E10
+                #M = M*1E20
+
+                #print M
+                #sys.exit()
 
                 result = np.abs(null(M).T)  # solve(M, b)
+                #print 'result = ',result
+                result = np.where(result<0,-result,result)
                 frac_abun[i, j, :] = result / np.sum(result)
 
         return frac_abun
@@ -409,23 +424,30 @@ if __name__ == '__main__':
 
     # Helium
     He_2 = ImpRad(z=2)
+
+    # Beryllium
+    Be_4 = ImpRad(z=4)
+
     # Carbon
     C_6 = ImpRad(z=6)
-    #
+
+    # Oxygen
+    O_8 = ImpRad(z=8)
+
     # #Neon
     Ne_10 = ImpRad(z=10)
-    #
+
     # #Argon
     Ar_18 = ImpRad(z=18)
-    #
+
     # #Krypton
     Kr_36 = ImpRad(z=36)
-    #
-    # #Xenon
-    # Xe_54 = ImpRad(54)
-    #
-    # #Tungsten
-    # W_74 = ImpRad(74)
+
+    #Xenon
+    Xe_54 = ImpRad(z=54)
+
+    #Tungsten
+    W_74 = ImpRad(z=74)
 
     def element_plot(inst, element):
         # specify density and temperature parameters at which you want to
@@ -434,30 +456,30 @@ if __name__ == '__main__':
         Tn = np.full(Te_kev.shape, 1E-3)
 
         #prepare figure
-        fig = plt.figure(figsize=(6, 4))
-        ax1 = fig.add_subplot(1, 1, 1)
-        ax1.set_title('{} $L_z$ as a Function of Temperature'.format(element))
-        ax1.set_xlabel(r'Electron Temperature ($keV$)')
-        ax1.set_ylabel(r'$L_z$ ($W*m^3$)')
-
-        nf = np.full(Tn.shape, 1E-4)
-        #ax1.loglog(Te_kev, inst.Lz(np.log10(Tn), np.log10(nf), np.log10(Te_kev)))
+        # fig = plt.figure(figsize=(6, 4))
+        # ax1 = fig.add_subplot(1, 1, 1)
+        # ax1.set_title('{} $L_z$ as a Function of Temperature'.format(element))
+        # ax1.set_xlabel(r'Electron Temperature ($keV$)')
+        # ax1.set_ylabel(r'$L_z$ ($W*m^3$)')
+        #
+        # nf = np.full(Tn.shape, 1E-7)
+        # ax1.loglog(Te_kev, inst.Lz(np.log10(Tn), np.log10(nf), np.log10(Te_kev)))
 
         #for i,v in enumerate(np.logspace(-5,-1,5)):
             #nf = np.full(Tn.shape, v)
             #if i==0:
                 #ax1.loglog(Te_kev, inst.Lz(np.log10(0.002), np.log10(nf), np.log10(Te_kev)))
         # clean up and show plot
-        #plt.tight_layout()
+        # plt.tight_layout()
         #fig.savefig('/home/max/Documents/{}_Lz.png'.format(element))
-        #plt.show()
+        # plt.show()
         return Te_kev, inst.Lz(np.log10(0.002), np.log10(nf), np.log10(Te_kev))
 
 
     #element_plot(He_2,'Helium')
-    element_plot(C_6,'Carbon')
+    #element_plot(C_6,'Carbon')
     # element_plot(Ne_10,'Neon')
     # element_plot(Ar_18,'Argon')
     # element_plot(Kr_36,'Krypton')
-    # element_plot(Xe_54,'Xenon')
-    # element_plot(W_74,'Tungsten')
+    #element_plot(Xe_54,'Xenon')
+    #element_plot(W_74,'Tungsten')
