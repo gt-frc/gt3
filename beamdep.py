@@ -38,7 +38,10 @@ def prep_nbi_infile(inp, core):
     # pwr_frac = [0.7, 0.2, 0.1]
 
     # f1=open(inp.nbeams_loc+"inbeams.dat", "w")
-    f = open("inbeams.dat", "w")
+    if __name__=="__main__":
+        f = open("inbeams_test.dat", "w")
+    else:
+        f = open("inbeams.dat", "w")
     f.write("$nbin\n")
     f.write("nbeams = 1\n")
     f.write("inbfus = 1\n")
@@ -256,13 +259,13 @@ class read_nbi_outfile:
         result = re.match(r'.*dA *((?:(?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)? +)|(?:NaN +))+) *', data).group(1)
         array = np.reshape(np.asarray(result.split(), dtype=float), (-1, 9))
         jnbtot = array[:, 1]
-        pNBe = array[:, 2]  # in MW/m^3
-        pNBi = array[:, 3]  # in MW/m^3
+        pNBe   = array[:, 2]  # in MW/m^3
+        pNBi   = array[:, 3]  # in MW/m^3
         nbfast = array[:, 4]
         pressb = array[:, 5]
-        pfusb = array[:, 6]
-        dvol = array[:, 7]
-        dA = array[:, 8]
+        pfusb  = array[:, 6]
+        dvol   = array[:, 7]
+        dA     = array[:, 8]
 
         #
         # H(r) is a strangely normalized power DENSITY deposition profile
@@ -288,6 +291,8 @@ class read_nbi_outfile:
         self.beam_en_1 = inp.ebeam
         self.beam_en_2 = inp.ebeam / 2
         self.beam_en_3 = inp.ebeam / 3
+
+        norm_const = 1./UnivariateSpline(rho_nbeams, hofr_1 * dvol / Volp_nbi, k=3, s=0).integral(0, 1.)
 
         dPdV_1_interp = UnivariateSpline(rho_nbeams,
                                          hofr_1 * self.beam_pwr_1 / Volp_nbi,
@@ -346,9 +351,13 @@ class read_nbi_outfile:
         self.dPdV_2_1D = dPdV_2_interp(core.rho[:, 0])
         self.dPdV_3_1D = dPdV_3_interp(core.rho[:, 0])
 
-        self.dPdr_1_1D = dPdr_1_interp(core.rho[:, 0])
-        self.dPdr_2_1D = dPdr_2_interp(core.rho[:, 0])
-        self.dPdr_3_1D = dPdr_3_interp(core.rho[:, 0])
+
+        # Introducing a normalization constant that seems to be getting lost in this calculation somewhere
+        # TODO: Figure out what the hell is this
+
+        self.dPdr_1_1D = dPdr_1_interp(core.rho[:, 0]) * norm_const
+        self.dPdr_2_1D = dPdr_2_interp(core.rho[:, 0]) * norm_const
+        self.dPdr_3_1D = dPdr_3_interp(core.rho[:, 0]) * norm_const
 
         # calculate deposition profile-weighted averaged zeta
         self.zeta_1 = np.sum(zeta_1_interp(np.linspace(0,1,100)) *
@@ -360,6 +369,24 @@ class read_nbi_outfile:
         self.zeta_3 = np.sum(zeta_1_interp(np.linspace(0,1,100)) *
                              (1/self.beam_pwr_1) *
                              dPdr_1_interp(np.linspace(0,1,100)))
+
+        self.debug={"P_abs_tot" : P_abs_tot,
+                    "P_lst_tot"  : P_lst_tot,
+                    "I_nbi_tot" : I_nbi_tot,
+                    "I_nbi_eff" : I_nbi_eff,
+                    "Volp_nbi"  : Volp_nbi,
+                    "P_abs_1" : P_abs_1,
+                    "hofr_1" : hofr_1,
+                    "hofr_2" : hofr_2,
+                    "hofr_3" : hofr_3,
+                    "jnbtot" : jnbtot,
+                    "pNBe" : pNBe,
+                    "pNBi" : pNBi,
+                    "nbfast" : nbfast,
+                    "pressb" : pressb,
+                    "pfusb" : pfusb,
+                    "dvol" : dvol,
+                    "dA" : dA}
 
 class calc_nbi_vals:
     def __init__(self, inp, core):
@@ -499,22 +526,35 @@ class BeamDeposition:
                 # call nbeams. Note to those familiar with the old nbeams, I modified
                 # the source code to take the input file as a commandline argument. - MH
 
-                try:
-                    # try to find nbeams in the system path
-                    p = Popen([nbeams_name, os.getcwd()+'/inbeams.dat'], stdin=PIPE, stdout=PIPE).wait()
-                except:
+                # If run as debug script, look at "/inputs" for inbeams_test.dat"
+                if __name__ == "__main__":
                     try:
-                        # otherwise use the location specified in the input file
-                        p = Popen([inp.nbeams_loc, os.getcwd()+'/inbeams.dat'], stdin=PIPE, stdout=PIPE).wait()
+                        # try to find nbeams in the system path
+                        p = Popen([nbeams_name, os.path.join(os.getcwd(), 'inputs', 'inbeams_test.dat')], stdin=PIPE, stdout=PIPE).wait()
                     except:
-                        print 'Unable to find nbeams executable. Stopping.'
-                        sys.exit()
+                        try:
+                            # otherwise use the location specified in the input file
+                            p = Popen([inp.nbeams_loc, os.path.join(os.getcwd(), 'inputs', 'inbeams_test.dat')], stdin=PIPE, stdout=PIPE).wait()
+                        except:
+                            print 'Unable to find nbeams executable. Stopping.'
+                            sys.exit()
+                else:
+                    try:
+                        # try to find nbeams in the system path
+                        p = Popen([nbeams_name, os.getcwd()+'/inbeams.dat'], stdin=PIPE, stdout=PIPE).wait()
+                    except:
+                        try:
+                            # otherwise use the location specified in the input file
+                            p = Popen([inp.nbeams_loc, os.getcwd()+'/inbeams.dat'], stdin=PIPE, stdout=PIPE).wait()
+                        except:
+                            print 'Unable to find nbeams executable. Stopping.'
+                            sys.exit()
                 # instantiate class with nbeams output file information
                 nbi_vals = read_nbi_outfile(inp, core)
             except:
                 print 'unable to create beam deposition information. Stopping.'
                 sys.exit()
-
+        self.debug = nbi_vals.debug
         # create beams object
         self.beams = namedtuple('beam', 'D1 D2 D3')(
             # create D1 beam
@@ -555,7 +595,7 @@ class BeamDeposition:
             ),
 
             # create D2 beam
-            namedtuple('beam_D1', 'z m E P rtan dPdV dPdr zeta')(
+            namedtuple('beam_D2', 'z m E P rtan dPdV dPdr zeta')(
                 z_d,
                 m_d,
                 namedtuple('E', 'kev ev J')(
@@ -592,7 +632,7 @@ class BeamDeposition:
             ),
 
             # create D3 beam
-            namedtuple('beam_D1', 'z m E P rtan dPdV dPdr zeta')(
+            namedtuple('beam_D3', 'z m E P rtan dPdV dPdr zeta')(
                 z_d,
                 m_d,
                 namedtuple('E', 'kev ev J')(
@@ -628,3 +668,207 @@ class BeamDeposition:
                 nbi_vals.zeta_3
             )
         )
+
+
+
+class debugInp():
+    def __init__(self):
+        self.ebeam = 76.56296774
+        self.pbeam = 4.88
+        self.rtang = 1.715
+        self.BT0 = 2.0
+        self.nbeams_loc='/home/jonathan/Dropbox/GTEDGE/MyPrograms/GTEDGE/lib/beams/NBeamsMDS/NBeams/bin/Release/nbeams'
+
+class debugCore():
+    from core import calc_rho1d
+    from core import calc_theta1d
+
+    def __init__(self):
+
+        rho1d= np.concatenate((np.linspace(0, 0.8, 10, endpoint=False), np.linspace(0.8, 1, 100, endpoint=True)))
+        self.a = 0.5640316391827651
+        self.R0_a = 1.691071481388474
+        self.kappa = namedtuple('kappa', 'axis sep')(1.2507812426138631,1.6533128554966692)
+        self.shaf_shift = 0.04273763321406595
+        self.theta, self.rho = np.meshgrid([0., 1.], rho1d)
+        loader=np.loadtxt("inputs/nbDebugProfs.dat")
+        # This named tuple is generated by:
+        #
+        # np.savetxt('nbDebugProfs.dat', (core.n.e[:,0] / ((1.+.025*6.0)), core.n.e[:, 0], core.T.i.kev[:, 0], core.T.e.kev[:, 0]))
+        #
+        # in a module supporting calls to core. 9/4/2018 nbeams debug profiles obtained from shot 118890.1560
+
+        self.n = namedtuple('n','i e')(np.array([loader[0],loader[0]]).transpose(),np.array([loader[1],loader[1]]).transpose())
+        self.T = namedtuple('T','i e')(namedtuple('i', 'kev')(np.array([loader[2],loader[2]]).transpose()),
+                                       namedtuple('e', 'kev')(np.array([loader[3],loader[3]]).transpose()))
+
+
+        self.pts = namedtuple('pts','axis')(namedtuple('axis','mag')([1.7151768587049954,None]))
+        self.kappa_vals = namedtuple('kappa_vals', 'axis sep')(1.2507812426138631, 1.6533128554966692)
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
+    inp=debugInp()
+    core=debugCore()
+    beamData=BeamDeposition(inp,core)
+    print """Printing NBeams input parameters:
+            Core
+            {:<16}          {}
+            {:<16}          {}
+            {:<16}          {}
+            {:<16}          {}
+            {:<16}          {}
+            {:<16}          {}
+            """.format("R0_a",str(core.R0_a),
+                        "a", str(core.a),
+                        "kappa_axis", str(core.kappa.axis),
+                        "kappa_sep", str(core.kappa.sep),
+                        "pts.axis.mag[0]", str(core.pts.axis.mag[0]),
+                        "shaf_shift", str(core.shaf_shift),
+                        )
+
+    print """
+            inp           
+            {:<16}          {}
+            {:<16}          {}
+            {:<16}          {}
+            {:<16}          {}
+            {:<16}          {}
+            """.format("BT0",str(inp.BT0),
+                        "ebeam", str(inp.ebeam),
+                        "nbeams_loc", str(inp.nbeams_loc),
+                        "pbeam", str(inp.pbeam),
+                        "rtang", str(inp.rtang)
+                        )
+
+    print """
+        D1 info
+        {:<10}      {}
+        {:<10}      {}
+        {:<10}      {}
+        """.format("m", str(beamData.beams.D1.m),
+                   "rtan", str(beamData.beams.D1.rtan),
+                   "zeta", str(beamData.beams.D1.zeta))
+    print """
+        D2 info
+        {:<10}      {}
+        {:<10}      {}
+        {:<10}      {}
+        """.format("m", str(beamData.beams.D2.m),
+                   "rtan", str(beamData.beams.D2.rtan),
+                   "zeta", str(beamData.beams.D2.zeta))
+    print """
+        D3 info
+        {:<10}      {}
+        {:<10}      {}
+        {:<10}      {}
+        """.format("m", str(beamData.beams.D3.m),
+                   "rtan", str(beamData.beams.D3.rtan),
+                   "zeta", str(beamData.beams.D3.zeta))
+
+    print """Calculated nbeams values"""
+    fig0 = plt.figure(figsize=(12,8))
+    fig0.suptitle(r"Deposition profiles")
+    axi=230
+    for a in beamData.debug.keys():
+        if type(beamData.debug[a]) is float:
+            print "{:<10}      {}".format(str(a),str(beamData.debug[a]))
+        elif type(beamData.debug[a]) is np.ndarray:
+            if "hofr" in a:
+                axi+=1
+                ax=fig0.add_subplot(axi)
+                ax.set_title(a,fontsize=16)
+                ax.set_ylabel("dep", fontsize=16)
+                ax.set_xlabel(r"rho", fontsize=16)
+                ax.plot(np.linspace(0, 1, 51), beamData.debug[a])
+    d1Ptot = UnivariateSpline(core.rho[:,0],beamData.beams.D1.dPdr.v1D.W).integral(0.,1.)
+    d2Ptot = UnivariateSpline(core.rho[:,0],beamData.beams.D2.dPdr.v1D.W).integral(0.,1.)
+    d3Ptot = UnivariateSpline(core.rho[:,0],beamData.beams.D3.dPdr.v1D.W).integral(0.,1.)
+    Ptot = d1Ptot + d2Ptot + d3Ptot
+    print "{:<10}      {}".format("D1 Total power", str(d1Ptot))
+    print "{:<10}      {}".format("D2 Total power", str(d2Ptot))
+    print "{:<10}      {}".format("D3 Total power", str(d3Ptot))
+    print "{:<10}      {}".format("Total power from dpdr graph integration", str(Ptot))
+
+
+    fig = plt.figure(figsize=(12, 8))
+    fig.suptitle(r'NBeams Debug Info')
+    ax1 = fig.add_subplot(231)
+    ax1.set_title(r'ion density', fontsize=16)
+    ax1.set_ylabel(r'$n_i[1/{m^3}]$', fontsize=16)
+    ax1.set_xlabel(r'rho', fontsize=16)
+    ax1.plot(core.rho[:, 0], core.n.i[:,0])
+
+    ax2 = fig.add_subplot(232)
+    ax2.set_title(r'electron density', fontsize=16)
+    ax2.set_ylabel(r'$n_e[1/{m^3}]$', fontsize=16)
+    ax2.set_xlabel(r'rho', fontsize=16)
+    ax2.plot(core.rho[:, 0], core.n.e[:,0])
+
+    ax3 = fig.add_subplot(233)
+    ax3.set_title(r'Ion temp (kev)', fontsize=16)
+    ax3.set_ylabel(r'$T_i[kev}$', fontsize=16)
+    ax3.set_xlabel(r'rho', fontsize=16)
+    ax3.plot(core.rho[:, 0], core.T.i.kev[:,0])
+
+    ax4 = fig.add_subplot(234)
+    ax4.set_title(r'Electron temp (kev)', fontsize=16)
+    ax4.set_ylabel(r'$T_e[kev}$', fontsize=16)
+    ax4.set_xlabel(r'rho', fontsize=16)
+    ax4.plot(core.rho[:, 0], core.T.e.kev[:,0])
+
+    ax5 = fig.add_subplot(235)
+    ax5.set_title(r'Electron temp (kev)', fontsize=16)
+    ax5.set_ylabel(r'$T_e[keV]$', fontsize=16)
+    ax5.set_xlabel(r'rho', fontsize=16)
+    ax5.plot(core.rho[:, 0], core.T.e.kev[:,0])
+
+    fig2 = plt.figure(figsize=(12, 8))
+    fig2.suptitle(r"""$D_1$ data""")
+
+    ax21 = fig2.add_subplot(231)
+    ax21.set_title(r'Power density profile', fontsize=16)
+    ax21.set_ylabel(r'$\frac{dP}{dr}$', fontsize=16)
+    ax21.set_xlabel(r'rho', fontsize=16)
+    ax21.plot(core.rho[:, 0], beamData.beams.D1.dPdr.v1D.W)
+
+    ax22 = fig2.add_subplot(232)
+    ax22.set_title(r'Power density profile', fontsize=16)
+    ax22.set_ylabel(r'$\frac{dP}{dV}$', fontsize=16)
+    ax22.set_xlabel(r'rho', fontsize=16)
+    ax22.plot(core.rho[:, 0], beamData.beams.D1.dPdV.v1D.W)
+
+
+    fig3 = plt.figure(figsize=(12, 8))
+    fig3.suptitle(r"""$D_2$ data""")
+
+    ax31 = fig3.add_subplot(231)
+    ax31.set_title(r'Power density profile', fontsize=16)
+    ax31.set_ylabel(r'$\frac{dP}{dr}$', fontsize=16)
+    ax31.set_xlabel(r'rho', fontsize=16)
+    ax31.plot(core.rho[:, 0], beamData.beams.D2.dPdr.v1D.W)
+
+    ax32 = fig3.add_subplot(232)
+    ax32.set_title(r'Power density profile', fontsize=16)
+    ax32.set_ylabel(r'$\frac{dP}{dV}$', fontsize=16)
+    ax32.set_xlabel(r'rho', fontsize=16)
+    ax32.plot(core.rho[:, 0], beamData.beams.D2.dPdV.v1D.W)
+
+
+    fig4 = plt.figure(figsize=(12, 8))
+    fig4.suptitle(r"""$D_3$ data""")
+
+    ax41 = fig4.add_subplot(231)
+    ax41.set_title(r'Power density profile', fontsize=16)
+    ax41.set_ylabel(r'$\frac{dP}{dr}$', fontsize=16)
+    ax41.set_xlabel(r'rho', fontsize=16)
+    ax41.plot(core.rho[:, 0], beamData.beams.D3.dPdr.v1D.W)
+
+    ax42 = fig4.add_subplot(232)
+    ax42.set_title(r'Power density profile', fontsize=16)
+    ax42.set_ylabel(r'$\frac{dP}{dV}$', fontsize=16)
+    ax42.set_xlabel(r'rho', fontsize=16)
+    ax42.plot(core.rho[:, 0], beamData.beams.D3.dPdV.v1D.W)
+
+    plt.show()
