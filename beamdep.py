@@ -39,7 +39,7 @@ def prep_nbi_infile(inp, core):
 
     # f1=open(inp.nbeams_loc+"inbeams.dat", "w")
     if __name__=="__main__":
-        f = open("inbeams_test.dat", "w")
+        f = open("inputs/inbeams_test.dat", "w")
     else:
         f = open("inbeams.dat", "w")
     f.write("$nbin\n")
@@ -292,35 +292,35 @@ class read_nbi_outfile:
         self.beam_en_2 = inp.ebeam / 2
         self.beam_en_3 = inp.ebeam / 3
 
-        norm_const = 1./UnivariateSpline(rho_nbeams, hofr_1 * dvol / Volp_nbi, k=3, s=0).integral(0, 1.)
+
 
         dPdV_1_interp = UnivariateSpline(rho_nbeams,
-                                         hofr_1 * self.beam_pwr_1 / Volp_nbi,
-                                         k=3,
-                                         s=0)
+                                          hofr_1 * self.beam_pwr_1 / Volp_nbi,
+                                          k=3,
+                                          s=0)
 
         dPdV_2_interp = UnivariateSpline(rho_nbeams,
-                                         hofr_2 * self.beam_pwr_2 / Volp_nbi,
-                                         k=3,
-                                         s=0)
+                                          hofr_2 * self.beam_pwr_2 / Volp_nbi,
+                                          k=3,
+                                          s=0)
 
         dPdV_3_interp = UnivariateSpline(rho_nbeams,
-                                         hofr_3 * self.beam_pwr_3 / Volp_nbi,
-                                         k=3,
-                                         s=0)
+                                          hofr_3 * self.beam_pwr_3 / Volp_nbi,
+                                          k=3,
+                                          s=0)
 
         dPdr_1_interp = UnivariateSpline(rho_nbeams,
-                                         hofr_1 * self.beam_pwr_1 / Volp_nbi * dvol,
+                                         (hofr_1 * dvol * self.beam_pwr_1 )/ (.02 * Volp_nbi),
                                          k=3,
                                          s=0)
 
         dPdr_2_interp = UnivariateSpline(rho_nbeams,
-                                         hofr_2 * self.beam_pwr_2 / Volp_nbi * dvol,
+                                         hofr_2  * dvol * self.beam_pwr_2 / (.02 * Volp_nbi),
                                          k=3,
                                          s=0)
 
         dPdr_3_interp = UnivariateSpline(rho_nbeams,
-                                         hofr_3 * self.beam_pwr_3 / Volp_nbi * dvol,
+                                         hofr_3  * dvol * self.beam_pwr_3 / (.02 * Volp_nbi),
                                          k=3,
                                          s=0)
 
@@ -355,9 +355,9 @@ class read_nbi_outfile:
         # Introducing a normalization constant that seems to be getting lost in this calculation somewhere
         # TODO: Figure out what the hell is this
 
-        self.dPdr_1_1D = dPdr_1_interp(core.rho[:, 0]) * norm_const
-        self.dPdr_2_1D = dPdr_2_interp(core.rho[:, 0]) * norm_const
-        self.dPdr_3_1D = dPdr_3_interp(core.rho[:, 0]) * norm_const
+        self.dPdr_1_1D = dPdr_1_interp(core.rho[:, 0])
+        self.dPdr_2_1D = dPdr_2_interp(core.rho[:, 0])
+        self.dPdr_3_1D = dPdr_3_interp(core.rho[:, 0])
 
         # calculate deposition profile-weighted averaged zeta
         self.zeta_1 = np.sum(zeta_1_interp(np.linspace(0,1,100)) *
@@ -386,7 +386,8 @@ class read_nbi_outfile:
                     "pressb" : pressb,
                     "pfusb" : pfusb,
                     "dvol" : dvol,
-                    "dA" : dA}
+                    "dA" : dA,
+                    "rho_nbeams" : rho_nbeams}
 
 class calc_nbi_vals:
     def __init__(self, inp, core):
@@ -870,5 +871,11 @@ if __name__ == "__main__":
     ax42.set_ylabel(r'$\frac{dP}{dV}$', fontsize=16)
     ax42.set_xlabel(r'rho', fontsize=16)
     ax42.plot(core.rho[:, 0], beamData.beams.D3.dPdV.v1D.W)
+
+    ax43 = fig4.add_subplot(233)
+    ax43.set_title(r'Power density profile', fontsize=16)
+    ax43.set_ylabel(r'$\frac{dP}{dr}$', fontsize=16)
+    ax43.set_xlabel(r'rho', fontsize=16)
+    ax43.plot(beamData.debug['rho_nbeams'], beamData.debug['dvol'])
 
     plt.show()
