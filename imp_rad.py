@@ -73,13 +73,13 @@ class ImpRad:
         if core is not None:
             # if ImpRad is called by GT3 and an instance of core is passed, compute total Lz for all impurity elements
             # NOTE: if a core instance is passed, then z is ignored.
-            for z in [6]:  # list of all z elements in core. Update this list as necessary.
+            for z in [6, 4, 74, 10, 18, 36]:  # list of all z elements in core. Update this list as necessary.
                 try:  # before running adpak, try to find a pickled interpolator somewhere in the main directory.
                     Lz, dLzdT = self.find_interp(z, imp_names)
                 except:
                     print 'Pickled interpolater not found for {}. Running adpak.'.format(imp_names[z])
                     Lz, dLzdT= self.run_adpak(z, imp_names)
-                core.update_Lz_data(6, Lz, dLzdT)
+                core.update_Lz_data(z, Lz, dLzdT)
 
         elif z is not None:
             try:  # before running adpak, try to find a pickled interpolator somewhere in the main directory.
@@ -102,7 +102,6 @@ class ImpRad:
 
         # search for pkl_file
         outfile_found = 0
-        print os.getcwd()
         for root, subdirs, files in os.walk(os.getcwd()):
             for filename in files:
                 if filename == Lz_pkl_file:

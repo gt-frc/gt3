@@ -45,10 +45,10 @@ pfr_Ti_val = 0.002
 pfr_Te_val = 0.002
 
 #1D PROFILE INPUT FILES
-ne_file = /92980_3600/gt3_92980_3600_ne_rescaled.dat
-nD_file = /92980_3600/gt3_92980_3600_nD_rescaled.dat
-Te_file = /92980_3600/gt3_92980_3600_Te_rescaled.dat
-Ti_file = /92980_3600/gt3_92980_3600_Ti_rescaled.dat
+ne_file = /92980_3600/gt3_92980_3600_ne.dat
+nD_file = /92980_3600/gt3_92980_3600_nD.dat
+Te_file = /92980_3600/gt3_92980_3600_Te.dat
+Ti_file = /92980_3600/gt3_92980_3600_Ti.dat
 er_file = /92980_3600/gt3_92980_3600_er.dat
 fracz_file = /92980_3600/gt3_92980_3600_fracz.dat
 

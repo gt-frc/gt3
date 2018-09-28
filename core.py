@@ -18,8 +18,10 @@ from math import atan2, pi, ceil, sin, cos, sqrt
 from collections import namedtuple
 from contours.quad import QuadContourGenerator
 from scipy import constants
+from scipy.fftpack import diff
 
 e = constants.elementary_charge
+u_0 = constants.mu_0
 m_d = 3.343583719e-27
 m_t = 5.006e-27
 m_c = 1.9926467e-26
@@ -345,9 +347,9 @@ def cut(line, distance):
                 LineString([(cp.x, cp.y)] + coords[i:])]
 
 
-def draw_core_line(R, Z, psi, psi_val, sep_pts):
+def draw_core_line(R, Z, psinorm, psi_val, sep_pts):
     # create contour generator
-    c = QuadContourGenerator.from_rectilinear(R[0], Z[:, 0], psi)
+    c = QuadContourGenerator.from_rectilinear(R[0], Z[:, 0], psinorm)
 
     # draw contours with psi_val
     contours = c.contour(psi_val)
@@ -376,11 +378,11 @@ def draw_core_line(R, Z, psi, psi_val, sep_pts):
     else:
         if len(contours) == 1:
             # then we're definitely dealing with a surface inside the seperatrix
-            x, y = draw_contour_line(R, Z, psi, psi_val, 0)
+            x, y = draw_contour_line(R, Z, psinorm, psi_val, 0)
         else:
             # we need to find which of the surfaces is inside the seperatrix
             for j, line in enumerate(contours):
-                x, y = draw_contour_line(R, Z, psi, psi_val, j)
+                x, y = draw_contour_line(R, Z, psinorm, psi_val, j)
 
                 if (np.amax(x) < np.amax(sep_pts[:, 0]) and
                     np.amin(x) > np.amin(sep_pts[:, 0]) and
@@ -774,12 +776,32 @@ def calc_RZ(rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
 
 
 def calc_grad(rho, quant, psi, R, Z, psi_data):
-    rhovals = rho[:,0]
-    psivals = psi[:,0]
+    rho_vals = rho[:,0]
+    psi_vals = psi[:,0]
     vals = quant[:,0]
 
+
+    # For some reason, psi_vals will sometimes not be monotonically increasing, especially near the magnetic axis.
+    # This prevents UnivariateSpline from working. To prevent this, we're just going to delete any points that are
+    # lower than the previous point, prior to doing the fit. As long as the psi data isn't too wonky, this should be
+    # fine.
+    psivals_mi = []  # psivals that are monotonically increasing
+    vals_mi = []  # surf_area corresponding to monotonically increasing psi
+    for i, psi_val in enumerate(psi_vals):
+        if i == 0:
+            psivals_mi.append(0)
+            vals_mi.append(0)
+        elif psi_val > psivals_mi[-1]:
+            psivals_mi.append(psi_vals[i])
+            vals_mi.append(vals[i])
+
+    psivals_mi = np.asarray(psivals_mi)
+    vals_mi = np.asarray(vals_mi)
+
+
     # calculate values as function of psi and get psi derivative function
-    psi_fit = UnivariateSpline(psivals, vals, k=3, s=2.0)
+    #psi_fit = UnivariateSpline(psivals_mi, vals_mi, k=3, s=0)
+    psi_fit = UnivariateSpline(psi_vals, vals, k=3, s=0)
     d_dpsi_fit = psi_fit.derivative()
 
     # get value of dval_dpsi on the main computational grid
@@ -797,10 +819,10 @@ def calc_grad(rho, quant, psi, R, Z, psi_data):
     return dval_dr
 
 
-def create_surf_area_interp(rho2psi, psi2rho, psi_data, sep_pts, R0_a, a):
+def create_surf_area_interp(rho2psinorm, psinorm2rho, psi_data, sep_pts, R0_a, a):
     rho_vals = np.linspace(0, 1, 50, endpoint=True)
     r_vals = rho_vals * a
-    psi_vals = rho2psi(rho_vals)
+    psi_vals = rho2psinorm(rho_vals)
 
     surf_area = np.zeros(rho_vals.shape)
     # skip the first value. First value is zero.
@@ -813,7 +835,7 @@ def create_surf_area_interp(rho2psi, psi2rho, psi_data, sep_pts, R0_a, a):
             except:
                 # if too close to the seperatrix, it may return None. In this case, estimate perimeter using Ramanujan
                 # TODO: Improve this estimation. Also, see comments in draw_core_line
-                rho_val = psi2rho(psi_val)
+                rho_val = psinorm2rho(psi_val)
                 a_el = rho_val * a  # a of the ellipse
                 b_el = rho_val * a * 1.5  # b of the ellipse, assumed kappa of 1.5. This needs to be improved
 
@@ -822,17 +844,44 @@ def create_surf_area_interp(rho2psi, psi2rho, psi_data, sep_pts, R0_a, a):
         else:
             surf_area[i+1] = LineString(sep_pts).length * 2*pi*R0_a
 
-    r2sa = UnivariateSpline(r_vals, surf_area, k=3, s=0)
+    # For some reason, psi_vals will sometimes not be monotonically increasing, especially near the magnetic axis.
+    # This prevents UnivariateSpline from working. To prevent this, we're just going to delete any points that are
+    # lower than the previous point, prior to doing the fit. As long as the psi data isn't too wonky, this should be
+    # fine.
+    psinormvals_mi = []  # psivals that are monotonically increasing
+    rvals_mi = []  # rvals corresponding to monotonically increasing psi
+    rhovals_mi = []  # rhovals corresponding to monotonically increasing psi
+    surfarea_mi = []  # surf_area corresponding to monotonically increasing psi
+    for i, psi_val in enumerate(psi_vals):
+        if i == 0:
+            rvals_mi.append(0)
+            rhovals_mi.append(0)
+            psinormvals_mi.append(0)
+            surfarea_mi.append(0)
+        elif psi_val > psinormvals_mi[-1]:
+            rvals_mi.append(r_vals[i])
+            rhovals_mi.append(rho_vals[i])
+            psinormvals_mi.append(psi_vals[i])
+            surfarea_mi.append(surf_area[i])
 
-    rho2sa = UnivariateSpline(rho_vals, surf_area, k=3, s=0)
-    psi2sa = UnivariateSpline(psi_vals, surf_area, k=3, s=0)
+    rvals_mi = np.asarray(rvals_mi)
+    rhovals_mi = np.asarray(rhovals_mi)
+    psinormvals_mi = np.asarray(psinormvals_mi)
+    surfarea_mi = np.asarray(surfarea_mi)
 
-    return r2sa, rho2sa, psi2sa
+    r2sa = UnivariateSpline(rvals_mi, surfarea_mi, k=3, s=0)
+    rho2sa = UnivariateSpline(rhovals_mi, surfarea_mi, k=3, s=0)
+    psinorm2sa = UnivariateSpline(psinormvals_mi, surfarea_mi, k=3, s=0)
+    # r2sa = UnivariateSpline(r_vals, surf_area, k=3, s=0)
+    # rho2sa = UnivariateSpline(rho_vals, surf_area, k=3, s=0)
+    # psinorm2sa = UnivariateSpline(psi_vals, surf_area, k=3, s=0)
 
-def create_vol_interp(rho2psi, psi2rho, psi_data, sep_pts, R0_a, a):
+    return r2sa, rho2sa, psinorm2sa
+
+def create_vol_interp(rho2psinorm, psinorm2rho, psi_data, sep_pts, R0_a, a):
     rho_vals = np.linspace(0, 1, 50, endpoint=True)
     r_vals = rho_vals * a
-    psi_vals = rho2psi(rho_vals)
+    psi_vals = rho2psinorm(rho_vals)
 
     vol = np.zeros(rho_vals.shape)
     # skip the first value. First value is zero.
@@ -844,41 +893,104 @@ def create_vol_interp(rho2psi, psi2rho, psi_data, sep_pts, R0_a, a):
             except:
                 # if too close to the seperatrix, it may return None. In this case, estimate volume
                 # TODO: Improve this estimation. Also, see comments in draw_core_line
-                rho_val = psi2rho(psi_val)
+                rho_val = psinorm2rho(psi_val)
                 a_el = rho_val * a  # a of the ellipse
                 b_el = rho_val * a * 1.5  # b of the ellipse, assumed kappa of 1.5. This needs to be improved
                 vol[i + 1] = pi*a_el*b_el * 2 * pi * R0_a
         else:
             vol[i+1] = Polygon(LineString(sep_pts)).area * 2*pi*R0_a
 
-    r2vol = UnivariateSpline(r_vals, vol, k=3, s=0)
-    rho2vol = UnivariateSpline(rho_vals, vol, k=3, s=0)
-    psi2vol = UnivariateSpline(psi_vals, vol, k=3, s=0)
 
-    return r2vol, rho2vol, psi2vol
+    # For some reason, psi_vals will sometimes not be monotonically increasing, especially near the magnetic axis.
+    # This prevents UnivariateSpline from working. To prevent this, we're just going to delete any points that are
+    # lower than the previous point, prior to doing the fit. As long as the psi data isn't too wonky, this should be
+    # fine.
+    psinormvals_mi = []  # psivals that are monotonically increasing
+    rvals_mi = []  # rvals corresponding to monotonically increasing psi
+    rhovals_mi = []  # rhovals corresponding to monotonically increasing psi
+    vol_mi = []  # surf_area corresponding to monotonically increasing psi
+    for i, psi_val in enumerate(psi_vals):
+        if i == 0:
+            rvals_mi.append(0)
+            rhovals_mi.append(0)
+            psinormvals_mi.append(0)
+            vol_mi.append(0)
+        elif psi_val > psinormvals_mi[-1]:
+            rvals_mi.append(r_vals[i])
+            rhovals_mi.append(rho_vals[i])
+            psinormvals_mi.append(psi_vals[i])
+            vol_mi.append(vol[i])
+
+    rvals_mi = np.asarray(rvals_mi)
+    rhovals_mi = np.asarray(rhovals_mi)
+    psinormvals_mi = np.asarray(psinormvals_mi)
+    vol_mi = np.asarray(vol_mi)
+
+    r2vol = UnivariateSpline(rvals_mi, vol_mi, k=3, s=0)
+    rho2vol = UnivariateSpline(rhovals_mi, vol_mi, k=3, s=0)
+    psinorm2vol = UnivariateSpline(psinormvals_mi, vol_mi, k=3, s=0)
+    # r2vol = UnivariateSpline(r_vals, vol, k=3, s=0)
+    # rho2vol = UnivariateSpline(rho_vals, vol, k=3, s=0)
+    # psinorm2vol = UnivariateSpline(psi_vals, vol, k=3, s=0)
+
+    return r2vol, rho2vol, psinorm2vol
 
 def calc_rho2psi_interp(pts, psi_data):
-    rhovals = np.linspace(0, 1, 100)
+    rho_vals = np.linspace(0, 1, 100)
 
-    ptsRZ = np.zeros((len(rhovals), 2))
+    ptsRZ = np.zeros((len(rho_vals), 2))
 
     obmp_line = LineString([Point(pts.axis.mag), Point(pts.obmp)])
-    for i, rho in enumerate(rhovals):
+    for i, rho in enumerate(rho_vals):
         ptsRZ[i] = np.asarray(obmp_line.interpolate(rho, normalized=True).coords)
 
-    psivals = griddata(np.column_stack((psi_data.R.flatten(), psi_data.Z.flatten())),
+    psi_vals = griddata(np.column_stack((psi_data.R.flatten(), psi_data.Z.flatten())),
+                        psi_data.psi.flatten(),
+                        ptsRZ,
+                        method='cubic')
+
+    psinorm_vals = griddata(np.column_stack((psi_data.R.flatten(), psi_data.Z.flatten())),
                         psi_data.psi_norm.flatten(),
                         ptsRZ,
                         method='cubic')
 
-    psivals[0] = 0
-    psivals[-1] = 1
 
-    rho2psi = interp1d(rhovals, psivals, fill_value='extrapolate')
-    psi2rho = interp1d(psivals, rhovals, fill_value='extrapolate')
 
-    return rho2psi, psi2rho
+    psinorm_vals[0] = 0
+    psinorm_vals[-1] = 1
 
+    # For some reason, psi_vals will sometimes not be monotonically increasing, especially near the magnetic axis.
+    # This prevents UnivariateSpline from working. To prevent this, we're just going to delete any points that are
+    # lower than the previous point, prior to doing the fit. As long as the psi data isn't too wonky, this should be
+    # fine.
+    psivals_mi = []  # psivals that are monotonically increasing
+    psinormvals_mi = []  # psinormvals corresponding to monotonically increasing psi
+    rhovals_mi = []  # rhovals corresponding to monotonically increasing psi
+    for i, psi_val in enumerate(psi_vals):
+        if i == 0:
+            rhovals_mi.append(0)
+            psivals_mi.append(psi_vals[0])  #this is probably supposed to be zero as well, but we'll leave it for now
+            psinormvals_mi.append(0)
+        elif psi_val > psivals_mi[-1]:
+            rhovals_mi.append(rho_vals[i])
+            psivals_mi.append(psi_vals[i])
+            psinormvals_mi.append(psinorm_vals[i])
+
+    rhovals_mi = np.asarray(rhovals_mi)
+    psivals_mi = np.asarray(psivals_mi)
+    psinormvals_mi = np.asarray(psinormvals_mi)
+
+    rho2psi = interp1d(rhovals_mi, psivals_mi, fill_value='extrapolate')
+    rho2psinorm = interp1d(rhovals_mi, psinormvals_mi, fill_value='extrapolate')
+    psi2rho = interp1d(psivals_mi, rhovals_mi, fill_value='extrapolate')
+    psi2psinorm = interp1d(psivals_mi, psinormvals_mi, fill_value='extrapolate')
+    psinorm2rho = interp1d(psinormvals_mi, rhovals_mi, fill_value='extrapolate')
+    psinorm2psi = interp1d(psinormvals_mi, psivals_mi, fill_value='extrapolate')
+
+    #rho2psi = interp1d(rho_vals, psi_vals, fill_value='extrapolate')
+    #psi2rho = interp1d(psi_vals, rho_vals, fill_value='extrapolate')
+
+    return rho2psi, rho2psinorm, psi2rho, psi2psinorm, psinorm2rho, psinorm2psi
 
 
 def calc_chi_jet(T, L, a, q, B_T, m_i, rho):
@@ -904,6 +1016,12 @@ def calc_chi_jet(T, L, a, q, B_T, m_i, rho):
     chi_e_jet = 8E-5 * chi_bohm + 3.5E-2 * chi_gyro_bohm
     return chi_i_jet, chi_e_jet
 
+# def calc_imp_rad(nz, ne, rho, Lz, calc_dVdrho, rho_start=0, rho_end=1):
+#     nz_fit = UnivariateSpline(rho[:,0], nz[:,0], k=3, s=0)
+#     ne_fit = UnivariateSpline(rho[:,0], ne[:,0], k=3, s=0)
+#
+#     return
+
 
 class Core:
     def __init__(self, inp):
@@ -913,28 +1031,47 @@ class Core:
 
         raw_psi_R = inp.psirz_exp[:, 0].reshape(-1, psi_shape)
         raw_psi_Z = inp.psirz_exp[:, 1].reshape(-1, psi_shape)
-        raw_psi = inp.psirz_exp[:, 2].reshape(-1, psi_shape)
+        try:
+            raw_psi = inp.psirz_exp[:, 2].reshape(-1, psi_shape) * inp.psi_scale
+        except AttributeError:
+            raw_psi = inp.psirz_exp[:, 2].reshape(-1, psi_shape)
+
 
         xpt, mag_axis = find_xpt_mag_axis(raw_psi_R, raw_psi_Z, raw_psi)
 
         raw_psi_norm = calc_psi_norm(raw_psi_R, raw_psi_Z, raw_psi, xpt, mag_axis)
 
         raw_dpsidR = np.abs(np.gradient(raw_psi_norm, raw_psi_R[0, :], axis=1))
+        raw_1_R_dpsidR = raw_dpsidR / raw_psi_R
+        raw_d_dR_1_R_dpsidR = np.abs(np.gradient(raw_1_R_dpsidR, raw_psi_R[0, :], axis=1))
         raw_dpsidZ = np.abs(np.gradient(raw_psi_norm, raw_psi_Z[:, 0], axis=0))
+        raw_d2psidZ2 = np.abs(np.gradient(raw_dpsidZ, raw_psi_Z[:, 0], axis=0))
         raw_dpsidr = raw_dpsidR + raw_dpsidZ
+        raw_j = -(raw_d_dR_1_R_dpsidR*raw_psi_R + raw_d2psidZ2)/(raw_psi_R*u_0)
 
-        self.psi_data = namedtuple('psi_data', 'R Z psi psi_norm dpsidR dpsidZ dpsidr')(
+        self.psi_data = namedtuple('psi_data', 'R Z psi psi_norm dpsidR dpsidZ dpsidr j')(
             raw_psi_R,
             raw_psi_Z,
             raw_psi,
             raw_psi_norm,
             raw_dpsidR,
             raw_dpsidZ,
-            raw_dpsidr
+            raw_dpsidr,
+            raw_j
         )
 
         # calculate some important points and lines
         self.pts, self.lines = calc_pts_lines(self.psi_data, xpt, inp.wall_line, mag_axis)
+
+        # create interpolation functions to convert rho to psi and vice versa
+        interp_fns = calc_rho2psi_interp(self.pts, self.psi_data)
+
+        self.rho2psi = interp_fns[0]
+        self.rho2psinorm = interp_fns[1]
+        self.psi2rho = interp_fns[2]
+        self.psi2psinorm = interp_fns[3]
+        self.psinorm2rho = interp_fns[4]
+        self.psinorm2psi = interp_fns[5]
 
         # plt.plot(np.asarray(self.lines.sep.coords)[:,0], np.asarray(self.lines.sep.coords)[:,1], color='red')
         # plt.plot(np.asarray(self.lines.div.ib.coords)[:,0], np.asarray(self.lines.div.ib.coords)[:,1], color='green')
@@ -942,7 +1079,7 @@ class Core:
         # plt.show()
 
         self.R0_a = self.pts.axis.geo[0]
-        print 'xpt = ',xpt
+
         # TODO: Figure out which of these is the definition of 'a'
         # self.a = self.pts.obmp[0] - self.pts.axis.geo
         self.a = self.pts.obmp[0] - self.pts.axis.mag[0]
@@ -969,9 +1106,12 @@ class Core:
         # create rho and theta arrays (initializing the main computational grid)
         self.theta, self.rho = np.meshgrid(theta1d, rho1d)
         self.r = self.rho * self.a
-        self.psi, self.psi_norm = calc_psi(self.rho, self.pts, self.psi_data)
+
+        self.psi = self.rho2psi(self.rho)
+        self.psi_norm = self.rho2psinorm(self.rho)
 
         self.R, self.Z = calc_RZ(self.rho, self.theta, theta_xpt, self.pts, self.psi_data, self.psi_norm, self.lines)
+
 
         self.xpt_loc = np.where(self.Z == np.amin(self.Z))
         self.obmp_loc = np.where(self.R == np.amax(self.R))
@@ -981,26 +1121,24 @@ class Core:
         # estimate elongation and triangularity
         self.kappa_vals, self.tri_vals = calc_kappa_elong(self.psi_data, np.asarray(self.lines.sep_closed.coords))
 
-        # create interpolation functions to convert rho to psi and vice versa
-        self.rho2psi, self.psi2rho = calc_rho2psi_interp(self.pts, self.psi_data)
-
-        np.savetxt('psi2rho.txt', np.column_stack((np.linspace(0,1,100), self.psi2rho(np.linspace(0,1,100)))))
-
         #create interpolation functions to obtain the flux surface surface area for any value of r, rho, or psi_norm
-        self.r2sa, self.rho2sa, self.psi2sa = create_surf_area_interp(self.rho2psi,
-                                                                      self.psi2rho,
+        self.r2sa, self.rho2sa, self.psinorm2sa = create_surf_area_interp(self.rho2psinorm,
+                                                                      self.psinorm2rho,
                                                                       self.psi_data,
                                                                       np.asarray(self.lines.sep_closed.coords),
                                                                       self.R0_a,
                                                                       self.a)
 
         #create interpolation functions to obtain the plasma volume for any value of r, rho, or psi_norm
-        self.r2vol, self.rho2vol, self.psi2vol = create_vol_interp(self.rho2psi,
-                                                                   self.psi2rho,
+        self.r2vol, self.rho2vol, self.psinorm2vol = create_vol_interp(self.rho2psinorm,
+                                                                   self.psinorm2rho,
                                                                    self.psi_data,
                                                                    np.asarray(self.lines.sep_closed.coords),
                                                                    self.R0_a,
                                                                    self.a)
+
+        np.savetxt('psi2rho.txt', np.column_stack((np.linspace(0,1,100), self.psi2rho(np.linspace(0,1,100)))))
+
 
         # initialize volume as a function of rho
         self.vol_rho = self.rho2vol(self.rho)
@@ -1025,13 +1163,13 @@ class Core:
 
         # deuterium density
         try:
-            nD = UnivariateSpline(inp.nD_data[:, 0], inp.nD_data[:, 1], k=3, s=2.0)(self.rho)
+            nD = UnivariateSpline(inp.nD_data[:, 0], inp.nD_data[:, 1], k=3, s=0)(self.rho)
         except AttributeError:
             nD = np.zeros(self.rho.shape)
 
         # tritium density
         try:
-            nT = UnivariateSpline(inp.nT_data[:, 0], inp.nT_data[:, 1], k=3, s=2.0)(self.rho)
+            nT = UnivariateSpline(inp.nT_data[:, 0], inp.nT_data[:, 1], k=3, s=0)(self.rho)
         except AttributeError:
             nT = np.zeros(self.rho.shape)
 
@@ -1039,46 +1177,77 @@ class Core:
 
         # electron density
         try:
-            ne = UnivariateSpline(inp.ne_data[:, 0], inp.ne_data[:, 1], k=3, s=2.0)(self.rho)
+            ne = UnivariateSpline(inp.ne_data[:, 0], inp.ne_data[:, 1], k=3, s=0)(self.rho)
         except AttributeError:
             ne = np.zeros(self.rho.shape)
 
         # carbon density
         try:
-            nC = UnivariateSpline(inp.nC_data[:, 0], inp.nC_data[:, 1], k=3, s=2.0)(self.rho)
+            nC = UnivariateSpline(inp.nC_data[:, 0], inp.nC_data[:, 1], k=3, s=0)(self.rho)
         except AttributeError:
             try:
-                frac_C = UnivariateSpline(inp.frac_C_data[:, 0], inp.frac_C_data[:, 1], k=5, s=2.0)(self.rho)
+                frac_C = UnivariateSpline(inp.frac_C_data[:, 0], inp.frac_C_data[:, 1], k=3, s=0)(self.rho)
                 nC = ne * frac_C
             except AttributeError:
                 nC = np.zeros(self.rho.shape)
 
         # tungsten density
         try:
-            nW = UnivariateSpline(inp.nW_data[:, 0], inp.nW_data[:, 1], k=3, s=2.0)(self.rho)
+            nW = UnivariateSpline(inp.nW_data[:, 0], inp.nW_data[:, 1], k=3, s=0)(self.rho)
         except AttributeError:
             try:
-                frac_W = UnivariateSpline(inp.frac_W_data[:, 0], inp.frac_W_data[:, 1], k=5, s=2.0)(self.rho)
+                frac_W = UnivariateSpline(inp.frac_W_data[:, 0], inp.frac_W_data[:, 1], k=3, s=0)(self.rho)
                 nW = ne * frac_W
             except AttributeError:
                 nW = np.zeros(self.rho.shape)
 
         # beryllium density
         try:
-            nBe = UnivariateSpline(inp.nBe_data[:, 0], inp.nBe_data[:, 1], k=3, s=2.0)(self.rho)
+            nBe = UnivariateSpline(inp.nBe_data[:, 0], inp.nBe_data[:, 1], k=3, s=0)(self.rho)
         except AttributeError:
             try:
-                frac_Be = UnivariateSpline(inp.frac_Be_data[:, 0], inp.frac_Be_data[:, 1], k=5, s=2.0)(self.rho)
+                frac_Be = UnivariateSpline(inp.frac_Be_data[:, 0], inp.frac_Be_data[:, 1], k=3, s=0)(self.rho)
                 nBe = ne * frac_Be
             except AttributeError:
                 nBe = np.zeros(self.rho.shape)
 
-        # alpha density
+
+        # neon density
         try:
-            na = UnivariateSpline(inp.na_data[:, 0], inp.na_data[:, 1], k=3, s=2.0)(self.rho)
+            nNe = UnivariateSpline(inp.nNe_data[:, 0], inp.nNe_data[:, 1], k=3, s=0)(self.rho)
         except AttributeError:
             try:
-                frac_a = UnivariateSpline(inp.frac_a_data[:, 0], inp.frac_a_data[:, 1], k=5, s=2.0)(self.rho)
+                frac_Ne = UnivariateSpline(inp.frac_Ne_data[:, 0], inp.frac_Ne_data[:, 1], k=3, s=0)(self.rho)
+                nNe = ne * frac_Ne
+            except AttributeError:
+                nNe = np.zeros(self.rho.shape)
+
+        # krypton density
+        try:
+            nKr = UnivariateSpline(inp.nKr_data[:, 0], inp.nKr_data[:, 1], k=3, s=0)(self.rho)
+        except AttributeError:
+            try:
+                frac_Kr = UnivariateSpline(inp.frac_Kr_data[:, 0], inp.frac_Kr_data[:, 1], k=3, s=0)(self.rho)
+                nKr = ne * frac_Kr
+            except AttributeError:
+                nKr = np.zeros(self.rho.shape)
+
+        # argon density
+        try:
+            nAr = UnivariateSpline(inp.nAr_data[:, 0], inp.nAr_data[:, 1], k=3, s=0)(self.rho)
+        except AttributeError:
+            try:
+                frac_Ar = UnivariateSpline(inp.frac_Ar_data[:, 0], inp.frac_Ar_data[:, 1], k=3, s=0)(self.rho)
+                nAr = ne * frac_Ar
+            except AttributeError:
+                nAr = np.zeros(self.rho.shape)
+
+        # alpha density
+        try:
+            na = UnivariateSpline(inp.na_data[:, 0], inp.na_data[:, 1], k=3, s=0)(self.rho)
+        except AttributeError:
+            try:
+                frac_a = UnivariateSpline(inp.frac_a_data[:, 0], inp.frac_a_data[:, 1], k=3, s=0)(self.rho)
                 na = ne * frac_a
             except AttributeError:
                 na = np.zeros(self.rho.shape)
@@ -1088,13 +1257,20 @@ class Core:
             ne * 1E-7,  # thermal
             2 * ne * 1E-7   # total
         )
-        self.n = namedtuple('n', 'D T i e C W Be a n')(nD, nT, ni, ne, nC, nW, nBe, na, nn)
+        self.n = namedtuple('n', 'D T i e C W Be Ne Ar Kr a n')(nD, nT, ni, ne, nC, nW, nBe, nNe, nAr, nKr, na, nn)
 
         self.z_0 = nC*6.0**2 / (nD + nT)  # TODO: Update this calculation
         self.z_eff = ((nD + nT)*1.0**2 + nC*6.0**2) / ne  # TODO: Update this calculation
 
         # populate temperature namedtuples, including the main T object
-        Ti_kev = UnivariateSpline(inp.Ti_data[:, 0], inp.Ti_data[:, 1], k=3, s=0.0)(self.rho)
+        Ti_kev_fit = UnivariateSpline(
+            inp.Ti_data[:, 0],
+            inp.Ti_data[:, 1],
+            k=3,
+            s=0.0
+        )
+
+        Ti_kev = Ti_kev_fit(self.rho)
         Te_kev = UnivariateSpline(inp.Te_data[:, 0], inp.Te_data[:, 1], k=3, s=0.0)(self.rho)
         Tns_kev = np.full(self.rho.shape, 0.002)
         Tnt_kev = Ti_kev
@@ -1134,37 +1310,45 @@ class Core:
             self.n.C * self.T.C.J)
 
         # initialize spatial gradients and gradient scale lengths
-        dni_dr = calc_grad(self.rho, self.n.i, self.psi_norm, self.R, self.Z, self.psi_data)
-        dne_dr = calc_grad(self.rho, self.n.e, self.psi_norm, self.R, self.Z, self.psi_data)
-        dnC_dr = calc_grad(self.rho, self.n.C, self.psi_norm, self.R, self.Z, self.psi_data)
-        dTi_kev_dr = calc_grad(self.rho, self.T.i.kev, self.psi_norm, self.R, self.Z, self.psi_data)
-        dTi_ev_dr = dTi_kev_dr * 1E3
-        dTi_J_dr = dTi_kev_dr * 1E3 * e
-        dTe_kev_dr = calc_grad(self.rho, self.T.i.kev, self.psi_norm, self.R, self.Z, self.psi_data)
-        dTe_ev_dr = dTe_kev_dr * 1E3
-        dTe_J_dr = dTe_kev_dr * 1E3 * e
+        self.dni_dr = calc_grad(self.rho, self.n.i, self.psi_norm, self.R, self.Z, self.psi_data)
+        # plt.contourf(self.R, self.Z, dni_dr, 500)
+        # plt.axis('equal')
+        # plt.colorbar()
+        # plt.show()
+        # sys.exit()
+        self.dne_dr = calc_grad(self.rho, self.n.e, self.psi_norm, self.R, self.Z, self.psi_data)
+        self.dnC_dr = calc_grad(self.rho, self.n.C, self.psi_norm, self.R, self.Z, self.psi_data)
+        self.dTi_kev_dr = calc_grad(self.rho, self.T.i.kev, self.psi_norm, self.R, self.Z, self.psi_data)
+        self.dTi_ev_dr = self.dTi_kev_dr * 1E3
+        self.dTi_J_dr = self.dTi_kev_dr * 1E3 * e
+        self.dTe_kev_dr = calc_grad(self.rho, self.T.i.kev, self.psi_norm, self.R, self.Z, self.psi_data)
+        self.dTe_ev_dr = self.dTe_kev_dr * 1E3
+        self.dTe_J_dr = self.dTe_kev_dr * 1E3 * e
 
-        dpi_dr = calc_grad(self.rho, self.n.i * self.T.i.J, self.psi_norm, self.R, self.Z, self.psi_data)
-        dpe_dr = calc_grad(self.rho, self.n.e * self.T.e.J, self.psi_norm, self.R, self.Z, self.psi_data)
+        self.dpi_dr = calc_grad(self.rho, self.n.i * self.T.i.J, self.psi_norm, self.R, self.Z, self.psi_data)
+        self.dpe_dr = calc_grad(self.rho, self.n.e * self.T.e.J, self.psi_norm, self.R, self.Z, self.psi_data)
 
         self.L = namedtuple('L', 'n T p')(
             namedtuple('Ln', 'i e')(
-                -dni_dr / self.n.i,
-                -dne_dr / self.n.e
+                -self.n.i / self.dni_dr,
+                -self.n.e / self.dne_dr
             ),
             namedtuple('LT', 'i e')(
-                -dTi_kev_dr / self.T.i.kev,  # note: independent of units,
-                -dTe_kev_dr / self.T.e.kev  # note: independent of units
+                -self.T.i.kev / self.dTi_kev_dr,  # note: independent of units,
+                -self.T.e.kev / self.dTe_kev_dr  # note: independent of units
             ),
             namedtuple('Lp', 'i e')(
-                -dpi_dr / self.p.i,  # note: independent of units,
-                -dpe_dr / self.p.e  # note: independent of units
+                -self.p.i / self.dpi_dr,  # note: independent of units,
+                -self.p.e / self.dpe_dr  # note: independent of units
             )
         )
 
         # initialize E_r and the corresponding electric potential
         try:
-            E_r_fit = UnivariateSpline(inp.er_data[:, 0], inp.er_data[:, 1], k=5, s=2.0)
+            try:
+                E_r_fit = UnivariateSpline(inp.er_data[:, 0], inp.er_data[:, 1] * inp.Er_scale, k=3, s=0)
+            except AttributeError:
+                E_r_fit = UnivariateSpline(inp.er_data[:, 0], inp.er_data[:, 1], k=3, s=0)
             self.E_r = E_r_fit(self.rho)
             self.E_pot = np.zeros(self.rho.shape)
             for i, rhoval in enumerate(rho1d):
@@ -1176,19 +1360,19 @@ class Core:
 
         # initialize rotation velocities from data
         try:
-            vpolD = UnivariateSpline(inp.vpolD_data[:, 0], inp.vpolD_data[:, 1], k=5, s=2.0)(self.rho)
+            vpolD = UnivariateSpline(inp.vpolD_data[:, 0], inp.vpolD_data[:, 1], k=3, s=0)(self.rho)
         except AttributeError:
             vpolD = np.zeros(self.rho.shape)
         try:
-            vpolC = UnivariateSpline(inp.vpolC_data[:, 0], inp.vpolC_data[:, 1], k=5, s=2.0)(self.rho)
+            vpolC = UnivariateSpline(inp.vpolC_data[:, 0], inp.vpolC_data[:, 1], k=3, s=0)(self.rho)
         except AttributeError:
             vpolC = np.zeros(self.rho.shape)
         try:
-            vtorD = UnivariateSpline(inp.vtorD_data[:, 0], inp.vtorD_data[:, 1], k=5, s=2.0)(self.rho)
+            vtorD = UnivariateSpline(inp.vtorD_data[:, 0], inp.vtorD_data[:, 1], k=3, s=0)(self.rho)
         except AttributeError:
             vtorD = np.zeros(self.rho.shape)
         try:
-            vtorC = UnivariateSpline(inp.vtorC_data[:, 0], inp.vtorC_data[:, 1], k=5, s=2.0)(self.rho)
+            vtorC = UnivariateSpline(inp.vtorC_data[:, 0], inp.vtorC_data[:, 1], k=3, s=0)(self.rho)
         except AttributeError:
             vtorC = np.zeros(self.rho.shape)
 
@@ -1218,7 +1402,7 @@ class Core:
 
         try:
             # use input q profile if given
-            q_interp = UnivariateSpline(inp.q_data[:, 0], inp.q_data[:, 1], k=5, s=1.0)
+            q_interp = UnivariateSpline(inp.q_data[:, 0], inp.q_data[:, 1], k=3, s=1.0)
             self.q = q_interp(self.rho)
             self.q_1D = q_interp(self.rho.T[0])
         except:
@@ -1230,7 +1414,52 @@ class Core:
         self.q95 = UnivariateSpline(self.psi_norm[:,0], self.q_1D, k=1, s=0)(0.95)
 
         # create Lz-related variables. These will remain zero unless set by the ImpRad module
-        self.Lz = namedtuple('Lz', 's t ddT')(
+        self.Lz_C = namedtuple('Lz_C', 's t ddT')(
+            np.zeros(self.rho.shape),
+            np.zeros(self.rho.shape),
+            namedtuple('Lz_ddT', 's t')(
+                np.zeros(self.rho.shape),
+                np.zeros(self.rho.shape)
+            )
+        )
+
+        self.Lz_Be = namedtuple('Lz_Be', 's t ddT')(
+            np.zeros(self.rho.shape),
+            np.zeros(self.rho.shape),
+            namedtuple('Lz_ddT', 's t')(
+                np.zeros(self.rho.shape),
+                np.zeros(self.rho.shape)
+            )
+        )
+
+        self.Lz_W = namedtuple('Lz_W', 's t ddT')(
+            np.zeros(self.rho.shape),
+            np.zeros(self.rho.shape),
+            namedtuple('Lz_ddT', 's t')(
+                np.zeros(self.rho.shape),
+                np.zeros(self.rho.shape)
+            )
+        )
+
+        self.Lz_Ne = namedtuple('Lz_Ne', 's t ddT')(
+            np.zeros(self.rho.shape),
+            np.zeros(self.rho.shape),
+            namedtuple('Lz_ddT', 's t')(
+                np.zeros(self.rho.shape),
+                np.zeros(self.rho.shape)
+            )
+        )
+
+        self.Lz_Ar = namedtuple('Lz_Ar', 's t ddT')(
+            np.zeros(self.rho.shape),
+            np.zeros(self.rho.shape),
+            namedtuple('Lz_ddT', 's t')(
+                np.zeros(self.rho.shape),
+                np.zeros(self.rho.shape)
+            )
+        )
+
+        self.Lz_Kr = namedtuple('Lz_Kr', 's t ddT')(
             np.zeros(self.rho.shape),
             np.zeros(self.rho.shape),
             namedtuple('Lz_ddT', 's t')(
@@ -1374,12 +1603,6 @@ class Core:
         except:
             izn_rate_t = self.izn_rate.t
 
-        print 'n_n_t_xpt = ', n_n_t[self.xpt_loc]
-        # plt.contourf(self.R, self.Z, n_n_t)
-        # plt.colorbar()
-        # plt.show()
-        # sys.exit()
-
         nn = namedtuple('nn', 's t tot')(
             n_n_s,  # slow
             n_n_t,  # thermal
@@ -1412,14 +1635,65 @@ class Core:
                           np.log10(self.n.n.t / self.n.e),
                           np.log10(self.T.e.kev))
 
-        self.Lz = namedtuple('Lz', 's t ddT')(
-            Lz_slow,
-            Lz_thermal,
-            namedtuple('Lz_ddT', 's t')(
-                dLzdT_slow,
-                dLzdT_thermal
+        if z==6:
+            self.Lz_C = namedtuple('Lz_C', 's t ddT')(
+                Lz_slow,
+                Lz_thermal,
+                namedtuple('Lz_ddT', 's t')(
+                    dLzdT_slow,
+                    dLzdT_thermal
+                )
             )
-        )
+
+        if z==4:
+            self.Lz_Be = namedtuple('Lz_Be', 's t ddT')(
+                Lz_slow,
+                Lz_thermal,
+                namedtuple('Lz_ddT', 's t')(
+                    dLzdT_slow,
+                    dLzdT_thermal
+                )
+            )
+
+        if z == 74:
+            self.Lz_W = namedtuple('Lz_W', 's t ddT')(
+                Lz_slow,
+                Lz_thermal,
+                namedtuple('Lz_ddT', 's t')(
+                    dLzdT_slow,
+                    dLzdT_thermal
+                )
+            )
+
+        if z == 10:
+            self.Lz_Ne = namedtuple('Lz_Ne', 's t ddT')(
+                Lz_slow,
+                Lz_thermal,
+                namedtuple('Lz_ddT', 's t')(
+                    dLzdT_slow,
+                    dLzdT_thermal
+                )
+            )
+
+        if z == 18:
+            self.Lz_Ar = namedtuple('Lz_Ar', 's t ddT')(
+                Lz_slow,
+                Lz_thermal,
+                namedtuple('Lz_ddT', 's t')(
+                    dLzdT_slow,
+                    dLzdT_thermal
+                )
+            )
+
+        if z == 36:
+            self.Lz_Kr = namedtuple('Lz_Kr', 's t ddT')(
+                Lz_slow,
+                Lz_thermal,
+                namedtuple('Lz_ddT', 's t')(
+                    dLzdT_slow,
+                    dLzdT_thermal
+                )
+            )
 
 
 
