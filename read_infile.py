@@ -104,6 +104,8 @@ class ReadInfile:
         self.invars['thetapts_approx'] = ['int', r0di]
 
         self.invars['BT0'] = ['float', r0df]
+        self.invars['Er_scale'] = ['float', r0df]
+        self.invars['psi_scale'] = ['float', r0df]
 
         # SOL PARAMETERS
         self.invars['sollines_psi_max'] = ['float', r0df]

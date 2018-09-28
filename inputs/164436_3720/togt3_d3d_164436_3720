@@ -5,12 +5,7 @@ edge_rho = 0.7
 rhopts_edge = 100
 rhopts_core = 10
 
-#CURRENT- AND MAGNETIC FIELD-RELATED PARAMETERS
-j0 = 2.55E6
-j_sep = 7.95E4
-nu_j = 3.0
-IP = 1.07
-q95 = 3.79
+#MAGNETIC FIELD
 BT0 = 2.004
 
 #NEUTRALS PARAMETERS
@@ -27,7 +22,7 @@ wall_ne_min = 1.0E15
 wall_Ti_min = 0.005
 wall_Te_min = 0.005
 tri_min_angle = 20
-tri_min_area  = 0.01
+tri_min_area = 0.01
 
 #SOL PARAMETERS
 sollines_psi_max = 1.07
@@ -45,24 +40,24 @@ pfr_Ti_val = 0.002
 pfr_Te_val = 0.002
 
 #1D PROFILE INPUT FILES
-ne_file         = /164436_3720/gt3_164436_3720_ne.dat
-nD_file         = /164436_3720/gt3_164436_3720_ni.dat
-ni_file         = /164436_3720/gt3_164436_3720_ni.dat
-nC_file         = /164436_3720/gt3_164436_3720_nc.dat
-Te_file         = /164436_3720/gt3_164436_3720_Te.dat
-Ti_file         = /164436_3720/gt3_164436_3720_Ti.dat
-TC_file         = /164436_3720/gt3_164436_3720_Tc.dat
-er_file         = /164436_3720/gt3_164436_3720_er.dat
-vpolC_file      = /164436_3720/gt3_164436_3720_vpolC.dat
-vtorC_file      = /164436_3720/gt3_164436_3720_vtorC.dat
-vpolD_file      = /164436_3720/gt3_164436_3720_vpolD.dat
-vtorD_file      = /164436_3720/gt3_164436_3720_vtorD.dat
+ne_file = /164436_3720/gt3_164436_3720_ne.dat
+nD_file = /164436_3720/gt3_164436_3720_ni.dat
+ni_file = /164436_3720/gt3_164436_3720_ni.dat
+nC_file = /164436_3720/gt3_164436_3720_nc.dat
+Te_file = /164436_3720/gt3_164436_3720_Te.dat
+Ti_file = /164436_3720/gt3_164436_3720_Ti.dat
+TC_file = /164436_3720/gt3_164436_3720_Tc.dat
+er_file = /164436_3720/gt3_164436_3720_er.dat
+vpolC_file = /164436_3720/gt3_164436_3720_vpolC.dat
+vtorC_file = /164436_3720/gt3_164436_3720_vtorC.dat
+vpolD_file = /164436_3720/gt3_164436_3720_vpolD.dat
+vtorD_file = /164436_3720/gt3_164436_3720_vtorD.dat
 
 2D QUANTITIES INPUT FILES
-psirz_file      = /164436_3720/gt3_164436_3720_psirz.txt
+psirz_file = /164436_3720/gt3_164436_3720_psirz.txt
 
 2D LINE INPUT FILES
-wall_file        = /machine/gt3_diiid_wall.dat
+wall_file = /machine/gt3_diiid_wall.dat
 
 #NEUTRAL BEAM DEPOSITION
 # nbeams_loc = /nbeams/nbeams.exe

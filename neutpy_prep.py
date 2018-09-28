@@ -25,7 +25,7 @@ from sol import Sol
 from pfr import Pfr
 import pickle
 from contours.quad import QuadContourGenerator
-
+import pandas as pd
 
 def draw_contour_line(R, Z, array, val, pathnum):
     c = QuadContourGenerator.from_rectilinear(R[0], Z[:, 0], array)
@@ -132,7 +132,7 @@ def calc_core_lines_ntrl(core):
     c = QuadContourGenerator.from_rectilinear(core.psi_data.R[0], core.psi_data.Z[:, 0], core.psi_data.psi_norm)
 
     rhovals = np.linspace(0.7, 1, 5, endpoint=False)
-    psivals = core.rho2psi(rhovals)
+    psivals = core.rho2psinorm(rhovals)
 
     core_lines_ntrl = []
     for i, psival in enumerate(psivals):
@@ -337,10 +337,24 @@ def create_triangle_opts(inp):
     tri_options = tri_options + 'nz'
     return tri_options
 
+def create_cell_outfile(neutpy_inst, outfile, midpts):
+    df = pd.DataFrame()
+    df['R'] = pd.Series(midpts[:,0], name='R')
+    df['Z'] = pd.Series(midpts[:,1], name='Z')
+    df['n_n_slow'] = pd.Series(neutpy_inst.nn.s, name='n_n_slow')
+    df['n_n_thermal'] = pd.Series(neutpy_inst.nn.t, name='n_n_thermal')
+    df['n_n_total'] = pd.Series(neutpy_inst.nn.tot, name='n_n_total')
+    df['izn_rate_slow'] = pd.Series(neutpy_inst.izn_rate.s, name='izn_rate_slow')
+    df['izn_rate_thermal'] = pd.Series(neutpy_inst.izn_rate.t, name='izn_rate_thermal')
+    df['izn_rate_total'] = pd.Series(neutpy_inst.izn_rate.tot, name='izn_rate_total')
+    #cell_df = iterate_namedtuple(neut.cell, df)
+    df.to_csv(outfile)
+
 
 class Neutrals:
     def __init__(self, inp, core):
         # Try to read in specified neutrals data file. If it's not there, then prepare inputs for and run neutpy
+
         try:
             ntrl_data = np.loadtxt(inp.neutfile_loc, delimiter=',', skiprows=1)
             self.data = namedtuple('data', 'R Z n_n_slow n_n_thermal izn_rate_slow izn_rate_thermal')(
@@ -419,11 +433,14 @@ class Neutrals:
             # run neutpy
             self.neutpy_inst = neutpy(inarrs=toneutpy)
 
-            print 'instantiating NeutpyTools'
-            self.ntools = NeutpyTools(self.neutpy_inst)
+            # output cell values (this is also done by neutpy tools in the next step, but stored somewhere else)
+            create_cell_outfile(self.neutpy_inst, inp.neut_cell_file, midpts)
 
-            #print 'calling plot_cell_vals from NeutpyTools'
-            #self.ntools.plot_cell_vals
+            # instantiating NeutpyTools and create neutrals data files. To make neutral densities and related
+            # charts, you can use neutpy tools directly by passing it a namedtuple of the output files
+            ntools = NeutpyTools(self.neutpy_inst)
+            ntools.create_flux_outfile(inp.neut_face_file)
+            ntools.create_cell_outfile(inp.neut_cell_file)
 
             self.data = namedtuple('data', 'R Z n_n_slow n_n_thermal izn_rate_slow izn_rate_thermal')(
                 midpts[:, 0],
