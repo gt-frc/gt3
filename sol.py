@@ -45,8 +45,10 @@ def cut(line, distance):
 
 class Sol:
     def __init__(self, inp, core):
-        R = inp.psirz_exp[:, 0].reshape(-1, 65)
-        Z = inp.psirz_exp[:, 1].reshape(-1, 65)
+        # # NOTE: this assumes structured psi data on a regular grid. This way of getting R and Z is entirely inadeqaute for
+        # # unstructured psi data
+        # R = inp.psirz_exp[:, 0].reshape(-1, np.unique(inp.psirz_exp[:, 0]).size)
+        # Z = inp.psirz_exp[:, 1].reshape(-1, np.unique(inp.psirz_exp[:, 1]).size)
         
         self.calc_sol_lines(inp, core)
         self.calc_sol_nT(inp, core)
@@ -73,10 +75,13 @@ class Sol:
 
         sollines_psi_max_contours = c.contour(inp.sollines_psi_max)
         num_lines = len(sollines_psi_max_contours)
+
+        print 'num_lines = ', num_lines
         if num_lines == 1:
             # then this is probably the correct line. Check to see how many times it intersects
             # with the first wall
             num_wall_ints = len(LineString(sollines_psi_max_contours[0]).intersection(inp.wall_line))
+            print 'num_wall_ints = ',num_wall_ints
             if num_wall_ints > 2:
                 print 'It looks like your sollines_psi_max value might be intersecting the wall.' \
                       'Try reducing it. Stopping.'
@@ -129,6 +134,11 @@ class Sol:
         # end of the flux line isn't exactly on top of the wall line.
 
         # add inboard seperatrix strike point
+
+        #plt.plot(np.asarray(inp.wall_line)[:,0], np.asarray(inp.wall_line)[:,1])
+        #plt.plot(np.asarray(core.lines.div.ib_long)[:,0], np.asarray(core.lines.div.ib_long)[:, 1])
+
+
         union = inp.wall_line.union(core.lines.div.ib_long)
         result = [geom for geom in polygonize(union)][0]
         inp.wall_line = LineString(result.exterior.coords)
@@ -368,6 +378,7 @@ class Sol:
         r_pts = np.linspace(0, r_max, twoptdiv_r_pts)
         xi, r = np.meshgrid(xi_pts, r_pts)
         sol_ni = ni_xi * np.exp(-r/delta_sol_n)
+
         sol_ne = ne_xi * np.exp(-r/delta_sol_n)
         sol_Ti = Ti_xi * np.exp(-r/delta_sol_T)
         sol_Te = Te_xi * np.exp(-r/delta_sol_T)
@@ -424,12 +435,8 @@ class Sol:
             pts_Ti_sol = np.vstack((pts_Ti_sol, np.column_stack((sol_nT_pts[:, :, i], sol_line_Ti[:, i]/1.0E3/1.6021E-19))))  # converting back to kev
             pts_Te_sol = np.vstack((pts_Te_sol, np.column_stack((sol_nT_pts[:, :, i], sol_line_Te[:, i]/1.0E3/1.6021E-19))))  # converting back to kev
 
-        sol_nT_dict = {}
-        sol_nT_dict['ni'] = pts_ni_sol
-        sol_nT_dict['ne'] = pts_ne_sol
-        sol_nT_dict['Ti'] = pts_Ti_sol
-        sol_nT_dict['Te'] = pts_Te_sol
-        self.sol_nT = namedtuple('sol_nT', sol_nT_dict.keys())(*sol_nT_dict.values())
+
+        self.sol_nT = namedtuple('sol_nT', 'ni ne Ti Te')(pts_ni_sol, pts_ne_sol, pts_Ti_sol, pts_Te_sol)
 
 
         
@@ -456,18 +463,13 @@ class Sol:
         pts_Ti_wall = np.column_stack((wall_nT_pts, wall_Ti / 1.0E3 / 1.6021E-19))  # in kev
         pts_Te_wall = np.column_stack((wall_nT_pts, wall_Te / 1.0E3 / 1.6021E-19))  # in kev
 
-        wall_nT_dict = {}
-        wall_nT_dict['ni'] = pts_ni_wall
-        wall_nT_dict['ne'] = pts_ne_wall
-        wall_nT_dict['Ti'] = pts_Ti_wall
-        wall_nT_dict['Te'] = pts_Te_wall
-        self.wall_nT = namedtuple('wall_nT', wall_nT_dict.keys())(*wall_nT_dict.values())
+        self.wall_nT = namedtuple('wall_nT', 'ni ne Ti Te')(pts_ni_wall, pts_ne_wall, pts_Ti_wall, pts_Te_wall)
 
-        # uncomment this if you're debugging
-        plt.contourf(xi, r, sol_Ti, 500)
-        plt.colorbar()
-        for i, v in enumerate(self.sol_lines_cut):
-            plt.plot(xi_pts, sol_line_dist[:, i])
-        plt.plot(np.linspace(0, 1, num_wall_pts), wall_dist, color='black')
-        plt.show()
-        sys.exit()
+        # # uncomment this if you're debugging
+        # plt.contourf(xi, r, sol_Ti, 500)
+        # plt.colorbar()
+        # for i, v in enumerate(self.sol_lines_cut):
+        #     plt.plot(xi_pts, sol_line_dist[:, i])
+        # plt.plot(np.linspace(0, 1, num_wall_pts), wall_dist, color='black')
+        # plt.show()
+        # sys.exit()

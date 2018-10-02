@@ -44,8 +44,8 @@ def cut(line, distance):
 class Pfr:
     def __init__(self, inp, core):
         
-        R = inp.psirz_exp[:, 0].reshape(-1, 65)
-        Z = inp.psirz_exp[:, 1].reshape(-1, 65)
+        # R = inp.psirz_exp[:, 0].reshape(-1, 65)
+        # Z = inp.psirz_exp[:, 1].reshape(-1, 65)
         
         self.pfr_lines(inp, core)
         self.pfr_nT(inp, core)

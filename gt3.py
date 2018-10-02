@@ -5,6 +5,7 @@
 import sys
 from neutpy_prep import Neutrals
 from iol import IOL
+from sol import Sol
 from read_infile import ReadInfile
 from imp_rad import ImpRad
 from core import Core
@@ -42,13 +43,16 @@ class gt3:
 
         if mode == 'coreonly':
             pass
+
+        if mode == 'coreandsol':
+            self.sol = Sol(self.inp, self.core)
         elif mode == 'thermaliol':
             self.iol = IOL(self.inp, self.core)
         elif mode == 'fulliol':
 
             self.iol = IOL(self.inp, self.core)
         elif mode == 'imp':
-            self.imp = ImpRad(self.inp, self.core)
+            self.imp = ImpRad(core=self.core)
         elif mode == 'ntrls':
             self.ntrl = Neutrals(self.inp, self.core)
         elif mode == 'ntrlsandiol':
@@ -57,17 +61,22 @@ class gt3:
             self.ntrl = Neutrals(self.inp, self.core)
         elif mode == 'nbi':
             self.nbi = BeamDeposition(self.inp, self.core)
-        elif mode == 'therm_instab':
+        elif mode == 'marfe_denlim':
             self.nbi = BeamDeposition(self.inp, self.core)
             self.ntrl = Neutrals(self.inp, self.core)
-            self.imp = ImpRad(z=None, core=self.core)
+            self.imp = ImpRad(core=self.core)
             self.dl = DensityLimit(self.core, self.nbi)
+            self.mar = Marfe(core=self.core)
+        elif mode == 'marfe':
+            self.nbi = BeamDeposition(self.inp, self.core)
+            self.ntrl = Neutrals(self.inp, self.core)
+            self.imp = ImpRad(core=self.core)
             self.mar = Marfe(core=self.core)
         elif mode == 'allthethings':
             self.nbi = BeamDeposition(self.inp, self.core)
             self.iol = IOL(self.inp, self.core)
             self.ntrl = Neutrals(self.inp, self.core)
-            self.imp = ImpRad(z=None, core=self.core)
+            self.imp = ImpRad(core=self.core)
             self.dl = DensityLimit(self.inp, self.core, self.nbi, self.imp, self.ntrl)
             self.mar = Marfe(self.inp, self.core, self.imp)
         elif mode == 'radialtrans':
