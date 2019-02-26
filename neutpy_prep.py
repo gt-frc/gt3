@@ -427,6 +427,7 @@ class Neutrals:
                     #call([inp.triangle_loc, triangle_opts, triangle_infile])
                 except:
                     print 'Unable to find triangle executable. Stopping.'
+                    sys.exit(status=1)
 
             midpts, toneutpy = self.create_neutpy_input(inp, core, lines, nT, core_ring)
 

@@ -1326,6 +1326,8 @@ class Core:
         self.dTe_J_dr = self.dTe_kev_dr * 1E3 * e
 
         self.dpi_dr = calc_grad(self.rho, self.n.i * self.T.i.J, self.psi_norm, self.R, self.Z, self.psi_data)
+        # Nick: Added Carbon Pressure gradient
+        self.dpC_dr = calc_grad(self.rho, self.n.C * self.T.C.J, self.psi_norm, self.R, self.Z, self.psi_data)
         self.dpe_dr = calc_grad(self.rho, self.n.e * self.T.e.J, self.psi_norm, self.R, self.Z, self.psi_data)
 
         self.L = namedtuple('L', 'n T p')(
@@ -1505,10 +1507,11 @@ class Core:
         self.izn_rate_fsa_t = calc_fsa(self.izn_rate.t, self.R, self.Z)
         self.izn_rate_fsa = calc_fsa(self.izn_rate.s + self.izn_rate.t, self.R, self.Z)
         self.cool_rate_fsa = calc_fsa(self.cool_rate, self.R, self.Z)
-
+        self.dn_dr = calc_grad(self.rho, self.n.n.s + self.n.n.t, self.psi_norm, self.R, self.Z, self.psi_data)
         self.z_eff_fsa = calc_fsa(self.z_eff, self.R, self.Z)
         self.B_p_fsa = calc_fsa(self.B_p, self.R, self.Z)
         self.B_t_fsa = calc_fsa(self.B_t, self.R, self.Z)
+        self.E_r_fsa = calc_fsa(self.E_r, self.R, self.Z) # Piper changes: Also get FSA'd Er.
 
         self.n_fsa = namedtuple('n', 'i e n C')(
             calc_fsa(self.n.i, self.R, self.Z),
@@ -1531,7 +1534,7 @@ class Core:
                 Ti_kev_fsa,
                 Ti_kev_fsa * 1E3,
                 Ti_kev_fsa * 1E3 * e),
-            namedtuple('eT', 'kev ev J')(
+            namedtuple('Te', 'kev ev J')(
                 Te_kev_fsa,
                 Te_kev_fsa * 1E3,
                 Te_kev_fsa * 1E3 * e),
@@ -1549,7 +1552,43 @@ class Core:
                 TC_kev_fsa,
                 TC_kev_fsa * 1E3,
                 TC_kev_fsa * 1E3 * e))
-
+        # Piper Changes: Calculate FSA of pressures and make namedtuple.
+        pi_fsa = calc_fsa(self.n.i * self.T.i.J, self.R, self.Z)
+        pC_fsa = calc_fsa(self.n.C * self.T.C.J, self.R, self.Z)
+        pe_fsa = calc_fsa(self.n.e * self.T.e.J, self.R, self.Z)
+        
+        self.p_fsa = namedtuple('p_fsa', 'i C e')(
+            -pi_fsa,
+            -pC_fsa,
+            -pe_fsa)
+               
+        # Piper Changes: Calculate FSA of pressure gradient.
+        dpi_dr_fsa = calc_fsa(self.dpi_dr, self.R, self.Z)
+        dpC_dr_fsa = calc_fsa(self.dpC_dr, self.R, self.Z)
+        dpe_dr_fsa = calc_fsa(self.dpe_dr, self.R, self.Z)
+        
+        self.dp_dr_fsa = namedtuple('dp_dr_fsa', 'i C e')(
+            -dpi_dr_fsa,
+            -dpC_dr_fsa,
+            -dpe_dr_fsa)
+        
+        # FSA of gradient scale length.
+        self.Lp_fsa = namedtuple('Lp_fsa', 'i C e')(
+            -dpi_dr_fsa/pi_fsa,
+            -dpC_dr_fsa/pC_fsa,
+            -dpe_dr_fsa/pe_fsa)
+        
+        self.L_fsa = namedtuple('L', 'T n p')(
+            namedtuple('T', 'i e')(
+                calc_fsa(self.L.T.i, self.R, self.Z),
+                calc_fsa(self.L.T.e, self.R, self.Z)),
+            namedtuple('n', 'i e')(
+                calc_fsa(self.L.n.i, self.R, self.Z),
+                calc_fsa(self.L.n.e, self.R, self.Z)),
+            namedtuple('p', 'i e')(
+                calc_fsa(self.L.p.i, self.R, self.Z),
+                calc_fsa(self.L.p.e, self.R, self.Z))
+            )
         # initialize chi_r using Bohm diffusion. This might get updated later
         chi_bohm = 5/32*self.T.i.J/(e * self.B_tot)
 

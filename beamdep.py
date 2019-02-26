@@ -4,7 +4,7 @@
 Created on Sun Mar 18 21:51:19 2018
 
 @author: max
-"""
+""" 
 from __future__ import division
 import numpy as np
 from scipy.interpolate import interp1d
@@ -542,7 +542,8 @@ class BeamDeposition:
                 else:
                     try:
                         # try to find nbeams in the system path
-                        p = Popen([nbeams_name, os.getcwd()+'/inbeams.dat'], stdin=PIPE, stdout=PIPE).wait()
+		        p = Popen(os.getcwd()+inp.nbeams_loc, stdin=PIPE, stdout=PIPE)
+	                p.communicate()
                     except:
                         try:
                             # otherwise use the location specified in the input file
