@@ -200,11 +200,7 @@ class Sol:
         Ti_sep = np.full(num_sep_pts, Ti_psi_fit(sep_flx_surf)) * 1E3 * 1.6021E-19  # in Joules
         Te_sep = np.full(num_sep_pts, Te_psi_fit(sep_flx_surf)) * 1E3 * 1.6021E-19  # in Joules
 
-        # DEBUG SOL TEMPS/DENS#
-        ni_sep = np.full(num_sep_pts, core.n.i[:,0][-1])
-        ne_sep = np.full(num_sep_pts, core.n.e[:,0][-1])
-        Ti_sep = np.full(num_sep_pts, core.T.i.J[:,0][-1]) # in Joules
-        Te_sep = np.full(num_sep_pts, core.T.e.J[:,0][-1]) # in Joules
+
 
 
         #calculate BT along the seperatrix
