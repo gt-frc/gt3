@@ -15,7 +15,8 @@ import graphs as graphs
 import matplotlib.pyplot as plt
 import pickle
 import numpy as np
-
+from math import ceil, floor, log10
+#164436_3720
 shotid=118888
 timeid=1570
 runid='r88'
@@ -31,7 +32,10 @@ def yRangeFind(inList):
     x=np.concatenate(inList)
     flat=x.flatten()
     flat.sort()
-    return [flat[2],flat[-2]]
+    #return [flat[2]*.75,flat[-2]*1.25]
+    a=flat[2]*.75
+    b=flat[-2]*1.25
+    return [1*10**int(floor(log10(a))), 1*10**int(ceil(log10(b)))]
 
 ###############################################################################
 #
@@ -40,8 +44,8 @@ def yRangeFind(inList):
 ###############################################################################
 
 def chiComp1(shot, shotnoIOL):
-    prettyID = [r'$Q^{diff}_{j,L}=Q^{total}_j$ w/ IOL',
-                r'$Q^{diff}_{j,L}=Q^{total}_j$ w/out IOL']
+    prettyID = [r'$Q^{diff}_{j,r}=Q^{total}_j$ w/ IOL',
+                r'$Q^{diff}_{j,r}=Q^{total}_j$ w/out IOL']
 
     title = r"Comparison of Ion Heat Conductivity w/ and w/out IOL"
 
@@ -50,7 +54,8 @@ def chiComp1(shot, shotnoIOL):
                "Neutrals calculation included"]
 
     graphs.prettyCompare(('rhor', shot.rhor), [(prettyID[0], shot.chi.chi.i.chi1), (prettyID[1], shotnoIOL.chi.chi.i.chi1)],
-                         yrange=yRangeFind([shot.chi.chi.i.chi1, shotnoIOL.chi.chi.i.chi1]),
+                         #yrange=yRangeFind([shot.chi.chi.i.chi1[-30:], shotnoIOL.chi.chi.i.chi1[-30:]]),
+                         yrange=[0., 15],
                          datalabels=[prettyID[0], prettyID[1]],
                          title=title,
                          ylabel=[r"$\chi_j$", r'$\left[\frac{m^2}{s}\right]$'],
@@ -67,8 +72,8 @@ def chiComp1(shot, shotnoIOL):
 
 
 def chiComp2(shot, shotnoIOL):
-    prettyID = [r'$Q^{diff}_{j,L}=Q^{total}_j-Q^{conv}_j$ w/ IOL',
-                r'$Q^{diff}_{j,H}=Q^{total}_j-Q^{conv}_j$ w/out IOL']
+    prettyID = [r'$Q^{diff}_{j,r}=Q^{total}_j-Q^{conv}_j$ w/ IOL',
+                r'$Q^{diff}_{j,r}=Q^{total}_j-Q^{conv}_j$ w/out IOL']
 
     title = r"Comparison of Ion Heat Conductivity w/ and w/out IOL correction"
 
@@ -77,7 +82,8 @@ def chiComp2(shot, shotnoIOL):
                "and convective heat flow, neutrals calculation included"]
 
     graphs.prettyCompare(('rhor', shot.rhor), [(prettyID[0], shot.chi.chi.i.chi2), (prettyID[1], shotnoIOL.chi.chi.i.chi2)],
-                         yrange=yRangeFind([shot.chi.chi.i.chi2, shotnoIOL.chi.chi.i.chi2]),
+                         #yrange=yRangeFind([shot.chi.chi.i.chi2[-30:], shotnoIOL.chi.chi.i.chi2[-30:]]),
+                         yrange=[0., 15],
                          datalabels=[prettyID[0], prettyID[1]],
                          title=title,
                          ylabel=[r"$\chi_j$", r'$\left[\frac{m^2}{s}\right]$'],
@@ -94,8 +100,8 @@ def chiComp2(shot, shotnoIOL):
 
 
 def chiComp3(shot, shotnoIOL):
-    prettyID = [r'$Q^{diff}_{j,L}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j$ w/ IOL',
-                r'$Q^{diff}_{j,H}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j$ w/out IOL']
+    prettyID = [r'$Q^{diff}_{j,r}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j$ w/ IOL',
+                r'$Q^{diff}_{j,r}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j$ w/out IOL']
 
     title = r"Comparison of Ion Heat Conductivity w/ and w/out IOL correction"
 
@@ -104,7 +110,7 @@ def chiComp3(shot, shotnoIOL):
                "convective heat flow, and work done on plasma, neutrals calculation included"]
 
     graphs.prettyCompare(('rhor', shot.rhor), [(prettyID[0], shot.chi.chi.i.chi3), (prettyID[1], shotnoIOL.chi.chi.i.chi3)],
-                         yrange=yRangeFind([shot.chi.chi.i.chi3, shotnoIOL.chi.chi.i.chi3]),
+                         yrange=yRangeFind([shot.chi.chi.i.chi3[-30:], shotnoIOL.chi.chi.i.chi3[-30:]]),
                          datalabels=[prettyID[0], prettyID[1]],
                          title=title,
                          ylabel=[r"$\chi_j$", r'$\left[\frac{m^2}{s}\right]$'],
@@ -121,8 +127,10 @@ def chiComp3(shot, shotnoIOL):
 
 
 def chiComp4(shot, shotnoIOL):
-    prettyID = [r'$Q^{diff}_{j,L}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j-Q^{visc}_j$ w/ IOL',
-                r'$Q^{diff}_{j,H}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j-Q^{visc}_j$ w/out IOL']
+    #prettyID = [r'$Q^{diff}_{j,r}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j-Q^{visc}_j$ w/ IOL',
+    #            r'$Q^{diff}_{j,r}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j-Q^{visc}_j$ w/out IOL']
+    prettyID = [r'$\chi_{j,r}$ w/ IOL correction',
+                r'$\chi_{j,r}$ w/out IOL correction']
 
     title = r"Comparison of Ion Heat Conductivity w/ and w/out IOL correction"
 
@@ -131,15 +139,15 @@ def chiComp4(shot, shotnoIOL):
                "convective heat flow,  work done on plasma and visc. heat"]
 
     graphs.prettyCompare(('rhor', shot.rhor[:-1]), [(prettyID[0], shot.chi.chi.i.chi4[:-1]), (prettyID[1], shotnoIOL.chi.chi.i.chi4[:-1])],
-                         #yrange=yRangeFind([shot.chi.chi.i.chi4, shotnoIOL.chi.chi.i.chi4]),
-                         yrange=[0.,20.],
+                         #yrange=yRangeFind([shot.chi.chi.i.chi4[-30:], shotnoIOL.chi.chi.i.chi4[-30:]]),
+                         yrange=[0., 10],
                          datalabels=[prettyID[0], prettyID[1]],
                          title=title,
                          ylabel=[r"$\chi_j$", r'$\left[\frac{m^2}{s}\right]$'],
                          caption=caption,
                          adjust=adjustments,
                          xTickremove=None,
-                         textSpace=.065,
+                         textSpace=.025,
                          marginBottom=.20,
                          marginLeft=0.095,
                          capAdj=-0.15,
@@ -159,8 +167,8 @@ def chieComp(shot, shotnoIOL):
                "neutrals calculation included"]
 
     graphs.prettyCompare(('rhor', shot.rhor), [(prettyID[0], shot.chi.chi.e), (prettyID[1], shotnoIOL.chi.chi.e)],
-                         #yrange=yRangeFind([shot.chi.chi.e, shotnoIOL.chi.chi.e]),
-                         yrange=[0., 5.],
+                         #yrange=yRangeFind([shot.chi.chi.e[-30:], shotnoIOL.chi.chi.e[-30:]]),
+                         yrange=[0., 50],
                          datalabels=[prettyID[0], prettyID[1]],
                          title=title,
                          ylabel=[r"$\chi_e$", r'$\left[\frac{m^2}{s}\right]$'],
@@ -192,7 +200,8 @@ def chiComp1neuts(shot, shotnoneuts):
     caption = ["Ion heat conductivity in the edge for DIII-D shot %s.%s w/ and w/out neutrals, IOL corrected" % (str(shotid), str(timeid))]
 
     graphs.prettyCompare(('rhor', shot.rhor), [(prettyID[0], shot.chi.chi.i.chi1), (prettyID[1], shotnoneuts.chi.chi.i.chi1)],
-                         yrange=yRangeFind([shot.chi.chi.i.chi1, shotnoneuts.chi.chi.i.chi1]),
+                         #yrange=yRangeFind([shot.chi.chi.i.chi1[-30:], shotnoneuts.chi.chi.i.chi1[-30:]]),
+                         yrange=[0, 15.],
                          datalabels=[prettyID[0], prettyID[1]],
                          title=title,
                          ylabel=[r"$\chi_j$", r'$\left[\frac{m^2}{s}\right]$'],
@@ -217,7 +226,8 @@ def chiComp2neuts(shot, shotnoneuts):
                "IOL corrected, convective heat subtracted"]
 
     graphs.prettyCompare(('rhor', shot.rhor), [(prettyID[0], shot.chi.chi.i.chi2), (prettyID[1], shotnoneuts.chi.chi.i.chi2)],
-                         yrange=yRangeFind([shot.chi.chi.i.chi2, shotnoneuts.chi.chi.i.chi2]),
+                         #yrange=yRangeFind([shot.chi.chi.i.chi2[-30:], shotnoneuts.chi.chi.i.chi2[-30:]]),
+                         yrange=[0, 15.],
                          datalabels=[prettyID[0], prettyID[1]],
                          title=title,
                          ylabel=[r"$\chi_j$", r'$\left[\frac{m^2}{s}\right]$'],
@@ -232,8 +242,8 @@ def chiComp2neuts(shot, shotnoneuts):
 
 
 def chiComp3neuts(shot, shotnoneuts):
-    prettyID = [r'$Q^{diff}_{j,L}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j$ w/ neutrals',
-                r'$Q^{diff}_{j,H}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j$ w/out neutrals']
+    prettyID = [r'$Q^{diff}_{j,r}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j$ w/ neutrals',
+                r'$Q^{diff}_{j,r}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j$ w/out neutrals']
 
     title = r"Comparison of Ion Heat Conductivity w/ and w/out neutrals"
 
@@ -242,7 +252,7 @@ def chiComp3neuts(shot, shotnoneuts):
                "convective heat flow, and work done on plasma, IOL corrected"]
 
     graphs.prettyCompare(('rhor', shot.rhor), [(prettyID[0], shot.chi3), (prettyID[1], shotnoneuts.chi3)],
-                         yrange=yRangeFind([shot.chi.chi.i.chi3, shotnoneuts.chi.chi.i.chi3]),
+                         yrange=yRangeFind([shot.chi.chi.i.chi3[-30:], shotnoneuts.chi.chi.i.chi3[-30:]]),
                          datalabels=[prettyID[0], prettyID[1]],
                          title=title,
                          ylabel=[r"$\chi_j$", r'$\left[\frac{m^2}{s}\right]$'],
@@ -257,8 +267,8 @@ def chiComp3neuts(shot, shotnoneuts):
 
 
 def chiComp4neuts(shot, shotnoneuts):
-    prettyID = [r'$Q^{diff}_{j,L}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j-Q^{visc}_j$ w/ neutrals',
-                r'$Q^{diff}_{j,H}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j-Q^{visc}_j$ w/out neutrals']
+    prettyID = [r'$Q^{diff}_{j,r}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j-Q^{visc}_j$ w/ neutrals',
+                r'$Q^{diff}_{j,r}=Q^{total}_j-Q^{conv}_j-Q^{heatin}_j-Q^{visc}_j$ w/out neutrals']
 
     title = r"Comparison of Ion Heat Conductivity w/ and w/out neutrals"
 
@@ -267,7 +277,7 @@ def chiComp4neuts(shot, shotnoneuts):
                "convective heat flow,  work done on plasma and visc., IOL corrected"]
 
     graphs.prettyCompare(('rhor', shot.rhor), [(prettyID[0], shot.chi.chi.i.chi4), (prettyID[1], shotnoneuts.chi.chi.i.chi4)],
-                         yrange=yRangeFind([shot.chi.chi.i.chi4, shotnoneuts.chi.chi.i.chi4]),
+                         yrange=yRangeFind([shot.chi.chi.i.chi4[-30:], shotnoneuts.chi.chi.i.chi4[-30:]]),
                          datalabels=[prettyID[0], prettyID[1]],
                          title=title,
                          ylabel=[r"$\chi_j$", r'$\left[\frac{m^2}{s}\right]$'],
@@ -294,8 +304,8 @@ def chieCompneuts(shot, shotnoneuts):
                "IOL corrected"]
 
     graphs.prettyCompare(('rhor', shot.rhor), [(prettyID[0], shot.chi.chi.e), (prettyID[1], shotnoneuts.chi.chi.e)],
-                         #yrange=yRangeFind([shot.chi.chi.e, shotnoneuts.chi.chi.e]),
-                         yrange=[0.,5.],
+                         #yrange=yRangeFind([shot.chi.chi.e[-30:], shotnoneuts.chi.chi.e[-30:]]),
+                         yrange=[0, 50.],
                          datalabels=[prettyID[0], prettyID[1]],
                          title=title,
                          ylabel=[r"$\chi_e$", r'$\left[\frac{m^2}{s}\right]$'],
@@ -348,8 +358,9 @@ def fluxComp(shot, shotnoIOL, shotnoneuts):
     caption = ["Ion radial particle flux for DIII-D shot %s.%s w/ and w/out neutrals" % (str(shotid), str(timeid))]
     title = r"$\Gamma_{r,j}$  w/ and w/out neutrals"
     adjustments = {}
-    graphs.prettyCompare(('rhor', shot.rhor), [(prettyID[0], shotnoIOL.gamma_diff_D), (prettyID[1], shotnoneuts.gamma_diff_D)],
-                         yrange=[0.E18, 1.E20],
+    graphs.prettyCompare(('rhor', shot.rhor), [(prettyID[0], shot.gamma_diff_D), (prettyID[1], shotnoneuts.gamma_diff_D)],
+                         #yrange=(yRangeFind([shot.gamma_diff_D[-30:], shotnoneuts.gamma_diff_D[-30:]]),
+                         yrange=[0., 1E20],
                          datalabels=[prettyID[0], prettyID[1]],
                          title=title,
                          ylabel=[r"$\Gamma_{r,j}$", r"$\left[\frac{\#}{m^2 s}\right]$"],
@@ -369,7 +380,8 @@ def fluxComp(shot, shotnoIOL, shotnoneuts):
     title = r"$\Gamma_{r,j}$  w/ and w/out IOL corr"
     adjustments = {}
     graphs.prettyCompare(('rhor', shot.rhor), [(prettyID[0], shot.gamma_diff_D), (prettyID[1], shotnoIOL.gamma_diff_D)],
-                         yrange=[0.E18, 1.E20],
+                         #yrange=yRangeFind([shot.gamma_diff_D[-30:], shotnoIOL.gamma_diff_D[-30:]]),
+                         yrange=[0,1E20],
                          datalabels=[prettyID[0], prettyID[1]],
                          title=title,
                          ylabel=[r"$\Gamma_{r,j}$", r"$\left[\frac{\#}{m^2 s}\right]$"],
@@ -393,10 +405,10 @@ if __name__ == "__main__":
                 'nbRun': True,
                 'IOL': True,
                 'quiet': False,
-                'reNeut': True,
+                'reNeut': False,
                 'neutrals': True,
                 'gt3Method': 'radialtrans',
-                'debug' : True}
+                'debug' : False}
     try:
         shot = pickle.load(open("outputs/s%s.%s.dat" % (str(shotid), str(timeid)), "rb"))
     except:
@@ -490,7 +502,7 @@ if __name__ == "__main__":
     #    chiComp3neuts(shot,shotnoneuts)
     #chiComp4neuts(shot, shotnoneuts)
 
-    chieCompneuts(shot, shotnoneuts)
+
 
     #    qComp1neuts(shot,shotnoneuts)
     #    qComp2neuts(shot,shotnoneuts)
@@ -506,5 +518,5 @@ if __name__ == "__main__":
     #   TODO: Electron chi
     #
     ####################################################################################
-
+    chieCompneuts(shot, shotnoneuts)
     plt.show(block=True)

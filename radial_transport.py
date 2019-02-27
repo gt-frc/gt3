@@ -42,7 +42,7 @@ def neutPatch(core):
     core.izn_rate_fsa = calc_fsa(core.izn_rate.s + core.izn_rate.t, core.R, core.Z)
 
     #Piper chages: Use carbon Lz for the cool_rate calculation
-    core.cool_rate_fsa = calc_fsa(core.n.e * core.n.C * np.nan_to_num(core.Lz_C.s) \
+    core.cool_rate_fsa = calc_fsa(core.n.e * core.n.C * np.nan_to_num(core.Lz_C.s) + \
     +                            core.n.e * core.n.C * np.nan_to_num(core.Lz_C.t), \
                                   core.R, core.Z)
 
@@ -50,9 +50,6 @@ def neutPatch(core):
     Calculate the neutrals now
     """
 
-    core.n_n_fsa_s = calc_fsa(core.n.n.s, core.R, core.Z)
-    core.n_n_fsa_t = calc_fsa(core.n.n.t, core.R, core.Z)
-    core.n_n_fsa = calc_fsa(core.n.n.s + core.n.n.t, core.R, core.Z)
     core.dn_dr_fsa = calc_fsa(core.dn_dr, core.R, core.Z)
 
     """
@@ -61,8 +58,17 @@ def neutPatch(core):
 
     core.izn_rate_fsa = np.array(map(lambda x: core.izn_rate_fsa[-1] * x**10, core.r[:,0]/core.a))
     core.cool_rate_fsa = np.array(map(lambda x: core.cool_rate_fsa[-1] * x**10, core.r[:,0]/core.a))
-    core.n_n_fsa = np.array(map(lambda x: core.n_n_fsa[-1] * x**10, core.r[:,0]/core.a))
     core.dn_dr_fsa = np.array(map(lambda x: core.dn_dr_fsa[-1] * x**10, core.r[:,0]/core.a))
+
+
+    core.n_fsa = namedtuple('n', 'i e n C')(
+        calc_fsa(core.n.i, core.R, core.Z),
+        calc_fsa(core.n.e, core.R, core.Z),
+        namedtuple('n', 's t tot')(
+            np.array(map(lambda x: core.n_fsa.n.s[-1] * x ** 10, core.r[:, 0] / core.a))/1E3,  # slow
+            np.array(map(lambda x: core.n_fsa.n.t[-1] * x ** 10, core.r[:, 0] / core.a))/1E3,  # thermal
+            np.array(map(lambda x: core.n_fsa.n.tot[-1] * x ** 10, core.r[:, 0] / core.a))/1E3),  # total
+        calc_fsa(core.n.C, core.R, core.Z))
 
 
 def corePatch(core, neutFlag=True):
@@ -81,13 +87,12 @@ def corePatch(core, neutFlag=True):
     if neutFlag:
         core.n = namedtuple('n', 'i e n C')(core.n.e/(1.+.025*6.0), core.n.e, core.n.n, 0.025 * core.n.e/(1.+.025*6.0))   # TODO: Update 0.025 and 6.0 to actual fracz and zbar2
     else:
-        namedtuple('n', 'i e n C')(core.n.e / (1. + .025 * 6.0), core.n.e,
+        core.n = namedtuple('n', 'i e n C')(core.n.e / (1. + .025 * 6.0), core.n.e,
                                    namedtuple('n', 's t tot')(
-                                       calc_fsa(np.zeros(core.n.i.shape), core.R, core.Z),  # slow
-                                       calc_fsa(np.zeros(core.n.i.shape), core.R, core.Z),  # thermal
-                                       calc_fsa(np.zeros(core.n.i.shape), core.R, core.Z)),  # total
+                                       np.zeros(core.n.i.shape),  # slow
+                                       np.zeros(core.n.i.shape),  # thermal
+                                       np.zeros(core.n.i.shape)),  # total
                                    0.025 * core.n.e / (1. + .025 * 6.0))
-
     core.n_fsa = namedtuple('n', 'i e n C')(
         calc_fsa(core.n.i, core.R, core.Z),
         calc_fsa(core.n.e, core.R, core.Z),
@@ -330,10 +335,10 @@ def calc_qie(n, T, ion_species='D'):
 
 def calc_cxcool(core, n, T):
     """Calculates charge exchange cooling with the slow neutrals"""
-    slowNeutDens = np.array(map(lambda x: core.n_fsa.n.s[-1] * x ** 15, core.r[:, 0] / core.a))
-    totalNeutDens = np.array(map(lambda x: core.n_fsa.n.tot[-1] * x ** 15, core.r[:, 0] / core.a))
+    slowNeutDens = np.array(map(lambda x: n.n.s[-1] * x ** 15, core.r[:, 0] / core.a))
+    totalNeutDens = np.array(map(lambda x: n.n.tot[-1] * x ** 15, core.r[:, 0] / core.a))
     #result = 1.5 * n.i * T.i.J * slowNeutDens* ((core.sv.el.st[:,0] + core.sv.el.st[:,0]* (totalNeutDens/n.i)) + core.sv.cx.st[:,0])
-    result = 1.5 * n.i * T.i.J * slowNeutDens * ((core.sv.el.st[:, 0] + core.sv.cx.st[:, 0])) # TODO: Work this out for n-n elastic scattering
+    result = 1.5 * n.i * T.i.J * slowNeutDens * ((core.sv.el.st[:, 0] + core.sv.cx.st[:, 0])) / 1E4 # TODO: Work this out for n-n elastic scattering
     return result
 
 def calc_coul_log(z1, z2, T_J, n2):
@@ -681,7 +686,7 @@ class Chi:
     def calc_chi_e(self, data, n, L, T):
         gameltemp = 1.0* data.gamma_diff_D + 6.0 * data.gamma_C   #OHHHH gamma electron!!! HA HA HA HA WE DON'T KNOW WHAT THE FUCK GAMMA_C IS
 
-        return L.T.e * ((self.Qe / (ch_d * n.e * T.e.ev)) - 1.5 * gameltemp / n.e)
+        return L.T.e * ((self.Qe / (ch_d * n.e * T.e.ev)) - 2.5 * gameltemp / n.e)
 
 
     def calc_heatvisc(self, data):
@@ -706,7 +711,7 @@ class RadialTransport(Chi):
         beam_D = nbi.beams.D1 # Piper changes: Changed beam object references to match beamdep.
         beam_D2 = nbi.beams.D2
         beam_D3 = nbi.beams.D3
-        corePatch(core, neutFlag) # Patch to update values not brought in via files (ni, zeff)
+        corePatch(core, neutFlag) # Patch to update values not brought in via ffiles (ni, zeff)
         neutPatch(core)
         dn_dr = core.dn_dr_fsa
 
@@ -714,7 +719,11 @@ class RadialTransport(Chi):
         # prepare core and iol quantities
         r = core.r.T[0]    # TODO: Should this be a flux surface average?
         self.rhor = core.r[:,0]/core.a
-        izn_rate = core.izn_rate_fsa  # TODO: Should this be a flux surface average or a flux surface total?
+
+        if neutFlag:
+            izn_rate = core.izn_rate_fsa  # TODO: Should this be a flux surface average or a flux surface total?
+        else:
+            izn_rate = np.zeros(core.izn_rate_fsa.shape)
         cool_rate = core.cool_rate_fsa  # TODO: Should this be a flux surface average or a flux surface total?
         n = core.n_fsa
 
@@ -1027,10 +1036,10 @@ def gammaDebug(rho, a, r2sa, dVdrho, Snbi_d_i, Snbi_kept_i, Sizn, gamma_i_D, gam
                        "Surface area at LCFS", str(r2sa(a))
                        )
     print r"""r          Particles in      Particles out"""
-    for x in range(len(rho)):
-        strList=balance(gamma_i_D, (Snbi_kept_i + Sizn) * dVdr, rho*a, r2sa, x)
-        strDiff = 100.*np.abs(strList[1]-strList[2])/np.average(np.array(strList))
-        print """{:<15}    {:<15}     {:<15}      {:<15}%""".format(strList[0], strList[1], strList[2], str(strDiff))
+    # for x in range(len(rho)):
+    #     strList=balance(gamma_i_D, (Snbi_kept_i + Sizn) * dVdr, rho*a, r2sa, x)
+    #     strDiff = 100.*np.abs(strList[1]-strList[2])/np.average(np.array(strList))
+    #     print """{:<15}    {:<15}     {:<15}      {:<15}%""".format(strList[0], strList[1], strList[2], str(strDiff))
 
 def QDebug(rho, a, r2sa, dVdrho, Qie, Qnbi_d_i, Qnbi_kept_i, coolrate, Eorb, Qi, T):
     # TODO: FINISH THIS
@@ -1100,9 +1109,9 @@ def QDebug(rho, a, r2sa, dVdrho, Qie, Qnbi_d_i, Qnbi_kept_i, coolrate, Eorb, Qi,
                        "Total volume", str(totVol),
                        "Surface area at LCFS", str(r2sa(a))
                        )
-    print r"""r          Energy in      Energy out"""
-    for x in range(len(rho)):
-        strList=balance(Qi, (Qnbi_kept_i - coolrate) * dVdr, rho*a, r2sa, x)
-        strDiff = 100.*np.abs(strList[1]-strList[2])/np.average(np.array(strList))
-        print """{:<15}    {:<15}     {:<15}      {:<15}%""".format(strList[0], strList[1], strList[2], str(strDiff))
+    # print r"""r          Energy in      Energy out"""
+    # for x in range(len(rho)):
+    #     strList=balance(Qi, (Qnbi_kept_i - coolrate) * dVdr, rho*a, r2sa, x)
+    #     strDiff = 100.*np.abs(strList[1]-strList[2])/np.average(np.array(strList))
+    #     print """{:<15}    {:<15}     {:<15}      {:<15}%""".format(strList[0], strList[1], strList[2], str(strDiff))
 
