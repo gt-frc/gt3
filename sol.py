@@ -165,7 +165,7 @@ class Sol:
     def calc_sol_nT(self, inp, core):
         # calculate spatial gradients for density and temperature along the seperatrix from dni/dr = dni/dpsi * dpsi/dr
         # specify the flux surface to get densities, temperatures, and their gradients
-        sep_flx_surf = 0.98
+        sep_flx_surf = .98
 
         # calculate dni/dpsi and dTi/dpsi at the seperatrix
         # TODO: include both deuterium and tritium here
@@ -199,6 +199,9 @@ class Sol:
         ne_sep = np.full(num_sep_pts, ne_psi_fit(sep_flx_surf))
         Ti_sep = np.full(num_sep_pts, Ti_psi_fit(sep_flx_surf)) * 1E3 * 1.6021E-19  # in Joules
         Te_sep = np.full(num_sep_pts, Te_psi_fit(sep_flx_surf)) * 1E3 * 1.6021E-19  # in Joules
+
+
+
 
         #calculate BT along the seperatrix
         BT_sep = inp.BT0 * core.pts.axis.mag[0] / np.asarray(core.lines.sep.coords)[:,0]

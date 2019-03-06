@@ -241,7 +241,7 @@ class ReadInfile:
         for infile in self.in_prof:
             try:
                 exec("filename = self.%s"%(infile))
-                filepath = os.getcwd()+'/inputs'+ filename
+                filepath = os.path.join(os.getcwd(),"inputs", filename)
                 try:
                     exec("self.%s = np.genfromtxt('%s',comments='#')"%(self.in_prof[infile][2], filepath))
                 except Exception as e:

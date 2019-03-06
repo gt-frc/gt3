@@ -1,0 +1,171 @@
+d3d_iter = 1 
+exp_inp = 1 
+
+#1D PROFILE INPUT FILES 
+ne_file         = 118888_1570/gt3_118888_1570_ne.dat 
+nD_file         = 118888_1570/gt3_118888_1570_nD.dat 
+Te_file         = 118888_1570/gt3_118888_1570_Te.dat 
+Ti_file         = 118888_1570/gt3_118888_1570_Ti.dat 
+er_file         = 118888_1570/gt3_118888_1570_er.dat 
+fz1_file        = 118888_1570/gt3_118888_1570_fz1.dat 
+fracz_file      = 118888_1570/gt3_118888_1570_fracz.dat 
+exlti_file      = 118888_1570/gt3_118888_1570_exlti.dat 
+exlte_file      = 118888_1570/gt3_118888_1570_exlte.dat 
+exlni_file      = 118888_1570/gt3_118888_1570_exlni.dat 
+vpolC_file      = 118888_1570/gt3_118888_1570_vpolC.dat 
+vtorC_file      = 118888_1570/gt3_118888_1570_vtorC.dat 
+vpolD_file      = 118888_1570/gt3_118888_1570_vpolD.dat 
+vtorD_file      = 118888_1570/gt3_118888_1570_vtorD.dat 
+q_file          = 118888_1570/gt3_118888_1570_q.dat 
+zbar2_file      = 118888_1570/gt3_118888_1570_zbar2.dat    
+
+2D QUANTITIES INPUT FILES 
+bpol_file       = 118888_1570/gt3_118888_1570_bpol.dat  
+btor_file       = 118888_1570/gt3_118888_1570_btor.dat  
+psirz_file      = 118888_1570/gt3_118888_1570_psirz.dat 
+
+2D LINE INPUT FILES 
+sep_file        = 118888_1570/gt3_118888_1570_sep.dat 
+wall_file       = 118888_1570/gt3_diiid_wall.dat 
+
+# CONSTANTS 
+eq1 = 1.6e-19 
+eq2 = 9.6e-19 
+xmas1 = 3.35e-27 
+xmas2 = 2.01e-26 
+ephia = 0.04 
+xk = 1.6e-19 
+delma = 0.005 
+xnuioni = 0.0 
+xnuati = 0.0 
+
+#NEUTRAL BEAM DEPOSITION 
+nbeams_loc = /home/jonathan/Dropbox/GTEDGE/MyPrograms/GTEDGE/lib/beams/NBeamsMDS/NBeams/bin/Release/nbeams 
+ebeam = 77.48 
+abeam = 2 
+alphain = .6475 
+pbeam = 4.6 
+rtang = 1.09 
+bknot = 2.0 
+pwrfrac1 = 0.76 
+pwrfrac2 = 0.13 
+pwrfrac3 = 0.11 
+epsknot = 1.265 
+eps_sep = 1.82 
+shftknot = 0.033 
+
+#IMPURITY CALCULATION 
+adpak_loc = /home/jonathan/Dropbox/GTEDGE/MyPrograms/GTEDGE/MaxPlasma/adpak/ 
+# ADPAK PARAMETERS 
+z_imp = 6 
+laden = 1 
+ladtip = 1 
+leci = 1 
+ldrmlt = 2 
+ncxopt = 1 
+anneut = 1.0E9 
+vneut = 0.001 
+
+#GENERAL GEOMETRY 
+a = 0.598 
+BT0 = 2.04 
+R0_a = 1.7 
+Z0 = 0.0 
+kappa_up = 1.82 
+kappa_lo = 1.82 
+s_k_up = 0.0 
+s_k_lo = 0.0 
+tri_up = 0.237 
+tri_lo = 0.0 
+thetapts_approx = 30 
+rhopts = 201 
+edge_rho = 0.8 
+rhopts_edge = 100 
+rhopts_core = 10 
+thetapts_approx = 30 
+
+#NEUTRALS CALCULATION 
+ntrl_switch = 1 
+edge_rho_ntrl = 0.8 
+neut_outfile =  inputs/118888_1570/gt3_118888_1570_neut.dat 
+rhopts_edge_ntrl = 10 
+ntrl_thetapts = 33 
+
+#XMILLER PARAMETERS 
+xmil = 1 
+xpt_R = 1.48 
+xpt_Z = -1.24 
+
+#BACKGROUND DENSITIES AND TEMPERATURES (IF NOT READING FROM INPUT FILE) 
+#ni0 = 3.629E19 
+#ni9 = 1.523E19
+#ni_sep = 0.3E19
+#ni_dp = 1E17
+#nu_ni = 3.0
+#ne0 = 3.629E19
+#ne9 = 1.523E19
+#ne_sep = 0.3E19
+#ne_dp = 1E17
+#nu_ne = 2.5
+#Ti0 = 35
+#Ti9 = 6
+#Ti_sep = 0.6
+#Ti_dp = 0.03
+#nu_Ti = 3.5
+#Te0 = 36
+#Te9 = 6
+#Te_sep = 0.6
+#Te_dp = 0.01
+#nu_Te = 3.5 
+
+#CURRENT-RELATED PARAMETERS 
+j0 = 2850000 
+j_sep = 0 
+nu_j = 1. 
+IP = 1.38 
+q95 = 3.57 
+
+rmeshnum_p = 5 
+xtheta1 = 3.6 
+xtheta2 = 2.7 
+xtheta3 = 0.1 
+xtheta4 = -1.0 
+
+#ION ORBIT LOSS CALCULATION 
+numcos = 8 
+R_loss = 0.5 
+
+pfr_ni_val = 1.0E14 
+pfr_ne_val = 1.0E14 
+pfr_Ti_val = 0.002  
+pfr_Te_val = 0.002  
+############################################################################### 
+# CONFIG - YOU CAN PROBABLY LEAVE THESE ALONE IF YOU DON'T KNOW WHAT THEY ARE 
+############################################################################### 
+verbose = 1 
+corelines_begin = 0.75 
+num_corelines = 10 
+sollines_psi_max = 1.07 
+num_sollines = 6 
+xi_sep_pts = 50 
+ib_trim_off = 0.1 
+ob_trim_off = 0.1 
+xi_ib_pts = 10 
+xi_ob_pts = 10 
+core_pol_pts = 30 
+core_thetapts_ntrl = 50 
+#rhopts_ntrl = 100 
+edge_rho_ntrl = 0.8 
+rhopts_edge_ntrl = 5 
+rhopts_core_ntrl = 10 
+ib_div_pol_pts = 7 
+ob_div_pol_pts = 7 
+wall_ni_min = 1.0E15 
+wall_ne_min = 1.0E15 
+wall_Ti_min = 3.2042e-18 
+wall_Te_min = 3.2042e-18 
+core_thetapts_ntrl = 30 
+ib_thetapts_ntrl = 10 
+ob_thetapts_ntrl = 10 
+tri_min_angle = 20 
+tri_min_area = 0.01 
