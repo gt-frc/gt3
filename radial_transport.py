@@ -659,7 +659,8 @@ class Chi:
         self.Qe = data.Qe_diff
         self.conv15 = UnivariateSpline(core.r[:,0], .5 * ch_d * data.gamma_diff_D * T.i.ev, k=3, s=0)(core.r[:,0])
         self.conv25 = UnivariateSpline(core.r[:,0], .5 * ch_d * data.gamma_diff_D * T.i.ev, k=3, s=0)(core.r[:,0])
-        self.heatvisc = np.zeros(data.gamma_diff_D.shape)
+        self.heatvisc = self.viscCalc(data, core, n, T)
+        #self.heatvisc = np.zeros(self.conv25.shape)
         self.heatin = UnivariateSpline(core.r[:,0], .5 * data.gamma_diff_D * m_d * (data.vtor_D_total**2 + data.vpol_D**2), k=3, s=0)(core.r[:,0]) # TODO: Provide logic that uses vtor_D_intrin/fluid depending on IOL Switch, currently too small to matter
         if reInterp:
             L_T_i = UnivariateSpline(core.r[:,0], L.T.i, k=3, s=0)(core.r[:,0])
@@ -683,25 +684,34 @@ class Chi:
                 ),self.calc_chi_e(data, n, L, T)
             )
 
+
     def calc_chi_e(self, data, n, L, T):
         gameltemp = 1.0* data.gamma_diff_D + 6.0 * data.gamma_C   #OHHHH gamma electron!!! HA HA HA HA WE DON'T KNOW WHAT THE FUCK GAMMA_C IS
 
         return L.T.e * ((self.Qe / (ch_d * n.e * T.e.ev)) - 2.5 * gameltemp / n.e)
 
+    def viscCalc(self, data, core, n, T):
+        f1 = 1 # Must determine later, appears to be geometeric factor in Eq(4) in POP052504(2010)
+        fp = core.B_p_fsa/core.B_t_fsa
+        vth = [sqrt(2. * a  * ch_d / m_d) for a in T.i.ev]
+        eta0 = [a * m_d * b * c * core.R0_a * f1 for a,b,c in zip(n.i, vth, core.q[:,0])]
+        eta4 = [a * m_d * c * ch_d / (ch_d * abs(b)) for a, b, c in zip(n.i, core.B_t_fsa, T.i.ev)]
+        vrad = data.gamma_diff_D / n.i
 
-    def calc_heatvisc(self, data):
-        se = sqrt(0.5 * (1 + ((data.kappa_vals[0] + data.kappa_vals[1])/2)**2))
-        ep = data.a * se / data.R0_a
-        fp = data.B_p_fsa / data.B_t_fsa
+        # a = vtor    b = fp   c = eta0
+        # d = vrad    f = vthet g = eta 4
 
-        # TODO : finish this clusterfuck
+        return [a * (b * c * d - .5 * g * (4.0 * a + f)) - .5 * f * (c * d + g * (a + .5 * f)) for a,b,c,d,f,g in zip(data.vtor_D_total, fp, eta0, vrad, data.vpol_D, eta4)]
 
-        return None
 
 class RadialTransport(Chi):
     
     def __init__(self, inp, core, iol, nbi, iolFlag=True, neutFlag=True, debugFlag=False ):
         sys.dont_write_bytecode = True
+
+
+
+
 
         ##############################################################
         # prep quantities for 1D transport analysis
@@ -734,7 +744,7 @@ class RadialTransport(Chi):
         vol_P = core.vol
         B_p = core.B_p_fsa
         B_t = core.B_t_fsa
-        Er = core.E_r_fsa * 1000.0 # Piper Changes: Convert input Er from kV/m to V/m
+        Er = core.E_r_fsa #* 1000.0 # Piper Changes: Convert input Er from kV/m to V/m
         Lp = core.Lp_fsa
         dp_dr = core.dp_dr_fsa
 
@@ -920,6 +930,36 @@ class RadialTransport(Chi):
             gammaDebug(self.rhor, core.a, core.r2sa, core.dVdrho, part_src_nbi, part_src_nbi_kept, izn_rate, self.gamma_int_D, self.gamma_diff_D)
             """Energy flux debugging"""
             QDebug(self.rhor, core.a, core.r2sa, core.dVdrho, calc_qie(n,T,ion_species='D') , en_src_nbi_i, en_src_nbi_i_kept, cool_rate, E_orb_d, self.chi.Qi, T)
+
+        ##############################################################
+        # Release profiles used for rtransport calculations
+        ##############################################################
+
+        self.profiles = namedtuple('profiles', 'n T L nn')(
+            namedtuple('n', 'i e')(
+                core.n_fsa.i,
+                core.n_fsa.e
+            ),
+            namedtuple('T', 'i e')(
+                core.T_fsa.i,
+                core.T_fsa.e
+            ),
+            namedtuple('L', 'n T')(
+                namedtuple('n', 'i e')(
+                    core.L_fsa.n.i,
+                    core.L_fsa.n.e
+                ),
+                namedtuple('T', 'i e')(
+                    core.L_fsa.T.i,
+                    core.L_fsa.T.e)
+            ),
+            namedtuple('nn',' s t tot')(
+                core.n_fsa.n.s,
+                core.n_fsa.n.t,
+                core.n_fsa.n.tot
+            )
+        )
+
 
 def nbiDebug(rho, a, Qi, Qe, Si, Mi, dVdrho):
     """ """

@@ -245,7 +245,7 @@ class ReadInfile:
                 try:
                     exec("self.%s = np.genfromtxt('%s',comments='#')"%(self.in_prof[infile][2], filepath))
                 except Exception as e:
-                    print 'Something may have gone wrong: ', e
+                    print 'Something may have gone wrong in  %s' % filename , e
             except:
                 pass
             
@@ -257,7 +257,7 @@ class ReadInfile:
                 try:
                     exec("self.%s = np.genfromtxt('%s',comments='#')"%(self.in_map2d[infile][2], filepath))
                 except Exception as e:
-                    print 'Something may have gone wrong: ', e
+                    print 'Something may have gone wrong in %s' % filename , e
             except:
                 pass
             
@@ -268,7 +268,7 @@ class ReadInfile:
                 try:
                     exec("self.%s = np.genfromtxt('%s',comments='#')"%(self.in_line2d[infile][2], filepath))
                 except Exception as e:
-                    print 'Something may have gone wrong: ',e
+                    print 'Something may have gone wrong in %s' % filename ,e
             except:
                 pass
 
