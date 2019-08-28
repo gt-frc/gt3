@@ -1,0 +1,75 @@
+#MAIN MESH PARAMETERS
+thetapts_approx = 50
+#rhopts = 200
+edge_rho = 0.7
+rhopts_edge = 100
+rhopts_core = 10
+
+#CURRENT- AND MAGNETIC FIELD-RELATED PARAMETERS
+j0 = 2.25E6
+j_sep = 1.58E4
+nu_j = 3.0
+IP = 0.892
+q95 = 3.708
+BT0 = 2.006
+
+#NEUTRALS PARAMETERS
+neut_outfile = outputs/170672/1900/gt3_170672_1900_neut.dat
+core_thetapts_ntrl = 50
+ib_thetapts_ntrl = 10
+ob_thetapts_ntrl = 10
+#rhopts_ntrl = 100
+edge_rho_ntrl = 0.8
+rhopts_edge_ntrl = 5
+rhopts_core_ntrl = 10
+wall_ni_min = 1.0E15
+wall_ne_min = 1.0E15
+wall_Ti_min = 0.005
+wall_Te_min = 0.005
+tri_min_angle = 20
+tri_min_area  = 0.01
+
+#SOL PARAMETERS
+sollines_psi_max = 1.07
+num_sollines = 3
+xi_sep_pts = 30
+xi_ib_pts = 10
+xi_ob_pts = 10
+ib_trim_off = 0.1
+ob_trim_off = 0.1
+
+PFR PARAMETERS:
+pfr_ni_val = 1.0E14
+pfr_ne_val = 1.0E14
+pfr_Ti_val = 0.002
+pfr_Te_val = 0.002
+
+#1D PROFILE INPUT FILES
+ne_file         = /170672_1900/gt3_170672_1900_ne.dat
+nD_file         = /170672_1900/gt3_170672_1900_ni.dat
+Te_file         = /170672_1900/gt3_170672_1900_Te.dat
+Ti_file         = /170672_1900/gt3_170672_1900_Ti.dat
+er_file         = /170672_1900/gt3_170672_1900_er.dat
+vtorC_file      = /170672_1900/gt3_170672_1900_vtorC.dat
+
+2D QUANTITIES INPUT FILES
+psirz_file      = /170672_1900/gt3_170672_1900_psirz.txt
+
+2D LINE INPUT FILES
+wall_file        = /machine/gt3_diiid_wall.dat
+
+#NEUTRAL BEAM DEPOSITION
+nbeams_loc = /nbeams/nbeams.exe
+ebeam = 75.5
+abeam = 2
+alphain = 0.6475
+pbeam = 5.96584 # Good
+rtang = 1.024
+
+#ION ORBIT LOSS CALCULATION
+numcos = 20
+R_loss = 0.5
+
+#TRIANGLE EXECUTABLE LOCATION
+triangle_loc = /triangle/triangle.exe
+

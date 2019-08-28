@@ -65,7 +65,7 @@ class IOL:
 
         phi0 = np.broadcast_arrays(np.ones(polpts)[:, None, None, None],
                                    np.ones(inp.numcos)[:, None, None],
-                                   core.E_pot)[-1] * 1E3  # now in volts
+                                   core.E_pot)[-1]# * 1E3  # now in volts
 
         zeta0 = np.broadcast_arrays(np.ones(polpts)[:, None, None, None],
                                   self.coslist[:, None, None],
@@ -99,7 +99,7 @@ class IOL:
                                    np.ones(inp.numcos)[:, None, None],
                                    np.ones(radpts)[:, None],
                                    np.ones(polpts)[:],
-                                   core.E_pot[-1][:, None, None, None])[-1] * 1E3  # now in volts
+                                   core.E_pot[-1][:, None, None, None])[-1] #* 1E3  # now in volts
 
         Tprofile = namedtuple('Tprofile', 'i C')(
             core.T.i.kev.T[0],
