@@ -427,10 +427,10 @@ if __name__ == "__main__":
         except:
             pass
 
-    #chiComp(shotA, shotB)
-    #fluxComp(shotA, shotB)
-    #convComp(shotA, shotB)
-    #IOLcomp(shotA, shotB)
+    chiComp(shotA, shotB)
+    fluxComp(shotA, shotB)
+    convComp(shotA, shotB)
+    IOLcomp(shotA, shotB)
     heatsComp(shotA, shotB)
     #plasmaComp(shotA, shotB)
     #rotComp(shotA, shotB)

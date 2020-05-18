@@ -166,10 +166,15 @@ class ReadInfile:
         self.invars['pbeam'] = ['float', r0df]
         self.invars['rtang'] = ['float', r0df]
 
+        # NBeams multi-beam location
+        self.invars['nbeamsJSON'] = ['str', r0ds]
+
         # EXECUTABLE LOCATIONS
         self.invars['nbeams_loc'] = ['str', r0ds]
         self.invars['adpak_loc'] = ['str', r0ds]
         self.invars['triangle_loc'] = ['str', r0ds]
+
+
 
         self.in_prof = {}
         self.in_prof['er_file'] = ['str', r0ds, 'er_data']

@@ -33,23 +33,34 @@ def calc_pwr_frac(ebeam):
     return pwr_frac
 
 
-def prep_nbi_infile(inp, core):
-    pwr_frac = calc_pwr_frac(inp.ebeam)
+def prep_nbi_infile(inp, core, index = False, indBeam = False):
+    i = index
+    if indBeam: pwr_frac = calc_pwr_frac(indBeam['ebeam'])
+    else: pwr_frac = calc_pwr_frac(inp.ebeam)
+
     # pwr_frac = [0.7, 0.2, 0.1]
 
     # f1=open(inp.nbeams_loc+"inbeams.dat", "w")
     if __name__=="__main__":
         f = open("inputs/inbeams_test.dat", "w")
     else:
-        f = open("inbeams.dat", "w")
+        if indBeam: f=open("inbeams_%s.dat" % str(i), "w")
+        else: f = open("inbeams.dat", "w")
     f.write("$nbin\n")
     f.write("nbeams = 1\n")
     f.write("inbfus = 1\n")
     f.write("amb = 2.0\n")
     f.write("zbeam = 1.0\n")
-    f.write("ebeam = " + str(inp.ebeam) + "\n")
-    f.write("pbeam = " + str(inp.pbeam) + "\n")
-    f.write("rtang = " + str(inp.rtang) + "\n")
+
+    if indBeam: f.write("ebeam = " + str(indBeam["ebeam"]) + "\n")
+    else: f.write("ebeam = " + str(inp.ebeam) + "\n")
+
+    if indBeam: f.write("pbeam = " + str(indBeam["pbeam"]) + "\n")
+    else: f.write("pbeam = " + str(inp.pbeam) + "\n")
+
+    if indBeam: f.write("pbeam = " + str(indBeam["rtang"]) + "\n")
+    else: f.write("rtang = " + str(inp.rtang) + "\n")
+
     f.write("nbshape = 1\n")
     f.write("bwidth = 0.12\n")  # Is this default?
     f.write("bheigh = 0.48\n")
@@ -91,157 +102,309 @@ def prep_nbi_infile(inp, core):
 
 class read_nbi_outfile:
 
-    def __init__(self, inp, core):
-        with open(os.getcwd() + '/outbeams.dat', 'r') as f:
-            for count, line in enumerate(f):
-                if line.startswith(" Total Absorbed Power"):
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        P_abs_tot = float(result)
-                    except:
-                        P_abs_tot = np.NaN
+    def __init__(self, inp, core, index = False, indBeam = False):
+        if index:
+            with open(os.getcwd() + '/outbeams_%s.dat' % str(index), 'r') as f:
+                for count, line in enumerate(f):
+                    if line.startswith(" Total Absorbed Power"):
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            P_abs_tot = float(result)
+                        except:
+                            P_abs_tot = np.NaN
 
-                if line.startswith(" Total Lost Power"):
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        P_lst_tot = float(result)
-                    except:
-                        P_lst_tot = np.NaN
+                    if line.startswith(" Total Lost Power"):
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            P_lst_tot = float(result)
+                        except:
+                            P_lst_tot = np.NaN
 
-                if line.startswith(" Total NB Driven Current"):
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        I_nbi_tot = float(result)
-                    except:
-                        I_nbi_tot = np.NaN
+                    if line.startswith(" Total NB Driven Current"):
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            I_nbi_tot = float(result)
+                        except:
+                            I_nbi_tot = np.NaN
 
-                if line.startswith(" Total NBCD Efficiency"):
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        I_nbi_eff = float(result)
-                    except:
-                        I_nbi_eff = np.NaN
+                    if line.startswith(" Total NBCD Efficiency"):
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            I_nbi_eff = float(result)
+                        except:
+                            I_nbi_eff = np.NaN
 
-                if line.startswith(" Total Beam Beta"):
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        Beta_nbi_tot = float(result)
-                    except:
-                        Beta_nbi_tot = np.NaN
+                    if line.startswith(" Total Beam Beta"):
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            Beta_nbi_tot = float(result)
+                        except:
+                            Beta_nbi_tot = np.NaN
 
-                if line.startswith(" Taus"):
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        Taus_nbi = float(result)
-                    except:
-                        Taus_nbi = np.NaN
+                    if line.startswith(" Taus"):
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            Taus_nbi = float(result)
+                        except:
+                            Taus_nbi = np.NaN
 
-                if line.startswith(" Volp"):
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        Volp_nbi = float(result)
-                    except:
-                        Volp_nbi = np.NaN
+                    if line.startswith(" Volp"):
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            Volp_nbi = float(result)
+                        except:
+                            Volp_nbi = np.NaN
 
-                if line.startswith(" Absorbed Power"):
-                    # this will need to be modified for multiple beams
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        P_abs_1 = float(result)
-                    except:
-                        P_abs_1 = np.NaN
+                    if line.startswith(" Absorbed Power"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            P_abs_1 = float(result)
+                        except:
+                            P_abs_1 = np.NaN
 
-                if line.startswith(" Lost Power"):
-                    # this will need to be modified for multiple beams
+                    if line.startswith(" Lost Power"):
+                        # this will need to be modified for multiple beams
 
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        P_lst_1 = float(result)
-                    except:
-                        P_lst_1 = np.NaN
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            P_lst_1 = float(result)
+                        except:
+                            P_lst_1 = np.NaN
 
-                if line.startswith(" NB driven current"):
-                    # this will need to be modified for multiple beams
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        I_nbi_1 = float(result)
-                    except:
-                        I_nbi_1 = np.NaN
+                    if line.startswith(" NB driven current"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            I_nbi_1 = float(result)
+                        except:
+                            I_nbi_1 = np.NaN
 
-                if line.startswith(" NBCD efficiency"):
-                    # this will need to be modified for multiple beams
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        I_nbi_eff_1 = float(result)
-                    except:
-                        I_nbi_eff_1 = np.NaN
+                    if line.startswith(" NBCD efficiency"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            I_nbi_eff_1 = float(result)
+                        except:
+                            I_nbi_eff_1 = np.NaN
 
-                if line.startswith(" NBCD gamma"):
-                    # this will need to be modified for multiple beams
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        I_nbi_gam_1 = float(result)
-                    except:
-                        I_nbi_gam_1 = np.NaN
+                    if line.startswith(" NBCD gamma"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            I_nbi_gam_1 = float(result)
+                        except:
+                            I_nbi_gam_1 = np.NaN
 
-                if line.startswith("    energy group 1"):
-                    # this will need to be modified for multiple beams
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        st_en1_1 = float(result)
-                    except:
-                        st_en1_1 = np.NaN
+                    if line.startswith("    energy group 1"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            st_en1_1 = float(result)
+                        except:
+                            st_en1_1 = np.NaN
 
-                if line.startswith("    energy group 2"):
-                    # this will need to be modified for multiple beams
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        st_en2_1 = float(result)
-                    except:
-                        st_en2_1 = np.NaN
+                    if line.startswith("    energy group 2"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            st_en2_1 = float(result)
+                        except:
+                            st_en2_1 = np.NaN
 
-                if line.startswith("    energy group 3"):
-                    # this will need to be modified for multiple beams
-                    result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        st_en3_1 = float(result)
-                    except:
-                        st_en3_1 = np.NaN
+                    if line.startswith("    energy group 3"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            st_en3_1 = float(result)
+                        except:
+                            st_en3_1 = np.NaN
 
-                if line.startswith(" Total Beam-Target Fusion Power"):
-                    # this will need to be modified for multiple beams
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        fus_pwr_bt = float(result)
-                    except:
-                        fus_pwr_bt = np.NaN
+                    if line.startswith(" Total Beam-Target Fusion Power"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            fus_pwr_bt = float(result)
+                        except:
+                            fus_pwr_bt = np.NaN
 
-                if line.startswith(" Total Power to Charged Particles"):
-                    # this will need to be modified for multiple beams
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        cp_pwr_tot = float(result)
-                    except:
-                        cp_pwr_tot = np.NaN
+                    if line.startswith(" Total Power to Charged Particles"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            cp_pwr_tot = float(result)
+                        except:
+                            cp_pwr_tot = np.NaN
 
-                if line.startswith(" Total DT Neutron Rate"):
-                    # this will need to be modified for multiple beams
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        rate_dt_n = float(result)
-                    except:
-                        rate_dt_n = np.NaN
+                    if line.startswith(" Total DT Neutron Rate"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            rate_dt_n = float(result)
+                        except:
+                            rate_dt_n = np.NaN
 
-                if line.startswith(" Total DD Neutron Rate"):
-                    # this will need to be modified for multiple beams
-                    result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
-                    try:
-                        rate_dd_n = float(result)
-                    except:
-                        rate_dd_n = np.NaN
+                    if line.startswith(" Total DD Neutron Rate"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            rate_dd_n = float(result)
+                        except:
+                            rate_dd_n = np.NaN
 
-        with open(os.getcwd() + '/outbeams.dat', 'r') as f:
-            data = f.read().replace('\n', ' ')
+            with open(os.getcwd() + '/outbeams_%s.dat' % str(index), 'r') as f:
+                data = f.read().replace('\n', ' ')
+        else:
+            with open(os.getcwd() + '/outbeams.dat', 'r') as f:
+                for count, line in enumerate(f):
+                    if line.startswith(" Total Absorbed Power"):
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            P_abs_tot = float(result)
+                        except:
+                            P_abs_tot = np.NaN
+
+                    if line.startswith(" Total Lost Power"):
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            P_lst_tot = float(result)
+                        except:
+                            P_lst_tot = np.NaN
+
+                    if line.startswith(" Total NB Driven Current"):
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            I_nbi_tot = float(result)
+                        except:
+                            I_nbi_tot = np.NaN
+
+                    if line.startswith(" Total NBCD Efficiency"):
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            I_nbi_eff = float(result)
+                        except:
+                            I_nbi_eff = np.NaN
+
+                    if line.startswith(" Total Beam Beta"):
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            Beta_nbi_tot = float(result)
+                        except:
+                            Beta_nbi_tot = np.NaN
+
+                    if line.startswith(" Taus"):
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            Taus_nbi = float(result)
+                        except:
+                            Taus_nbi = np.NaN
+
+                    if line.startswith(" Volp"):
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            Volp_nbi = float(result)
+                        except:
+                            Volp_nbi = np.NaN
+
+                    if line.startswith(" Absorbed Power"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            P_abs_1 = float(result)
+                        except:
+                            P_abs_1 = np.NaN
+
+                    if line.startswith(" Lost Power"):
+                        # this will need to be modified for multiple beams
+
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            P_lst_1 = float(result)
+                        except:
+                            P_lst_1 = np.NaN
+
+                    if line.startswith(" NB driven current"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            I_nbi_1 = float(result)
+                        except:
+                            I_nbi_1 = np.NaN
+
+                    if line.startswith(" NBCD efficiency"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            I_nbi_eff_1 = float(result)
+                        except:
+                            I_nbi_eff_1 = np.NaN
+
+                    if line.startswith(" NBCD gamma"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            I_nbi_gam_1 = float(result)
+                        except:
+                            I_nbi_gam_1 = np.NaN
+
+                    if line.startswith("    energy group 1"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            st_en1_1 = float(result)
+                        except:
+                            st_en1_1 = np.NaN
+
+                    if line.startswith("    energy group 2"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            st_en2_1 = float(result)
+                        except:
+                            st_en2_1 = np.NaN
+
+                    if line.startswith("    energy group 3"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            st_en3_1 = float(result)
+                        except:
+                            st_en3_1 = np.NaN
+
+                    if line.startswith(" Total Beam-Target Fusion Power"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            fus_pwr_bt = float(result)
+                        except:
+                            fus_pwr_bt = np.NaN
+
+                    if line.startswith(" Total Power to Charged Particles"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            cp_pwr_tot = float(result)
+                        except:
+                            cp_pwr_tot = np.NaN
+
+                    if line.startswith(" Total DT Neutron Rate"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            rate_dt_n = float(result)
+                        except:
+                            rate_dt_n = np.NaN
+
+                    if line.startswith(" Total DD Neutron Rate"):
+                        # this will need to be modified for multiple beams
+                        result = re.match(r'.*= *((?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)?)|NaN).*', line).group(1)
+                        try:
+                            rate_dd_n = float(result)
+                        except:
+                            rate_dd_n = np.NaN
+
+            with open(os.getcwd() + '/outbeams.dat', 'r') as f:
+                data = f.read().replace('\n', ' ')
 
         result = re.match(r'.*hofr_3 *((?:(?:[-\+]?\d*(?:.?\d+)?(?:[Ee][-\+]?\d+)? +)|(?:NaN +))+) +Pitch.*', data).group(1)
         array = np.reshape(np.asarray(result.split(), dtype=float), (-1, 4))
@@ -283,14 +446,22 @@ class read_nbi_outfile:
 
 
 
-        pwr_frac = calc_pwr_frac(inp.ebeam)
+        if index:
+            pwr_frac = calc_pwr_frac(indBeam['ebeam'])
+        else:
+            pwr_frac = calc_pwr_frac(inp.ebeam)
         self.beam_pwr_1 = P_abs_tot * pwr_frac[0]  # atomic deuterium
         self.beam_pwr_2 = P_abs_tot * pwr_frac[1]  # molecular deuterium D2
         self.beam_pwr_3 = P_abs_tot * pwr_frac[2]  # molecular deuterium D3
 
-        self.beam_en_1 = inp.ebeam
-        self.beam_en_2 = inp.ebeam / 2
-        self.beam_en_3 = inp.ebeam / 3
+        if index:
+            self.beam_en_1 = indBeam['ebeam']
+            self.beam_en_2 = indBeam['ebeam'] / 2
+            self.beam_en_3 = indBeam['ebeam'] / 3
+        else:
+            self.beam_en_1 = inp.ebeam
+            self.beam_en_2 = inp.ebeam / 2
+            self.beam_en_3 = inp.ebeam / 3
 
 
 
@@ -390,8 +561,10 @@ class read_nbi_outfile:
                     "rho_nbeams" : rho_nbeams}
 
 class calc_nbi_vals:
-    def __init__(self, inp, core):
+    def __init__(self, inp, core,):
         R0 = core.pts.axis.mag[0]
+
+
         R_tan = inp.rtang
 
         # center of central solenoid is at the origin
@@ -520,156 +693,299 @@ class BeamDeposition:
                         to the beamdep module to help it find and run nbeams.'
                 sys.exit()
 
+                # Attempt to run multi-beam NBeams module
+
             try:
-                #prepare nbeams input file
-                prep_nbi_infile(inp, core)
-
-                # call nbeams. Note to those familiar with the old nbeams, I modified
-                # the source code to take the input file as a commandline argument. - MH
-
-                # If run as debug script, look at "/inputs" for inbeams_test.dat"
-                if __name__ == "__main__":
-                    try:
-                        # try to find nbeams in the system path
-                        p = Popen([nbeams_name, os.path.join(os.getcwd(), 'inputs', 'inbeams_test.dat')], stdin=PIPE, stdout=PIPE).wait()
-                    except:
-                        try:
-                            # otherwise use the location specified in the input file
-                            p = Popen([inp.nbeams_loc, os.path.join(os.getcwd(), 'inputs', 'inbeams_test.dat')], stdin=PIPE, stdout=PIPE).wait()
-                        except:
-                            print 'Unable to find nbeams executable. Stopping.'
-                            sys.exit()
-                else:
-                    try:
-                        # try to find nbeams in the system path
-		        p = Popen(os.getcwd()+inp.nbeams_loc, stdin=PIPE, stdout=PIPE)
-	                p.communicate()
-                    except:
-                        try:
-                            # otherwise use the location specified in the input file
-                            p = Popen([inp.nbeams_loc, os.getcwd()+'/inbeams.dat'], stdin=PIPE, stdout=PIPE).wait()
-                        except:
-                            print 'Unable to find nbeams executable. Stopping.'
-                            sys.exit()
-                # instantiate class with nbeams output file information
-                nbi_vals = read_nbi_outfile(inp, core)
+                inp.nbeamsJSON
+                try: import json
+                except: raise("Failed to import JSON library. Stopping.")
+                with open(os.path.join("inputs",inp.nbeamsJSON)) as json_file:
+                    data=json.load(json_file)
+                print("Notice: Multi-beam NBeams file found. Running NBeams for all shots individually")
+                nbi_vals_list = []
+                for i, beam in enumerate(data, start=1):
+                    prep_nbi_infile(inp, core, index=i, indBeam = beam)
+                    print("Notice: NBI File #%s prepared for Beam ID %s" % (str(i), str(data[i-1]["Beam ID"])))
+                    p = Popen([os.path.join(os.getcwd(),"nbeams", "bin", "Release", "nbeams"),
+                               os.path.join(os.getcwd(), "inbeams_%s.dat" % str(i)),
+                               os.path.join(os.getcwd(), "outbeams_%s.dat" % str(i))], stdin=PIPE, stdout=PIPE).wait()
+                    print("Notice: Nbeams active on output %s" % str(i))
+                    nbi_vals_list.append(read_nbi_outfile(inp, core, index = i, indBeam = beam))
             except:
-                print 'unable to create beam deposition information. Stopping.'
-                sys.exit()
-        self.debug = nbi_vals.debug
-        # create beams object
-        self.beams = namedtuple('beam', 'D1 D2 D3')(
-            # create D1 beam
-            namedtuple('beam_D1', 'z m E P rtan dPdV dPdr zeta')(
-                z_d,
-                m_d,
-                namedtuple('E', 'kev ev J')(
-                    nbi_vals.beam_en_1,
-                    nbi_vals.beam_en_1 * 1E3,
-                    nbi_vals.beam_en_1 * 1E3 * 1.6021E-19
-                ),
-                namedtuple('P', 'MW W')(
-                    nbi_vals.beam_pwr_1,
-                    nbi_vals.beam_pwr_1 * 1E6
-                ),
-                inp.rtang,
-                namedtuple('dPdV', 'v1D v2D')(
-                    namedtuple('v1D', 'MW W')(
-                        nbi_vals.dPdV_1_1D,
-                        nbi_vals.dPdV_1_1D * 1E6
-                    ),
-                    namedtuple('v2D', 'MW W')(
-                        nbi_vals.dPdV_1,
-                        nbi_vals.dPdV_1 * 1E6
-                    )
-                ),
-                namedtuple('dPdr', 'v1D v2D')(
-                    namedtuple('v1D', 'MW W')(
-                        nbi_vals.dPdr_1_1D,
-                        nbi_vals.dPdr_1_1D * 1E6
-                    ),
-                    namedtuple('v2D', 'MW W')(
-                        nbi_vals.dPdr_1,
-                        nbi_vals.dPdr_1 * 1E6
-                    )
-                ),
-                nbi_vals.zeta_1
-            ),
+                try:
+                    #prepare nbeams input file
+                    prep_nbi_infile(inp, core)
 
-            # create D2 beam
-            namedtuple('beam_D2', 'z m E P rtan dPdV dPdr zeta')(
-                z_d,
-                m_d,
-                namedtuple('E', 'kev ev J')(
-                    nbi_vals.beam_en_2,
-                    nbi_vals.beam_en_2 * 1E3,
-                    nbi_vals.beam_en_2 * 1E3 * 1.6021E-19
-                ),
-                namedtuple('P', 'MW W')(
-                    nbi_vals.beam_pwr_2,
-                    nbi_vals.beam_pwr_2 * 1E6
-                ),
-                inp.rtang,
-                namedtuple('dPdV', 'v1D v2D')(
-                    namedtuple('v1D', 'MW W')(
-                        nbi_vals.dPdV_2_1D,
-                        nbi_vals.dPdV_2_1D * 1E6
-                    ),
-                    namedtuple('v2D', 'MW W')(
-                        nbi_vals.dPdV_2,
-                        nbi_vals.dPdV_2 * 1E6
-                    )
-                ),
-                namedtuple('dPdr', 'v1D v2D')(
-                    namedtuple('v1D', 'MW W')(
-                        nbi_vals.dPdr_2_1D,
-                        nbi_vals.dPdr_2_1D * 1E6
-                    ),
-                    namedtuple('v2D', 'MW W')(
-                        nbi_vals.dPdr_2,
-                        nbi_vals.dPdr_2 * 1E6
-                    )
-                ),
-                nbi_vals.zeta_2
-            ),
+                    # call nbeams. Note to those familiar with the old nbeams, I modified
+                    # the source code to take the input file as a commandline argument. - MH
 
-            # create D3 beam
-            namedtuple('beam_D3', 'z m E P rtan dPdV dPdr zeta')(
-                z_d,
-                m_d,
-                namedtuple('E', 'kev ev J')(
-                    nbi_vals.beam_en_3,
-                    nbi_vals.beam_en_3 * 1E3,
-                    nbi_vals.beam_en_3 * 1E3 * 1.6021E-19
-                ),
-                namedtuple('P', 'MW W')(
-                    nbi_vals.beam_pwr_3,
-                    nbi_vals.beam_pwr_3 * 1E6
-                ),
-                inp.rtang,
-                namedtuple('dPdV', 'v1D v2D')(
-                    namedtuple('v1D', 'MW W')(
-                        nbi_vals.dPdV_3_1D,
-                        nbi_vals.dPdV_3_1D * 1E6
+                    # If run as debug script, look at "/inputs" for inbeams_test.dat"
+                    if __name__ == "__main__":
+                        try:
+                            # try to find nbeams in the system path
+                            p = Popen([nbeams_name, os.path.join(os.getcwd(), 'inputs', 'inbeams_test.dat')], stdin=PIPE, stdout=PIPE).wait()
+                        except:
+                            try:
+                                # otherwise use the location specified in the input file
+                                p = Popen([inp.nbeams_loc, os.path.join(os.getcwd(), 'inputs', 'inbeams_test.dat')], stdin=PIPE, stdout=PIPE).wait()
+                            except:
+                                print 'Unable to find nbeams executable. Stopping.'
+                                sys.exit()
+                    else:
+                        try:
+                            # try to find nbeams in the system path
+                            p = Popen(os.getcwd()+inp.nbeams_loc, stdin=PIPE, stdout=PIPE)
+                            p.communicate()
+                        except:
+                            try:
+                                # otherwise use the location specified in the input file
+                                p = Popen([inp.nbeams_loc, os.getcwd()+'/inbeams.dat', os.getcwd()+"/outbeams.dat"], stdin=PIPE, stdout=PIPE).wait()
+                            except:
+                                print 'Unable to find nbeams executable. Stopping.'
+                                sys.exit()
+                      # instantiate class with nbeams output file information
+                        nbi_vals = read_nbi_outfile(inp, core)
+
+                except:
+                    print 'unable to create beam deposition information. Stopping.'
+                    sys.exit()
+        try:
+            if nbi_vals: self.debug = nbi_vals.debug
+        except:
+            self.debug = nbi_vals_list
+
+        try:
+            nbi_vals_list
+            # create multi-beam nbeams object
+            self.beams = namedtuple('beam', 'D1 D2 D3')(
+                # create D1 beam
+                namedtuple('beam_D1', 'z m E P rtang dPdV dPdr zeta coI')(
+                    z_d,
+                    m_d,
+                    namedtuple('E', 'kev ev J')(
+                        [nbi_vals_list[i].beam_en_1 for i in range(len(nbi_vals_list))],
+                        [nbi_vals_list[i].beam_en_1 * 1E3 for i in range(len(nbi_vals_list))],
+                        [nbi_vals_list[i].beam_en_1 * 1E3 * 1.6021E-19 for i in range(len(nbi_vals_list))]
                     ),
-                    namedtuple('v2D', 'MW W')(
-                        nbi_vals.dPdV_3,
-                        nbi_vals.dPdV_3 * 1E6
-                    )
-                ),
-                namedtuple('dPdr', 'v1D v2D')(
-                    namedtuple('v1D', 'MW W')(
-                        nbi_vals.dPdr_3_1D,
-                        nbi_vals.dPdr_3_1D * 1E6
+                    namedtuple('P', 'MW W')(
+                        [nbi_vals_list[i].beam_pwr_1 for i in range(len(nbi_vals_list))],
+                        [nbi_vals_list[i].beam_pwr_1 * 1E6 for i in range(len(nbi_vals_list))]
                     ),
-                    namedtuple('v2D', 'MW W')(
-                        nbi_vals.dPdr_3,
-                        nbi_vals.dPdr_3 * 1E6
-                    )
+                    [data[i]['rtang'] for i in range(len(nbi_vals_list))],
+                    namedtuple('dPdV', 'v1D v2D')(
+                        namedtuple('v1D', 'MW W')(
+                            [nbi_vals_list[i].dPdV_1_1D for i in range(len(nbi_vals_list))],
+                            [nbi_vals_list[i].dPdV_1_1D * 1E6 for i in range(len(nbi_vals_list))]
+                        ),
+                        namedtuple('v2D', 'MW W')(
+                            [nbi_vals_list[i].dPdV_1 for i in range(len(nbi_vals_list))],
+                            [nbi_vals_list[i].dPdV_1 * 1E6 for i in range(len(nbi_vals_list))]
+                        )
+                    ),
+                    namedtuple('dPdr', 'v1D v2D')(
+                        namedtuple('v1D', 'MW W')(
+                            [nbi_vals_list[i].dPdr_1_1D for i in range(len(nbi_vals_list))],
+                            [nbi_vals_list[i].dPdr_1_1D * 1E6 for i in range(len(nbi_vals_list))]
+                        ),
+                        namedtuple('v2D', 'MW W')(
+                            [nbi_vals_list[i].dPdr_1 for i in range(len(nbi_vals_list))],
+                            [nbi_vals_list[i].dPdr_1 * 1E6 for i in range(len(nbi_vals_list))]
+                        )
+                    ),
+                    [nbi_vals_list[i].zeta_1 for i in range(len(nbi_vals_list))],
+                    [data[i]['coI'] for i in range(len(data))]
                 ),
-                nbi_vals.zeta_3
+
+                # create D2 beam
+                namedtuple('beam_D2', 'z m E P rtang dPdV dPdr zeta coI')(
+                    z_d,
+                    m_d,
+                    namedtuple('E', 'kev ev J')(
+                        [nbi_vals_list[i].beam_en_2 for i in range(len(nbi_vals_list))],
+                        [nbi_vals_list[i].beam_en_2 * 1E3 for i in range(len(nbi_vals_list))],
+                        [nbi_vals_list[i].beam_en_2 * 1E3 * 1.6021E-19 for i in range(len(nbi_vals_list))]
+                    ),
+                    namedtuple('P', 'MW W')(
+                        [nbi_vals_list[i].beam_pwr_2 for i in range(len(nbi_vals_list))],
+                        [nbi_vals_list[i].beam_pwr_2 * 1E6 for i in range(len(nbi_vals_list))]
+                    ),
+                    [data[i]['rtang'] for i in range(len(nbi_vals_list))],
+                    namedtuple('dPdV', 'v1D v2D')(
+                        namedtuple('v1D', 'MW W')(
+                            [nbi_vals_list[i].dPdV_2_1D for i in range(len(nbi_vals_list))],
+                            [nbi_vals_list[i].dPdV_2_1D * 1E6 for i in range(len(nbi_vals_list))]
+                        ),
+                        namedtuple('v2D', 'MW W')(
+                            [nbi_vals_list[i].dPdV_2 for i in range(len(nbi_vals_list))],
+                            [nbi_vals_list[i].dPdV_2 * 1E6 for i in range(len(nbi_vals_list))]
+                        )
+                    ),
+                    namedtuple('dPdr', 'v1D v2D')(
+                        namedtuple('v1D', 'MW W')(
+                            [nbi_vals_list[i].dPdr_2_1D for i in range(len(nbi_vals_list))],
+                            [nbi_vals_list[i].dPdr_2_1D * 1E6 for i in range(len(nbi_vals_list))]
+                        ),
+                        namedtuple('v2D', 'MW W')(
+                            [nbi_vals_list[i].dPdr_2 for i in range(len(nbi_vals_list))],
+                            [nbi_vals_list[i].dPdr_2 * 1E6 for i in range(len(nbi_vals_list))]
+                        )
+                    ),
+                    [nbi_vals_list[i].zeta_2 for i in range(len(nbi_vals_list))],
+                    [data[i]['coI'] for i in range(len(data))]
+                ),
+
+                # create D3 beam
+                namedtuple('beam_D3', 'z m E P rtang dPdV dPdr zeta coI')(
+                    z_d,
+                    m_d,
+                    namedtuple('E', 'kev ev J')(
+                        [nbi_vals_list[i].beam_en_3 for i in range(len(nbi_vals_list))],
+                        [nbi_vals_list[i].beam_en_3 * 1E3 for i in range(len(nbi_vals_list))],
+                        [nbi_vals_list[i].beam_en_3 * 1E3 * 1.6021E-19 for i in range(len(nbi_vals_list))]
+                    ),
+                    namedtuple('P', 'MW W')(
+                        [nbi_vals_list[i].beam_pwr_3 for i in range(len(nbi_vals_list))],
+                        [nbi_vals_list[i].beam_pwr_3 * 1E6 for i in range(len(nbi_vals_list))]
+                    ),
+                    [data[i]['rtang'] for i in range(len(data))],
+                    namedtuple('dPdV', 'v1D v2D')(
+                        namedtuple('v1D', 'MW W')(
+                            [nbi_vals_list[i].dPdV_3_1D for i in range(len(nbi_vals_list))],
+                            [nbi_vals_list[i].dPdV_3_1D * 1E6 for i in range(len(nbi_vals_list))]
+                        ),
+                        namedtuple('v2D', 'MW W')(
+                            [nbi_vals_list[i].dPdV_3 for i in range(len(nbi_vals_list))],
+                            [nbi_vals_list[i].dPdV_3 * 1E6 for i in range(len(nbi_vals_list))]
+                        )
+                    ),
+                    namedtuple('dPdr', 'v1D v2D')(
+                        namedtuple('v1D', 'MW W')(
+                            [nbi_vals_list[i].dPdr_3_1D for i in range(len(nbi_vals_list))],
+                            [nbi_vals_list[i].dPdr_3_1D * 1E6 for i in range(len(nbi_vals_list))]
+                        ),
+                        namedtuple('v2D', 'MW W')(
+                            [nbi_vals_list[i].dPdr_3 for i in range(len(nbi_vals_list))],
+                            [nbi_vals_list[i].dPdr_3 * 1E6 for i in range(len(nbi_vals_list))]
+                        )
+                    ),
+                    [nbi_vals_list[i].zeta_3 for i in range(len(nbi_vals_list))],
+                    [data[i]['coI'] for i in range(len(data))]
+                )
             )
-        )
+        except:
+            # create beams object
+            self.beams = namedtuple('beam', 'D1 D2 D3')(
+                # create D1 beam
+                namedtuple('beam_D1', 'z m E P rtang dPdV dPdr zeta')(
+                    z_d,
+                    m_d,
+                    namedtuple('E', 'kev ev J')(
+                        nbi_vals.beam_en_1,
+                        nbi_vals.beam_en_1 * 1E3,
+                        nbi_vals.beam_en_1 * 1E3 * 1.6021E-19
+                    ),
+                    namedtuple('P', 'MW W')(
+                        nbi_vals.beam_pwr_1,
+                        nbi_vals.beam_pwr_1 * 1E6
+                    ),
+                    inp.rtang,
+                    namedtuple('dPdV', 'v1D v2D')(
+                        namedtuple('v1D', 'MW W')(
+                            nbi_vals.dPdV_1_1D,
+                            nbi_vals.dPdV_1_1D * 1E6
+                        ),
+                        namedtuple('v2D', 'MW W')(
+                            nbi_vals.dPdV_1,
+                            nbi_vals.dPdV_1 * 1E6
+                        )
+                    ),
+                    namedtuple('dPdr', 'v1D v2D')(
+                        namedtuple('v1D', 'MW W')(
+                            nbi_vals.dPdr_1_1D,
+                            nbi_vals.dPdr_1_1D * 1E6
+                        ),
+                        namedtuple('v2D', 'MW W')(
+                            nbi_vals.dPdr_1,
+                            nbi_vals.dPdr_1 * 1E6
+                        )
+                    ),
+                    nbi_vals.zeta_1
+                ),
+
+                # create D2 beam
+                namedtuple('beam_D2', 'z m E P rtang dPdV dPdr zeta')(
+                    z_d,
+                    m_d,
+                    namedtuple('E', 'kev ev J')(
+                        nbi_vals.beam_en_2,
+                        nbi_vals.beam_en_2 * 1E3,
+                        nbi_vals.beam_en_2 * 1E3 * 1.6021E-19
+                    ),
+                    namedtuple('P', 'MW W')(
+                        nbi_vals.beam_pwr_2,
+                        nbi_vals.beam_pwr_2 * 1E6
+                    ),
+                    inp.rtang,
+                    namedtuple('dPdV', 'v1D v2D')(
+                        namedtuple('v1D', 'MW W')(
+                            nbi_vals.dPdV_2_1D,
+                            nbi_vals.dPdV_2_1D * 1E6
+                        ),
+                        namedtuple('v2D', 'MW W')(
+                            nbi_vals.dPdV_2,
+                            nbi_vals.dPdV_2 * 1E6
+                        )
+                    ),
+                    namedtuple('dPdr', 'v1D v2D')(
+                        namedtuple('v1D', 'MW W')(
+                            nbi_vals.dPdr_2_1D,
+                            nbi_vals.dPdr_2_1D * 1E6
+                        ),
+                        namedtuple('v2D', 'MW W')(
+                            nbi_vals.dPdr_2,
+                            nbi_vals.dPdr_2 * 1E6
+                        )
+                    ),
+                    nbi_vals.zeta_2
+                ),
+
+                # create D3 beam
+                namedtuple('beam_D3', 'z m E P rtang dPdV dPdr zeta')(
+                    z_d,
+                    m_d,
+                    namedtuple('E', 'kev ev J')(
+                        nbi_vals.beam_en_3,
+                        nbi_vals.beam_en_3 * 1E3,
+                        nbi_vals.beam_en_3 * 1E3 * 1.6021E-19
+                    ),
+                    namedtuple('P', 'MW W')(
+                        nbi_vals.beam_pwr_3,
+                        nbi_vals.beam_pwr_3 * 1E6
+                    ),
+                    inp.rtang,
+                    namedtuple('dPdV', 'v1D v2D')(
+                        namedtuple('v1D', 'MW W')(
+                            nbi_vals.dPdV_3_1D,
+                            nbi_vals.dPdV_3_1D * 1E6
+                        ),
+                        namedtuple('v2D', 'MW W')(
+                            nbi_vals.dPdV_3,
+                            nbi_vals.dPdV_3 * 1E6
+                        )
+                    ),
+                    namedtuple('dPdr', 'v1D v2D')(
+                        namedtuple('v1D', 'MW W')(
+                            nbi_vals.dPdr_3_1D,
+                            nbi_vals.dPdr_3_1D * 1E6
+                        ),
+                        namedtuple('v2D', 'MW W')(
+                            nbi_vals.dPdr_3,
+                            nbi_vals.dPdr_3 * 1E6
+                        )
+                    ),
+                    nbi_vals.zeta_3
+                )
+            )
 
 
 

@@ -1344,7 +1344,6 @@ class Core:
             )
         )
 
-        # initialize E_r and the corresponding electric potential
         try:
             try:
                 E_r_fit = UnivariateSpline(inp.er_data[:, 0], inp.er_data[:, 1] * inp.Er_scale, k=3, s=0)
@@ -1352,12 +1351,16 @@ class Core:
                 E_r_fit = UnivariateSpline(inp.er_data[:, 0], inp.er_data[:, 1], k=3, s=0)
             self.E_r = E_r_fit(self.rho)
             self.E_pot = np.zeros(self.rho.shape)
-            for i, rhoval in enumerate(rho1d):
-                self.E_pot[i] = E_r_fit.integral(rhoval, 1.0)
+            try:
+                for i, rhoval in enumerate(rho1d):
+                    self.E_pot[i] = E_r_fit.integral(rhoval, 1.0)
+            except:
+                print "Error in E_pot integration"
         except:
             print 'Er data not supplied. Setting E_r and E_pot to zero.'
             self.E_r = np.zeros(self.rho.shape)
             self.E_pot = np.zeros(self.rho.shape)
+        # initialize E_r and the corresponding electric potential
 
         # initialize rotation velocities from data
         try:

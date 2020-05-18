@@ -1,0 +1,197 @@
+ Global NB Heating and Current Drive Parameters
+ ----------------------------------------------
+ TOTALS:
+ Total Absorbed Power      =       NaN MW
+ Total Lost Power          =       NaN MW
+ Total NB Driven Current   =          NaN A
+ Total NBCD Efficiency     =          NaN A/W
+ Total Beam Beta           =          NaN
+ Taus                      =          NaN s
+ Volp                      =  0.17938E+02 m3
+
+ Information per Beamline and Energy Group:
+ -----------------------------------------
+                       Beam 1          Beam 2          Beam 3
+                       ------          ------          ------
+ Absorbed Power             NaN
+ Lost Power                 NaN
+ NB driven current          NaN
+ NBCD efficiency            NaN
+ NBCD gamma                 NaN
+
+ Beam Shinethrough
+    energy group 1          NaN
+    energy group 2          NaN
+    energy group 3          NaN
+
+ Beam-Target Parameters
+ ----------------------
+ Total Beam-Target Fusion Power   =          NaN MW
+ Total Power to Charged Particles =          NaN MW
+ Total DT Neutron Rate            =  0.00000E+00 n/s
+ Total DD Neutron Rate            =          NaN n/s
+
+ Neutral Beam Deposition Profiles
+ --------------------------------
+ Beam  1
+     rho      hofr_1       hofr_2       hofr_3
+  0.00000          NaN          NaN          NaN
+  0.02000          NaN          NaN          NaN
+  0.04000          NaN          NaN          NaN
+  0.06000          NaN          NaN          NaN
+  0.08000          NaN          NaN          NaN
+  0.10000          NaN          NaN          NaN
+  0.12000          NaN          NaN          NaN
+  0.14000          NaN          NaN          NaN
+  0.16000          NaN          NaN          NaN
+  0.18000          NaN          NaN          NaN
+  0.20000          NaN          NaN          NaN
+  0.22000          NaN          NaN          NaN
+  0.24000          NaN          NaN          NaN
+  0.26000          NaN          NaN          NaN
+  0.28000          NaN          NaN          NaN
+  0.30000          NaN          NaN          NaN
+  0.32000          NaN          NaN          NaN
+  0.34000          NaN          NaN          NaN
+  0.36000          NaN          NaN          NaN
+  0.38000          NaN          NaN          NaN
+  0.40000          NaN          NaN          NaN
+  0.42000          NaN          NaN          NaN
+  0.44000          NaN          NaN          NaN
+  0.46000          NaN          NaN          NaN
+  0.48000          NaN          NaN          NaN
+  0.50000          NaN          NaN          NaN
+  0.52000          NaN          NaN          NaN
+  0.54000          NaN          NaN          NaN
+  0.56000          NaN          NaN          NaN
+  0.58000          NaN          NaN          NaN
+  0.60000          NaN          NaN          NaN
+  0.62000          NaN          NaN          NaN
+  0.64000          NaN          NaN          NaN
+  0.66000          NaN          NaN          NaN
+  0.68000          NaN          NaN          NaN
+  0.70000          NaN          NaN          NaN
+  0.72000          NaN          NaN          NaN
+  0.74000          NaN          NaN          NaN
+  0.76000          NaN          NaN          NaN
+  0.78000          NaN          NaN          NaN
+  0.80000          NaN          NaN          NaN
+  0.82000          NaN          NaN          NaN
+  0.84000          NaN          NaN          NaN
+  0.86000          NaN          NaN          NaN
+  0.88000          NaN          NaN          NaN
+  0.90000          NaN          NaN          NaN
+  0.92000          NaN          NaN          NaN
+  0.94000          NaN          NaN          NaN
+  0.96000          NaN          NaN          NaN
+  0.98000          NaN          NaN          NaN
+  1.00000          NaN          NaN          NaN
+
+ Pitch Angle at Birth
+ --------------------------------
+ Angle  1
+     rho      zeta_1       zeta_2       zeta_3
+  0.00000          NaN          NaN          NaN
+  0.02000          NaN          NaN          NaN
+  0.04000          NaN          NaN          NaN
+  0.06000          NaN          NaN          NaN
+  0.08000          NaN          NaN          NaN
+  0.10000          NaN          NaN          NaN
+  0.12000          NaN          NaN          NaN
+  0.14000          NaN          NaN          NaN
+  0.16000          NaN          NaN          NaN
+  0.18000          NaN          NaN          NaN
+  0.20000          NaN          NaN          NaN
+  0.22000          NaN          NaN          NaN
+  0.24000          NaN          NaN          NaN
+  0.26000          NaN          NaN          NaN
+  0.28000          NaN          NaN          NaN
+  0.30000          NaN          NaN          NaN
+  0.32000          NaN          NaN          NaN
+  0.34000          NaN          NaN          NaN
+  0.36000          NaN          NaN          NaN
+  0.38000          NaN          NaN          NaN
+  0.40000          NaN          NaN          NaN
+  0.42000          NaN          NaN          NaN
+  0.44000          NaN          NaN          NaN
+  0.46000          NaN          NaN          NaN
+  0.48000          NaN          NaN          NaN
+  0.50000          NaN          NaN          NaN
+  0.52000          NaN          NaN          NaN
+  0.54000          NaN          NaN          NaN
+  0.56000          NaN          NaN          NaN
+  0.58000          NaN          NaN          NaN
+  0.60000          NaN          NaN          NaN
+  0.62000          NaN          NaN          NaN
+  0.64000          NaN          NaN          NaN
+  0.66000          NaN          NaN          NaN
+  0.68000          NaN          NaN          NaN
+  0.70000          NaN          NaN          NaN
+  0.72000          NaN          NaN          NaN
+  0.74000          NaN          NaN          NaN
+  0.76000          NaN          NaN          NaN
+  0.78000          NaN          NaN          NaN
+  0.80000          NaN          NaN          NaN
+  0.82000          NaN          NaN          NaN
+  0.84000          NaN          NaN          NaN
+  0.86000          NaN          NaN          NaN
+  0.88000          NaN          NaN          NaN
+  0.90000          NaN          NaN          NaN
+  0.92000          NaN          NaN          NaN
+  0.94000          NaN          NaN          NaN
+  0.96000          NaN          NaN          NaN
+  0.98000          NaN          NaN          NaN
+  1.00000  0.00000E+00  0.00000E+00  0.00000E+00
+
+   rho     jnbtot      pNBe        pNBi        nbfast      pressb      pfusb      dvol      dA
+ 0.0000         NaN         NaN         NaN         NaN         NaN         NaN  0.1506E-02  0.1421E-03
+ 0.0200         NaN         NaN         NaN         NaN         NaN         NaN  0.1205E-01  0.1137E-02
+ 0.0400         NaN         NaN         NaN         NaN         NaN         NaN  0.2412E-01  0.2275E-02
+ 0.0600         NaN         NaN         NaN         NaN         NaN         NaN  0.3621E-01  0.3416E-02
+ 0.0800         NaN         NaN         NaN         NaN         NaN         NaN  0.4834E-01  0.4560E-02
+ 0.1000         NaN         NaN         NaN         NaN         NaN         NaN  0.6052E-01  0.5710E-02
+ 0.1200         NaN         NaN         NaN         NaN         NaN         NaN  0.7276E-01  0.6865E-02
+ 0.1400         NaN         NaN         NaN         NaN         NaN         NaN  0.8508E-01  0.8027E-02
+ 0.1600         NaN         NaN         NaN         NaN         NaN         NaN  0.9749E-01  0.9198E-02
+ 0.1800         NaN         NaN         NaN         NaN         NaN         NaN  0.1100E+00  0.1038E-01
+ 0.2000         NaN         NaN         NaN         NaN         NaN         NaN  0.1226E+00  0.1157E-01
+ 0.2200         NaN         NaN         NaN         NaN         NaN         NaN  0.1354E+00  0.1277E-01
+ 0.2400         NaN         NaN         NaN         NaN         NaN         NaN  0.1483E+00  0.1399E-01
+ 0.2600         NaN         NaN         NaN         NaN         NaN         NaN  0.1613E+00  0.1522E-01
+ 0.2800         NaN         NaN         NaN         NaN         NaN         NaN  0.1745E+00  0.1646E-01
+ 0.3000         NaN         NaN         NaN         NaN         NaN         NaN  0.1879E+00  0.1773E-01
+ 0.3200         NaN         NaN         NaN         NaN         NaN         NaN  0.2015E+00  0.1901E-01
+ 0.3400         NaN         NaN         NaN         NaN         NaN         NaN  0.2153E+00  0.2031E-01
+ 0.3600         NaN         NaN         NaN         NaN         NaN         NaN  0.2293E+00  0.2163E-01
+ 0.3800         NaN         NaN         NaN         NaN         NaN         NaN  0.2435E+00  0.2297E-01
+ 0.4000         NaN         NaN         NaN         NaN         NaN         NaN  0.2579E+00  0.2433E-01
+ 0.4200         NaN         NaN         NaN         NaN         NaN         NaN  0.2727E+00  0.2572E-01
+ 0.4400         NaN         NaN         NaN         NaN         NaN         NaN  0.2876E+00  0.2714E-01
+ 0.4600         NaN         NaN         NaN         NaN         NaN         NaN  0.3029E+00  0.2858E-01
+ 0.4800         NaN         NaN         NaN         NaN         NaN         NaN  0.3185E+00  0.3004E-01
+ 0.5000         NaN         NaN         NaN         NaN         NaN         NaN  0.3343E+00  0.3154E-01
+ 0.5200         NaN         NaN         NaN         NaN         NaN         NaN  0.3505E+00  0.3307E-01
+ 0.5400         NaN         NaN         NaN         NaN         NaN         NaN  0.3670E+00  0.3462E-01
+ 0.5600         NaN         NaN         NaN         NaN         NaN         NaN  0.3839E+00  0.3621E-01
+ 0.5800         NaN         NaN         NaN         NaN         NaN         NaN  0.4011E+00  0.3784E-01
+ 0.6000         NaN         NaN         NaN         NaN         NaN         NaN  0.4186E+00  0.3950E-01
+ 0.6200         NaN         NaN         NaN         NaN         NaN         NaN  0.4366E+00  0.4119E-01
+ 0.6400         NaN         NaN         NaN         NaN         NaN         NaN  0.4549E+00  0.4292E-01
+ 0.6600         NaN         NaN         NaN         NaN         NaN         NaN  0.4737E+00  0.4469E-01
+ 0.6800         NaN         NaN         NaN         NaN         NaN         NaN  0.4929E+00  0.4650E-01
+ 0.7000         NaN         NaN         NaN         NaN         NaN         NaN  0.5125E+00  0.4835E-01
+ 0.7200         NaN         NaN         NaN         NaN         NaN         NaN  0.5325E+00  0.5024E-01
+ 0.7400         NaN         NaN         NaN         NaN         NaN         NaN  0.5530E+00  0.5217E-01
+ 0.7600         NaN         NaN         NaN         NaN         NaN         NaN  0.5740E+00  0.5415E-01
+ 0.7800         NaN         NaN         NaN         NaN         NaN         NaN  0.5954E+00  0.5618E-01
+ 0.8000         NaN         NaN         NaN         NaN         NaN         NaN  0.6174E+00  0.5825E-01
+ 0.8200         NaN         NaN         NaN         NaN         NaN         NaN  0.6399E+00  0.6037E-01
+ 0.8400         NaN         NaN         NaN         NaN         NaN         NaN  0.6628E+00  0.6253E-01
+ 0.8600         NaN         NaN         NaN         NaN         NaN         NaN  0.6863E+00  0.6475E-01
+ 0.8800         NaN         NaN         NaN         NaN         NaN         NaN  0.7104E+00  0.6702E-01
+ 0.9000         NaN         NaN         NaN         NaN         NaN         NaN  0.7350E+00  0.6934E-01
+ 0.9200         NaN         NaN         NaN         NaN         NaN         NaN  0.7602E+00  0.7172E-01
+ 0.9400         NaN         NaN         NaN         NaN         NaN         NaN  0.7860E+00  0.7415E-01
+ 0.9600         NaN         NaN         NaN         NaN         NaN         NaN  0.8123E+00  0.7664E-01
+ 0.9800         NaN         NaN         NaN         NaN         NaN         NaN  0.8393E+00  0.7918E-01
+ 1.0000  0.0000E+00         NaN         NaN  0.0000E+00  0.0000E+00  0.0000E+00  0.0000E+00  0.0000E+00

@@ -17,8 +17,10 @@ import pickle
 import numpy as np
 from math import ceil, floor, log10
 #164436_3720 good shot
-shotid=123301
-timeid=2800
+shotid=164436
+
+timeid=3720
+
 runid='j1900'
 
 
@@ -304,6 +306,59 @@ def chiComp4neuts(shot, shotnoneuts):
                          yLabelAdj=-.25,
                          size=(16, 12))
 
+def paperComp(shotIOL, shot):
+    prettyID = [r'$\chi_{j,r}$ no corr',
+                r'$\chi_{j,r}$ w/ IOL',
+                r'$\chi_{j,r}$ w/ IOL, con',
+                r'$\chi_{j,r}$ w/ IOL, conv, int']
+
+    title = r"Comparison of Ion Heat Conductivity with various corrections"
+
+    adjustments = {0: -1.}
+    caption = ["Main ion heat conductivity in the edge for DIII-D shot %s.%s with no corrections (red)" % (str(shotid), str(timeid)),
+               "corrected for IOL (blue), corrected for convective heat flux (green), and corrected for work done on plasma (purple)"]
+
+    graphs.prettyCompare(('rhor', shot.rtrans.rhor[:-2]), [(prettyID[0], shot.rtrans.chi.chi.i.chi1[:-2]), (prettyID[1], shotIOL.rtrans.chi.chi.i.chi1[:-2]), (prettyID[2], shotIOL.rtrans.chi.chi.i.chi2[:-2]),
+        (prettyID[3], shotIOL.rtrans.chi.chi.i.chi3[:-2])],
+                         #yrange=yRangeFind([shot.rtrans.chi.chi.i.chi1[-30:], shotIOL.rtrans.chi.chi.i.chi3[-30:]]),
+                         yrange=[-1.5, 3.5],
+                         datalabels=[prettyID[0], prettyID[1], prettyID[2], prettyID[3]],
+                         title=title,
+                         ylabel=[r"$\chi_j$", r'$\left[\frac{m^2}{s}\right]$'],
+                         caption=caption,
+                         adjust=adjustments,
+                         xTickremove=None,
+                         textSpace=.065,
+                         marginBottom=.15,
+                         marginLeft=0.095,
+                         yLabelAdj=-.25,
+                         size=(16, 12),
+                         legend=True)
+
+
+
+    prettyID = [r'$D_{drag,j}$']
+
+    title = r"Calculation of $D$"
+
+    adjustments = {0: -1.}
+    caption = ["Main ion particle diffusion coefficient in the edge for DIII-D shot %s.%s with no corrections (red)" % (str(shotid), str(timeid))]
+
+    graphs.prettyCompare(('rhor', shot.rtrans.nu_drag_D[:-2]), [(prettyID[0], shotIOL.rtrans.nu_drag_D[:-2])],
+                         #yrange=yRangeFind([shot.rtrans.chi.chi.i.chi1[-30:], shotIOL.rtrans.chi.chi.i.chi3[-30:]]),
+                         yrange=[-15, 35],
+                         datalabels=[prettyID[0]],
+                         title=title,
+                         ylabel=[r"$D_{j}$", r'$\left[\frac{m^2}{s}\right]$'],
+                         caption=caption,
+                         adjust=adjustments,
+                         xTickremove=None,
+                         textSpace=.065,
+                         marginBottom=.15,
+                         marginLeft=0.095,
+                         yLabelAdj=-.25,
+                         size=(16, 12),
+                         legend=True)
 
 def chieCompneuts(shot, shotnoneuts):
     prettyID = [r"$\chi_e$ w/ neutrals",
@@ -393,7 +448,7 @@ def fluxComp(shot, shotnoIOL, shotnoneuts):
     adjustments = {}
     graphs.prettyCompare(('rhor', shot.rtrans.rhor), [(prettyID[0], shot.rtrans.gamma_diff_D), (prettyID[1], shotnoIOL.rtrans.gamma_diff_D)],
                          #yrange=yRangeFind([shot.rtrans.gamma_diff_D[-30:], shotnoIOL.rtrans.gamma_diff_D[-30:]]),
-                         yrange=[0,1E20],
+                         yrange=[0.,4E20],
                          datalabels=[prettyID[0], prettyID[1]],
                          title=title,
                          ylabel=[r"$\Gamma_{r,j}$", r"$\left[\frac{\#}{m^2 s}\right]$"],
@@ -427,7 +482,7 @@ if __name__ == "__main__":
         try:
             shot = GTEDGE3_cli.runGT3(shotargs)
         except Exception as e:
-            raise Exception(e)
+            raise("Exception occurred: %s" % e)
         try:
             pass
 #            with open("outputs/s%s.%s.dat"  % (str(shotid), str(timeid)), "wb") as f:
@@ -472,9 +527,9 @@ if __name__ == "__main__":
 #    chiComp1(shot,shotnoIOL)
 #    chiComp2(shot,shotnoIOL)
     # chiComp3(shot,shotnoIOL)
-    chiComp4(shot, shotnoIOL)
+    #chiComp4(shot, shotnoIOL)
 
-    chieComp(shot, shotnoIOL)
+    #chieComp(shot, shotnoIOL)
     #    qComp1(shot,shotnoIOL)
     #    qComp2(shot,shotnoIOL)
     #    qComp3(shot,shotnoIOL)
@@ -522,6 +577,7 @@ if __name__ == "__main__":
     #    qComp4neuts(shot,shotnoIOL)
     #
     #qieComp1(shot, shotnoIOL)
+    paperComp(shot, shotnoIOL)
     fluxComp(shot, shotnoIOL, shotnoneuts)
 
     ####################################################################################

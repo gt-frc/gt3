@@ -15,6 +15,7 @@ from scipy import constants
 from scipy.integrate import odeint
 from scipy.interpolate import interp1d, UnivariateSpline
 from core import calc_fsa
+from operator import add
 
 eps_0 = constants.epsilon_0
 e = constants.elementary_charge
@@ -123,12 +124,19 @@ def calc_part_src_nbi(beam, iol_adjusted=False, F_orb_nbi=None):
     # The factor of 2 can be applied to F_orb in the continuity equation later.
 
     # nbi source in particles/sec. Needed to calculate gamma with sources.
-    part_src_nbi = beam.dPdr.v1D.W / beam.E.J
+    try:
 
-    # nbi source in # of particles/(m^3 * sec). Needed to calculate gamma with source densities.
-    part_src_nbi_tot = beam.dPdV.v1D.W / beam.E.J
+        part_src_nbi = sum([beam.dPdr.v1D.W[i] / beam.E.J[i] for i in range(len(beam.E.J))])
 
-    part_src_nbi = beam.dPdV.v1D.W / beam.E.J #* beam.dp
+        # nbi source in # of particles/(m^3 * sec). Needed to calculate gamma with source densities.
+
+        part_src_nbi_tot = sum([beam.dPdV.v1D.W[i] / beam.E.J[i] for i in range(len(beam.E.J))])
+
+    except:
+        part_src_nbi = beam.dPdr.v1D.W / beam.E.J
+        part_src_nbi_tot = beam.dPdV.v1D.W / beam.E.J
+
+
     if iol_adjusted:
         part_src_nbi = part_src_nbi * (1 - F_orb_nbi)
         part_src_nbi_lost = part_src_nbi_tot * (F_orb_nbi)
@@ -145,12 +153,19 @@ def calc_en_src_nbi(beam, iol_adjusted=False, E_orb_nbi=None):
     """
     
     # Piper Changes: verify this calculation. Assumes the same things as the particle source eq.
-    
-    # nbi energy source in Joules/sec. Surprisingly, no need to actually calculate anything here.
-    en_src_nbi = beam.dPdr.v1D.W
-    
-    # nbi energy source in Joules/(m^3 * sec)
-    en_src_nbi_tot = beam.dPdV.v1D.W
+
+
+    try:
+        # nbi energy source in Joules/sec. Surprisingly, no need to actually calculate anything here.
+        en_src_nbi = sum([beam.dPdr.v1D.W[i] for i in range(len(beam.E.J))])
+
+        # nbi energy source in Joules/(m^3 * sec)
+
+        en_src_nbi_tot = sum([beam.dPdV.v1D.W[i] for i in range(len(beam.E.J))])
+
+    except:
+        en_src_nbi = beam.dPdr.v1D.W
+        en_src_nbi_tot = beam.dPdV.v1D.W
     
     if iol_adjusted:
         en_src_nbi = en_src_nbi * (1 - E_orb_nbi)
@@ -174,22 +189,39 @@ def calc_mom_src_nbi(beam,  n, z_eff, R0_a, fforb):
     :return:
     """
 
-    def calc_atten(beam, n, z_eff, rpts=200):  # TODO: Figure out what this is. has to do with beam attenuation
+    def calc_atten(beamE, n, z_eff, rpts=len(n.i)):  # TODO: Figure out what this is. has to do with beam attenuation
         delma = 1 / (rpts - 1)
         alphain = 0.6475  # TODO: no idea what this is
-        xlam = 5.5E17 * (beam.E.J / 1) / (2.0 * 0.5 * n.i * z_eff ** 0.5)
+        xlam = 5.5E17 * (beamE / 1) / (2.0 * 0.5 * n.i * z_eff ** 0.5)
         atten = 1 - np.exp(-delma / cos(alphain) / xlam)
         return atten
 
-    atten = calc_atten(beam, n, z_eff)
-    unatten = 1-atten  # might need to flip atten...
-    torque = calc_torque(beam,fforb)
+#
+#   Note: Legacy GTEDGE had the beam energy in keV I THINK. Using Joules just gives 0 torque.
+#
+    try:
+        beam.E.J[1] #checks to see if multiple beams
+        atten, unatten, torque, tor_mom = [], [], [], []
+        for i in range(len(beam.E.J)):
+            atten.append(calc_atten(beam.E.kev[i] , n, z_eff))
+            unatten.append(1-atten[i])
+            torque.append(calc_torque(beam, fforb, index=i))
+            if beam.coI[i]:
+                tor_mom.append(torque[i]*unatten*atten/R0_a)
+            else:
+                tor_mom.append(-1 * torque[i] * atten * unatten / R0_a)
 
-    tor_mom = unatten*atten*torque/R0_a
+        return np.asarray([sum(x) for x in zip(*tor_mom)][0])
+    except:
+        atten = calc_atten(beam.E.kev, n, z_eff)
+        unatten = 1-atten  # might need to flip atten...
+        torque = calc_torque(beam, fforb)
+
+        tor_mom = unatten*atten*torque/R0_a
     return tor_mom
 
 
-def calc_torque(beam,fforb):
+def calc_torque(beam, fforb, index=False):
     """ Calculates torque from a neutral beam (or beam component)
 
     torque = F * r_tan = (P/v) * r_tan = (P/sqrt(2E/m)) * r_tan = P * sqrt(m/(2E)) * r_tan
@@ -197,14 +229,22 @@ def calc_torque(beam,fforb):
     :param beam: beam object with attributes z, m, a, en, pwr, rtan
     :return: torque
     """
+    if index is not False:
 
-    power = beam.P.W
-    energy = beam.E.J
-    mass = beam.m
-    rtan = beam.rtan
+        power = beam.P.W[index]
+        energy = beam.E.J[index]
+        mass = beam.m
+        rtan = beam.rtang[index]
+        torque = power * np.sqrt(0.5 * mass / energy) * rtan * (1.0 - fforb)  # Piper Changes: Included fast ion losses.
+        return torque
+    else:
+        power = beam.P.W
+        energy = beam.E.J
+        mass = beam.m
+        rtan = beam.rtang
 
-    torque = power * np.sqrt(0.5 * mass / energy) * rtan * (1.0-fforb) # Piper Changes: Included fast ion losses.
-    return torque
+        torque = power * np.sqrt(0.5 * mass / energy) * rtan * (1.0-fforb) # Piper Changes: Included fast ion losses.
+        return torque
 
 
 def calc_Qi_diff_method(r, a, cxcool, Qie, en_src_nbi_kept, en_src_nbi_lost, dVdrho, iol_adjusted=False, E_orb=None):
@@ -659,8 +699,8 @@ class Chi:
         self.Qe = data.Qe_diff
         self.conv15 = UnivariateSpline(core.r[:,0], .5 * ch_d * data.gamma_diff_D * T.i.ev, k=3, s=0)(core.r[:,0])
         self.conv25 = UnivariateSpline(core.r[:,0], .5 * ch_d * data.gamma_diff_D * T.i.ev, k=3, s=0)(core.r[:,0])
-        self.heatvisc = self.viscCalc(data, core, n, T)
-        #self.heatvisc = np.zeros(self.conv25.shape)
+        #self.heatvisc = self.viscCalc(data, core, n, T)
+        self.heatvisc = np.zeros(self.conv25.shape)
         self.heatin = UnivariateSpline(core.r[:,0], .5 * data.gamma_diff_D * m_d * (data.vtor_D_total**2 + data.vpol_D**2), k=3, s=0)(core.r[:,0]) # TODO: Provide logic that uses vtor_D_intrin/fluid depending on IOL Switch, currently too small to matter
         if reInterp:
             L_T_i = UnivariateSpline(core.r[:,0], L.T.i, k=3, s=0)(core.r[:,0])
@@ -930,7 +970,8 @@ class RadialTransport(Chi):
             gammaDebug(self.rhor, core.a, core.r2sa, core.dVdrho, part_src_nbi, part_src_nbi_kept, izn_rate, self.gamma_int_D, self.gamma_diff_D)
             """Energy flux debugging"""
             QDebug(self.rhor, core.a, core.r2sa, core.dVdrho, calc_qie(n,T,ion_species='D') , en_src_nbi_i, en_src_nbi_i_kept, cool_rate, E_orb_d, self.chi.Qi, T)
-
+            """IOL Debugging"""
+            IOLDebug(self.rhor, F_orb_d, E_orb_d, M_orb_d)
         ##############################################################
         # Release profiles used for rtransport calculations
         ##############################################################
@@ -1155,3 +1196,31 @@ def QDebug(rho, a, r2sa, dVdrho, Qie, Qnbi_d_i, Qnbi_kept_i, coolrate, Eorb, Qi,
     #     strDiff = 100.*np.abs(strList[1]-strList[2])/np.average(np.array(strList))
     #     print """{:<15}    {:<15}     {:<15}      {:<15}%""".format(strList[0], strList[1], strList[2], str(strDiff))
 
+def IOLDebug(rhor, F_orb_d, E_orb_d, M_orb_d):
+    ticks = [0.8, 0.85, 0.9, 0.95, 1.0]
+    fig = plt.figure(figsize=(12, 8))
+    fig.tight_layout()
+#    fig.suptitle(r'Deuterium loss fractions')
+    fig.subplots_adjust(wspace=.25)
+
+    ax1 = fig.add_subplot(131)
+#    ax1.set_title(r'', fontsize=16)
+    ax1.set_ylabel(r"""$\frac{\partial F}{\partial r}$""", fontsize=16, rotation=0, ha='right')
+    ax1.set_xlabel(r'$\rho$', fontsize=16, labelpad=-10, x=-.05)
+    ax1.set_xticks(ticks)
+    ax1.plot(rhor[-100:], F_orb_d[-100:], color="blue")
+
+
+    ax2 = fig.add_subplot(132)
+#    ax2.set_title(r'$Energy loss fraction$', fontsize=16)
+    ax2.set_ylabel(r"""$\frac{\partial E}{\partial r}$""", fontsize=16, rotation=0, ha='right')
+    ax2.set_xlabel(r'$\rho$', fontsize=16, labelpad=-10, x=-.05)
+    ax2.set_xticks(ticks)
+    ax2.plot(rhor[-100:], E_orb_d[-100:], color="red")
+
+    ax3 = fig.add_subplot(133)
+#    ax3.set_title(r'$Momentum loss fraction$', fontsize=16)
+    ax3.set_ylabel(r"""$\frac{\partial M}{\partial r}$""", fontsize=16, rotation=0, ha='right')
+    ax3.set_xlabel(r'$\rho$', fontsize=16, labelpad=-10, y=-10, x=-.05)
+    ax3.set_xticks(ticks)
+    ax3.plot(rhor[-100:], M_orb_d[-100:], color="green")

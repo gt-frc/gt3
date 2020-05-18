@@ -1,0 +1,102 @@
+#MAIN MESH PARAMETERS
+thetapts_approx = 50
+#rhopts = 200
+edge_rho = 0.7
+rhopts_edge = 100
+rhopts_core = 10
+
+#CURRENT- AND MAGNETIC FIELD-RELATED PARAMETERS
+j0 = 1.69E6
+j_sep = -1.05E6
+nu_j = 3.0
+IP = 1.2514
+q95 = 3.303
+BT0 = 1.9202
+
+#NEUTRALS PARAMETERS
+neut_outfile = gt3_164988_1915_neut.dat
+core_thetapts_ntrl = 50
+ib_thetapts_ntrl = 10
+ob_thetapts_ntrl = 10
+#rhopts_ntrl = 100
+edge_rho_ntrl = 0.8
+rhopts_edge_ntrl = 5
+rhopts_core_ntrl = 10
+wall_ni_min = 1.0E15
+wall_ne_min = 1.0E15
+wall_Ti_min = 0.005
+wall_Te_min = 0.005
+tri_min_angle = 20
+tri_min_area  = 0.01
+
+#SOL PARAMETERS
+sollines_psi_max = 1.07
+num_sollines = 3
+xi_sep_pts = 30
+xi_ib_pts = 10
+xi_ob_pts = 10
+ib_trim_off = 0.1
+ob_trim_off = 0.1
+
+#PFR PARAMETERS:
+pfr_ni_val = 1.0E14
+pfr_ne_val = 1.0E14
+pfr_Ti_val = 0.002
+pfr_Te_val = 0.002
+
+#1D PROFILE INPUT FILES
+ne_file         = 164988_1915/gt3_164988_1915_ne.dat
+nD_file         = 164988_1915/gt3_164988_1915_ni.dat
+nC_file         = 164988_1915/gt3_164988_1915_nc.dat
+Te_file         = 164988_1915/gt3_164988_1915_Te.dat
+Ti_file         = 164988_1915/gt3_164988_1915_Ti.dat
+TC_file         = 164988_1915/gt3_164988_1915_Tc.dat
+er_file         = 164988_1915/gt3_164988_1915_Er.dat
+vpolC_file      = 164988_1915/gt3_164988_1915_vpolC.dat
+vtorC_file      = 164988_1915/gt3_164988_1915_vtorC.dat
+vpolD_file      = 164988_1915/gt3_164988_1915_vpolD.dat
+vtorD_file      = 164988_1915/gt3_164988_1915_vtorD.dat
+
+2D QUANTITIES INPUT FILES
+bpol_file       = 164988_1915/gt3_164988_1915_bpol.dat
+btor_file       = 164988_1915/gt3_164988_1915_btor.dat
+psirz_file      = 164988_1915/gt3_164988_1915_psirz.dat
+
+2D LINE INPUT FILES
+wall_file        = /machine/gt3_diiid_wall.dat
+
+# CONSTANTS
+eq1 = 1.6e-19
+eq2 = 9.6e-19
+xmas1 = 3.35e-27
+xmas2 = 2.01e-26
+ephia = 0.04
+xk = 1.6e-19
+delma = 0.005
+
+#NEUTRAL BEAM DEPOSITION
+nbeams_loc = /home/jonathan/Dropbox/GTEDGE/MyPrograms/GTEDGE/lib/beams/NBeamsMDS/NBeams/bin/Release/nbeams
+ebeam = 76.1866
+abeam = 2
+alphain = 0.6475
+pbeam = 3.817
+rtang = 1.146
+
+#IMPURITY CALCULATION
+adpak_loc = /home/jonathan/Dropbox/GTEDGE/MyPrograms/GTEDGE/MaxPlasma/adpak/
+# ADPAK PARAMETERS
+z_imp = 6
+laden = 1
+ladtip = 1
+leci = 1
+ldrmlt = 2
+ncxopt = 1
+anneut = 1.0E9
+vneut = 0.001
+
+#ION ORBIT LOSS CALCULATION
+numcos = 20
+R_loss = 0.5
+
+#TRIANGLE EXECUTABLE LOCATION
+triangle_loc = /triangle/triangle.exe
