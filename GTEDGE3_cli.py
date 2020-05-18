@@ -8,11 +8,10 @@
 #
 #########################################
 
-import matplotlib.pyplot as plt
 #import lib.beams as beams
 #import lib.funcs as funcs
 import graphs as graphs
-from gt3 import gt3, gt3Prep
+from GT3.gt3 import gt3, gt3Prep
 #from lib.funcs.dataGen import newScatPlot,smooth,multiScatPlot
 #from scipy.interpolate import UnivariateSpline
 from numpy import interp, pi

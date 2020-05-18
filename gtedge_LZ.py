@@ -2,8 +2,8 @@ from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import UnivariateSpline
-from imp_rad import ImpRad
-import sys
+from ImpRadiation.ImpurityRadiation import ImpRad
+
 
 def calc_Lz_gtedge(T_ev_val):
     if T_ev_val < 3.0:
