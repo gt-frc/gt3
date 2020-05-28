@@ -18,6 +18,14 @@ import re
 from subprocess import Popen, PIPE
 from SOL.sol import Sol
 from PFR.pfr import Pfr
+from Functions.CalcCoreLinesNtrl import calc_core_lines_ntrl
+from Functions.CreateTriangleInfile import create_triangle_infile
+from Functions.CreateTriangleOpts import create_triangle_opts
+from Functions.CreateTriPts import create_tri_pts
+from Functions.CreateTriSegs import create_tri_segs
+from Functions.GetAngle import getangle
+from Functions.GetAngle3ptsDeg import getangle3ptsdeg
+from Functions.IsInLine import isinline
 
 
 class Neutrals:

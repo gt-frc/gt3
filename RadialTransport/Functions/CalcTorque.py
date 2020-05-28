@@ -8,6 +8,8 @@ def calc_torque(beam, fforb, index=False):
 
     torque = F * r_tan = (P/v) * r_tan = (P/sqrt(2E/m)) * r_tan = P * sqrt(m/(2E)) * r_tan
 
+    :param fforb:
+    :param index:
     :param beam: beam object with attributes z, m, a, en, pwr, rtan
     :return: torque
     """

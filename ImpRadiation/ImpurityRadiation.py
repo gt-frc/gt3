@@ -9,7 +9,7 @@ from __future__ import division
 from subprocess import call
 from collections import namedtuple
 import numpy as np
-from scipy.interpolate import interp1d, interp2d, UnivariateSpline, interpn, Rbf, LinearNDInterpolator
+from scipy.interpolate import interp1d, interp2d, UnivariateSpline, LinearNDInterpolator
 import os
 import re
 import sys
@@ -20,13 +20,11 @@ class ImpRad:
     """Calculates the impurity charge state densities and resulting impurity emissivities.
 
     Attributes:
-        calc_nz_cs
         Lz
         dLzdT
 
     Methods:
         __init__
-        calc_nz_cs
         calc_Lz
         frac_abun
     """

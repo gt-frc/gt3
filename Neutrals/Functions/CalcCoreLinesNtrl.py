@@ -5,8 +5,8 @@ from contours.quad import QuadContourGenerator
 from shapely.geometry import LineString
 import numpy as np
 
-def calc_core_lines_ntrl(core):
 
+def calc_core_lines_ntrl(core):
     c = QuadContourGenerator.from_rectilinear(core.psi_data.R[0], core.psi_data.Z[:, 0], core.psi_data.psi_norm)
 
     rhovals = np.linspace(0.7, 1, 5, endpoint=False)

@@ -1,12 +1,10 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-import numpy as np
-
 from scipy.interpolate import UnivariateSpline
 import numpy as np
 from collections import namedtuple
-from scipy.constants import constants
+from scipy import constants
 from math import sqrt
 
 

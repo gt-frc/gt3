@@ -1,6 +1,8 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
+import numpy as np
+
 def calc_pwr_frac(ebeam):
     # calculate pwr fracs. These fits are only useful for DIII-D
 

@@ -10,7 +10,7 @@ Created on Thu Dec 28 02:13:04 2017
 #
 ###############################################################################
 
-import GTEDGE3_cli
+from utilities import GTEDGE3_cli
 import graphs as graphs
 import matplotlib.pyplot as plt
 import pickle
@@ -481,14 +481,14 @@ if __name__ == "__main__":
     except:
         try:
             shot = GTEDGE3_cli.runGT3(shotargs)
-        except Exception as e:
-            raise("Exception occurred: %s" % e)
+        except BaseException as e:
+            raise(e)
         try:
             pass
 #            with open("outputs/s%s.%s.dat"  % (str(shotid), str(timeid)), "wb") as f:
 #                pickle.dump(shot, f)
-        except Exception as e:
-             print e
+        except BaseException as e:
+             raise(e)
         try:
             f.close()
         except:

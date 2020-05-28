@@ -1,7 +1,6 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
-"""
-"""
+
 import sys
 from Neutrals.Neutrals import Neutrals
 from IOL.iol import IOL
@@ -14,27 +13,11 @@ from DensityLimit.dens_lim import DensityLimit
 from Marfe.marfe import Marfe
 from RadialTransport.radial_transport import RadialTransport
 
+
 class gt3:
-    """GT3 calculates various tokamak-related quantities
 
-    Methods:
-        allthethings
-        justneutrals
-        plotstuff
-
-    Attributes:
-
-    External Dependencies:
-        Triangle:       Used to create the triangular mesh for neutpy. Source
-                        code and documentation can be found at
-                        https://www.cs.cmu.edu/~quake/triangle.html. Can be
-                        installed from Ubuntu repositories as well.
-        Neutpy:
-        nbeams:
-        adpack:
-    """
-    def __init__(self, shotlabel=None, mode=None, iolFlag=True, neutFlag = True, debugRT= False):
-        sys.dont_write_bytecode = True 
+    def __init__(self, shotlabel=None, mode=None, iolFlag=True, neutFlag=True, debugRT=False):
+        sys.dont_write_bytecode = True
         # Create shotlabel as an attribute of plasma class
         self.shotlabel = shotlabel
         self.inp = ReadInfile(self.shotlabel)
@@ -87,4 +70,5 @@ class gt3:
             self.nbi = BeamDeposition(self.inp, self.core)
             self.ntrl = Neutrals(self.inp, self.core)
             self.imp = ImpRad(z=None, core=self.core)
-            self.rtrans = RadialTransport(self.inp, self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag, debugFlag = self.debugRT)
+            self.rtrans = RadialTransport(self.inp, self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag,
+                                          debugFlag=self.debugRT)

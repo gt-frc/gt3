@@ -88,6 +88,7 @@ def calc_n_marfe(n, sv, T, L, Lz, chi_r):
     """
     Calculates the density limit for MARFE onset
 
+    :param Lz:
     :param n: class instance or namedtuple with density attributes
     :param sv: class instance or namedtuple with cross section attributes
     :param T: class instance or namedtuple with temperature attributes

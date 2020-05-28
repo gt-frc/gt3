@@ -3,6 +3,7 @@
 
 from BeamDeposition.Functions.CalcPwrFrac import calc_pwr_frac
 from scipy.interpolate import interp1d
+import numpy as np
 
 def prep_nbi_infile(inp, core, index = False, indBeam = False):
     i = index

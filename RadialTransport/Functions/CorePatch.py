@@ -13,6 +13,7 @@ def corePatch(core, neutFlag=True):
 
     This is addressed by recreating the n_fsa namedtuple and z_eff_fsa in full, as namedtuples cannot be changed piecemeal
 
+    :param neutFlag:
     :param core:
     :return:
     """

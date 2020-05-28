@@ -116,7 +116,7 @@ def writeFile(s, t, fpath, data, reNeut=False):
             f.write("thetapts_approx = %s \n" % str(30))
         f.write("\n")
         f.write("#NEUTRALS CALCULATION \n")
-        if reNeut == True:
+        if reNeut:
             f.write("ntrl_switch = 2 \n")
         elif reNeut == False:
             f.write("ntrl_switch = 1 \n")

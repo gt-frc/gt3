@@ -3,7 +3,7 @@
 
 from math import sqrt, pi
 from RadialTransport.Functions.CalcCoulLog import calc_coul_log
-from scipy.constants import constants
+from scipy import constants
 import numpy as np
 
 eps_0 = constants.epsilon_0

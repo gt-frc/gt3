@@ -3,7 +3,7 @@
 
 from RadialTransport.Functions.CalcT90 import calc_t90
 from RadialTransport.Functions.CalcMbalRHS import calc_mbal_rhs
-from scipy.constants import constants
+from scipy import constants
 
 m_d = constants.physical_constants['deuteron mass'][0]
 m_c = 12 / constants.N_A / 1E3  # in kg

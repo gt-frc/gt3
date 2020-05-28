@@ -1,6 +1,10 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
+from shapely.geometry import Point, LineString
+from scipy.interpolate import UnivariateSpline
+import numpy as np
+
 class calc_nbi_vals:
     def __init__(self, inp, core,):
         R0 = core.pts.axis.mag[0]

@@ -25,7 +25,7 @@ def calc_RZ(rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
             # attempt to draw flux surface line through that point
             # (may not work for flux surfaces very close to the magnetic axis)
             fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, psi_norm_val, sep_pts)
-            if fs_line == None and fs_pts.axis == None:
+            if fs_line is not None and fs_pts.axis is None:
                 # then draw_core_line didn't find any contours, which probably means it was trying
                 # to draw a surface closer to psi_norm=0 than the contours package would cooperate with.
                 # When this happens, the best thing to do for now is decrease the radial resolution in

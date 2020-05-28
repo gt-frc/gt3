@@ -10,7 +10,7 @@ Created on Thu Dec 28 02:13:04 2017
 #
 ###############################################################################
 
-import GTEDGE3_cli
+from utilities import GTEDGE3_cli
 import graphs as graphs
 import matplotlib.pyplot as plt
 import pickle

@@ -8,6 +8,7 @@ from math import cos
 def calc_mom_src_nbi(beam,  n, z_eff, R0_a, fforb):
     """Calculates toroidal momentum input from a neutral beam (or beam component)
 
+    :param fforb:
     :param beam:
     :param n:
     :param z_eff:

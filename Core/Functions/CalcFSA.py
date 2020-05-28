@@ -5,6 +5,8 @@ import numpy as np
 from math import pi
 
 def calc_fsa(x, R, Z):
+
+
     R1 = R[:, :-1]
     R2 = np.roll(R[:, :-1], -1, axis=1)
     Z1 = Z[:, :-1]

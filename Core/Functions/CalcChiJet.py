@@ -7,6 +7,7 @@ from scipy.interpolate import UnivariateSpline
 
 e = constants.elementary_charge
 
+
 def calc_chi_jet(T, L, a, q, B_T, m_i, rho):
     def calc_bohm(T, L, a, q, B_T, m_i, rho):
         """"""
@@ -21,7 +22,7 @@ def calc_chi_jet(T, L, a, q, B_T, m_i, rho):
     def calc_gyro_bohm(T, L, B_T, m_i):
         cs = np.sqrt(T.i.J / m_i)  # sound speed
         rho_s = cs * m_i / (e * B_T)  # gyroradius
-        chi_gyro_bohm = rho_s**2 * cs * L.T.e
+        chi_gyro_bohm = rho_s ** 2 * cs * L.T.e
         return chi_gyro_bohm
 
     chi_bohm = calc_bohm(T, L, a, q, B_T, m_i, rho)

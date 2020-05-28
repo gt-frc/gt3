@@ -1,11 +1,11 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-from BeamDeposition.Functions.PrepNBIFile import prep_nbi_infile
-from BeamDeposition.Processors.ReadNBIOutfile import read_nbi_outfile
-from BeamDeposition.CalcNBIValues import calc_nbi_vals
-from BeamDeposition.Debuggers.DebugCore import debugCore
-from BeamDeposition.Debuggers.DebugInp import debugInp
+from Functions.PrepNBIFile import prep_nbi_infile
+from Processors.ReadNBIOutfile import read_nbi_outfile
+from CalcNBIValues import calc_nbi_vals
+from Debuggers.DebugCore import debugCore
+from Debuggers.DebugInp import debugInp
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 from subprocess import Popen, PIPE
@@ -47,8 +47,9 @@ class BeamDeposition:
                 inp.nbeamsJSON
                 try:
                     import json
-                except:
-                    raise ("Failed to import JSON library. Stopping.")
+                except BaseException as e:
+                    print ("Failed to import JSON library. Stopping.")
+                    raise e
                 with open(os.path.join("inputs", inp.nbeamsJSON)) as json_file:
                     data = json.load(json_file)
                 print("Notice: Multi-beam NBeams file found. Running NBeams for all shots individually")

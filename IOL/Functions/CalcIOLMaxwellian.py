@@ -7,6 +7,7 @@ from IOL.Functions.CalcVSep import calc_vsep
 from scipy.special import gammaincc
 
 
+
 def calc_iol_maxwellian(z, m, param, thetapts, Tprofile, coslist, numcos):
     """Calculates eps_min for IOL of species treated with a truncated maxwellian."""
 

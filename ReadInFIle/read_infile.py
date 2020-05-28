@@ -6,12 +6,13 @@ Created on Sat Aug  5 16:10:25 2017
 @author: max
 """
 import os
-import re
 import sys
+import re
 import numpy as np
 from math import pi
 
-from shapely.geometry import LineString, Polygon
+from shapely.geometry import LineString
+
 
 class ReadInfile:
     """Reads main GT3 input file.
@@ -65,11 +66,16 @@ class ReadInfile:
         xtheta2          (float)
         xtheta3          (float)
         xtheta4          (float)
-        wallfile         (str)         
+        wallfile         (str)
     """
-    
+
     def __init__(self, infile):
-        sys.dont_write_bytecode = True 
+        """
+        Initializes the read_infile class with the filename for the to_gt3 file.
+        :param infile:
+        :type infile: str
+        """
+        sys.dont_write_bytecode = True
         self.read_vars(infile)
         self.read_exp()
         self.set_ntrl_switch()
@@ -78,12 +84,14 @@ class ReadInfile:
 
     def read_vars(self, infile):
         """
+        Reads variables given infile filename
+        :param infile:
+        :type infile: str
         """
-        
-        #some regex commands we'll use when reading stuff in from the input file
+        # some regex commands we'll use when reading stuff in from the input file
         r0di = "r'%s *= *([ , \d]*) *'%(v)"
         r0df = "r'%s *= *([+\-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+)?) *'%(v)"
-        #r0ds = "r'%s *= *((?:/?\.?\w+\.?)+/?) *'%(v)"
+        # r0ds = "r'%s *= *((?:/?\.?\w+\.?)+/?) *'%(v)"
         r0ds = "r'%s *= *((?:\/?\w+)+(?:\.\w+)?) *'%(v)"
         r1di = "r'%s\( *(\d*) *\) *= *(\d*) *'%(v)"
         r1df = "r'%s\( *(\d*)\) *= *([+\-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+)?) *'%(v)"
@@ -238,7 +246,9 @@ class ReadInfile:
             pass
 
     def read_exp(self):
-        
+        """
+        Reads in additional input files from to_gt3 file list
+        """
         # read in additional input files
         for infile in self.in_prof:
             try:
@@ -277,13 +287,16 @@ class ReadInfile:
         self.wall_line = LineString(self.wall_exp)
         
     def set_ntrl_switch(self):
+        """
+        Sets the flagging about whether to run Neutpy to generate neutrals and whether a file already exists.
+        """
         # set neutral switch for modes that need neutrals
         # 0: don't run neutrals because not necessary for calculations being done
         # 1: neutrals needed, but the neut_outfile specified in input file exists. Use that data rather than running neutpy
         # 2: run neutpy
         
         # check if specified neutpy_outfile exists. If so, read in and skip everything else.
-        outfile_found=0
+        outfile_found = 0
         try:
             for root, subdirs, files in os.walk(os.getcwd()):
                 for filename in files:
@@ -304,8 +317,8 @@ class ReadInfile:
             
     def wall_prep(self):
         """
-        """   
-    
+        Prepares the wall mesh
+        """
         adotb = (self.wall_exp[:, 0]-np.roll(self.wall_exp[:, 0], 1))*(self.wall_exp[:, 0]-np.roll(self.wall_exp[:, 0], -1)) + \
                 (self.wall_exp[:, 1]-np.roll(self.wall_exp[:, 1], 1))*(self.wall_exp[:, 1]-np.roll(self.wall_exp[:, 1], -1))
         mag_a = np.sqrt((self.wall_exp[:, 0]-np.roll(self.wall_exp[:, 0], 1))**2+(self.wall_exp[:, 1]-np.roll(self.wall_exp[:, 1], 1))**2)
@@ -325,10 +338,10 @@ class ReadInfile:
         self.wall_line = LineString(self.wall_vertex_closed)
         #self.wall_ring = LinearRing(wall_pts)
         #self.wall_line = LineString(self.wall_vertex)
- 
 
     def showparams(self):
         """
+        Show the parameters of this show
         """
         print '**PARAMETERS FOR SHOT \'{}\'.'.format(self.shotlabel)
         for key in vars(self).iteritems():

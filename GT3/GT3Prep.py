@@ -1,8 +1,8 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 import os
-from GT3.Functions.GetVals import getVals
-from GT3.Processors.WriteFile import writeFile
+from Functions.GetVals import getVals
+from Processors.WriteFile import writeFile
 
 def gt3Prep(s, t, r, m, quiet=False, genFiles=False):
     """
@@ -101,6 +101,7 @@ def gt3Prep(s, t, r, m, quiet=False, genFiles=False):
         #   TODO: Implement this somehow
         #
         #####################################################################################################
+
 
     if genFiles:
         fileList = {

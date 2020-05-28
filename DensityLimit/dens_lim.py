@@ -10,7 +10,7 @@ import numpy as np
 from scipy.special import jv
 import sys
 from math import sqrt
-import matplotlib.pyplot as plt
+from Functions.CalcQuadratic import calc_quadratic
 
 
 
