@@ -4,8 +4,8 @@
 from Functions.PrepNBIFile import prep_nbi_infile
 from Processors.ReadNBIOutfile import read_nbi_outfile
 from CalcNBIValues import calc_nbi_vals
-from Debuggers.DebugCore import debugCore
-from Debuggers.DebugInp import debugInp
+from Test.DebugCore import debugCore
+from Test.DebugInp import debugInp
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 from subprocess import Popen, PIPE
@@ -341,6 +341,8 @@ class BeamDeposition:
                 )
             )
 
+    def print_something(self):
+        self.beams.D1.E
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

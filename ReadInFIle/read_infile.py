@@ -314,7 +314,6 @@ class ReadInfile:
             self.neutfile_loc = os.getcwd() + '/neut_outfile.dat'
             self.ntrl_switch=2
 
-            
     def wall_prep(self):
         """
         Prepares the wall mesh

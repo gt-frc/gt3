@@ -16,11 +16,14 @@ from RadialTransport.radial_transport import RadialTransport
 
 class gt3:
 
-    def __init__(self, shotlabel=None, mode=None, iolFlag=True, neutFlag=True, debugRT=False):
+    def __init__(self, preparedInput = None, shotlabel=None, mode=None, iolFlag=True, neutFlag=True, debugRT=False):
         sys.dont_write_bytecode = True
         # Create shotlabel as an attribute of plasma class
         self.shotlabel = shotlabel
-        self.inp = ReadInfile(self.shotlabel)
+        if preparedInput:
+            self.inp = preparedInput
+        else:
+            self.inp = ReadInfile(self.shotlabel)
         self.core = Core(self.inp)
         self.iolFlag = iolFlag
         self.neutFlag = neutFlag
@@ -62,7 +65,7 @@ class gt3:
             self.iol = IOL(self.inp, self.core)
             self.ntrl = Neutrals(self.inp, self.core)
             self.imp = ImpRad(core=self.core)
-            self.dl = DensityLimit(self.inp, self.core, self.nbi, self.imp, self.ntrl)
+            self.dl = DensityLimit(self.core, self.nbi)
             self.mar = Marfe(self.inp, self.core, self.imp)
         elif mode == 'radialtrans':
             self.sol = Sol(self.inp, self.core)
@@ -70,5 +73,40 @@ class gt3:
             self.nbi = BeamDeposition(self.inp, self.core)
             self.ntrl = Neutrals(self.inp, self.core)
             self.imp = ImpRad(z=None, core=self.core)
-            self.rtrans = RadialTransport(self.inp, self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag,
+            self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag,
                                           debugFlag=self.debugRT)
+
+    def run_SOL(self):
+        self.sol = Sol(self.inp, self.core)
+        return self
+
+    def run_IOL(self):
+        self.iol = IOL(self.inp, self.core)
+        return self
+
+    def run_NBI(self):
+        self.nbi = BeamDeposition(self.inp, self.core)
+        return self
+
+    def run_impurities(self):
+        self.imp = ImpRad(core=self.core)
+        return self
+
+    def run_neutrals(self):
+        self.ntrl = Neutrals(self.inp, self.core)
+        return self
+
+    def run_density_limit(self):
+        self.dl = DensityLimit(self.core, self.nbi)
+        return self
+
+    def run_marf(self):
+        self.mar = Marfe(self.inp, self.core)
+        return self
+
+    def run_radial_transport(self):
+        if not self.iol: self.run_IOL()
+        if not self.nbi: self.run_NBI()
+        self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag,
+                                      debugFlag=self.debugRT)
+        return self

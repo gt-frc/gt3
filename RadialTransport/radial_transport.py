@@ -15,29 +15,22 @@ from RadialTransport.Functions.CorePatch import corePatch
 from RadialTransport.Functions.CalcPartSrcNBI import calc_part_src_nbi
 from RadialTransport.Functions.CalcMomSrcNBI import calc_mom_src_nbi
 from RadialTransport.Functions.CalcReturnCur import calc_return_cur
-from RadialTransport.Functions.CalcNuJK import calc_nu_j_k
+from RadialTransport.Functions.CalcNu import calc_nu_j_k, calc_nustar, calc_nu_drag
 from RadialTransport.Functions.CalcMbalRHS import calc_mbal_rhs
 from RadialTransport.Functions.CalcT90 import calc_t90
-from RadialTransport.Functions.CalcQeDiffMethod import calc_Qe_diff_method
-from RadialTransport.Functions.CalcQiDiffMethod import calc_Qi_diff_method
-from RadialTransport.Functions.CalcQiIntMethod import calc_Qi_int_method
-from RadialTransport.Functions.CalcQeIntMethod import calc_Qe_int_method
-from RadialTransport.Functions.CalcNuDrag import calc_nu_drag
-from RadialTransport.Debuggers.QDebug import QDebug
-from RadialTransport.Debuggers.GammaDebug import gammaDebug
-from RadialTransport.Debuggers.NBIDebug import nbiDebug
-from RadialTransport.Debuggers.IOLDebug import IOLDebug
+from RadialTransport.Functions.CalcQ import calc_Qe_diff_method, calc_qie, calc_Qe_int_method, calc_Qi_int_method, calc_Qi_diff_method
+from RadialTransport.Test.QDebug import QDebug
+from RadialTransport.Test.GammaDebug import gammaDebug
+from RadialTransport.Test.NBIDebug import nbiDebug
+from RadialTransport.Test.IOLDebug import IOLDebug
 from RadialTransport.Functions.NeutPatch import neutPatch
-from RadialTransport.Functions.CalcGammaIntMethod import calc_gamma_int_method
-from RadialTransport.Functions.CalcGammaDiffMethod import calc_gamma_diff_method
+from RadialTransport.Functions.CalcGamma import calc_gamma_diff_method, calc_gamma_int_method
 from RadialTransport.Functions.CalcIntrinRot import calc_intrin_rot
 from RadialTransport.Functions.CalcVTorDPert import calc_vtor_d_pert
 from RadialTransport.Functions.CalcErMomBal import calc_Er_mom_bal
 from RadialTransport.Functions.CalcEnSrcNBI import calc_en_src_nbi
 from RadialTransport.Functions.CalcErIOL import calc_Er_iol
 from RadialTransport.Functions.CalcVpol import calc_vpol
-from RadialTransport.Functions.CalcQie import calc_qie
-from RadialTransport.Functions.CalcNuStar import calc_nustar
 from RadialTransport.Functions.CalcCXCool import calc_cxcool
 
 
@@ -162,7 +155,7 @@ def calc_pinch_velocity(ext_term, pol_term, Er_term, tor_term):
 
 class RadialTransport(Chi):
     
-    def __init__(self, inp, core, iol, nbi, iolFlag=True, neutFlag=True, debugFlag=False ):
+    def __init__(self, core, iol, nbi, iolFlag=True, neutFlag=True, debugFlag=False ):
         sys.dont_write_bytecode = True
 
 

@@ -3,6 +3,7 @@
 
 from shapely.geometry import Point, LineString
 from scipy.interpolate import UnivariateSpline
+from math import sqrt
 import numpy as np
 
 class calc_nbi_vals:

@@ -156,9 +156,13 @@ def calc_n_marfe(n, sv, T, L, Lz, chi_r):
 
 
 class Marfe:
-    """
-    """
+
     def __init__(self, inputs=None, core=None):
+        """
+
+        :param inputs:
+        :param core:
+        """
         if core is not None:
             if inputs is not None:
                 print 'ignoring \'inputs\' and attempting to use core instance'

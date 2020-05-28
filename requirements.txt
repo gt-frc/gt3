@@ -38,5 +38,6 @@ scipy==1.2.3
 Shapely==1.6.4.post2
 six==1.11.0
 subprocess32==3.5.2
+texttable==1.6.2
 traitlets==4.3.2
 triangle==20190115.1
