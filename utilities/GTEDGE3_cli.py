@@ -97,7 +97,7 @@ def runGT3(shotargs):
         except:
             pass
 
-    myPlasma = gt3(shotlabel=maxfile, mode=gt3Method, iolFlag = IOL, neutFlag = neutrals, debugRT = debug)
+    myPlasma = gt3(shotlabel=maxfile, mode=gt3Method, iolFlag = IOL, neutFlag = neutrals)
 
 
     return myPlasma

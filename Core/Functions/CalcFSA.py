@@ -23,5 +23,5 @@ def calc_fsa(x, R, Z):
     x_av = (x1 + x2)/2
 
     fsa = np.sum(x_av * dA, axis=1) / np.sum(dA, axis=1)
-    fsa[0] = x[0,0]
+    fsa[0] = x[0, 0]
     return fsa

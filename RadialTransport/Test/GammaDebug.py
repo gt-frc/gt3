@@ -4,6 +4,9 @@
 import matplotlib.pyplot as plt
 from scipy.interpolate import UnivariateSpline
 
+if __name__ == "__main__":
+    pass
+
 def gammaDebug(rho, a, r2sa, dVdrho, Snbi_d_i, Snbi_kept_i, Sizn, gamma_i_D, gamma_D):
 
     dVdr = dVdrho(rho)/a

@@ -69,20 +69,20 @@ class GT3TestBase:
         Define the meshing parameters
         """
 
-        self.er_data = np.genfromtxt(os.getcwd() + '/TestBase/TestBaseProfiles/gt3_%s_%s_er.dat' % (self.shotid, self.timeid), comments='#')
-        self.ne_data = np.genfromtxt(os.getcwd() + '/TestBase/TestBaseProfiles/gt3_%s_%s_ne.dat' % (self.shotid, self.timeid), comments='#')
-        self.nD_data = np.genfromtxt(os.getcwd() + '/TestBase/TestBaseProfiles/gt3_%s_%s_nd.dat' % (self.shotid, self.timeid), comments='#')
-        self.nC_data = np.genfromtxt(os.getcwd() + '/TestBase/TestBaseProfiles/gt3_%s_%s_nc.dat' % (self.shotid, self.timeid), comments='#')
-        self.Te_data = np.genfromtxt(os.getcwd() + '/TestBase/TestBaseProfiles/gt3_%s_%s_Te.dat' % (self.shotid, self.timeid), comments='#')
-        self.Ti_data = np.genfromtxt(os.getcwd() + '/TestBase/TestBaseProfiles/gt3_%s_%s_Ti.dat' % (self.shotid, self.timeid), comments='#')
-        self.vpolC_data = np.genfromtxt(os.getcwd() + '/TestBase/TestBaseProfiles/gt3_%s_%s_vpolC.dat' % (self.shotid, self.timeid), comments='#')
-        self.vpolD_data = np.genfromtxt(os.getcwd() + '/TestBase/TestBaseProfiles/gt3_%s_%s_vpolD.dat' % (self.shotid, self.timeid), comments='#')
-        self.vtorD_data = np.genfromtxt(os.getcwd() + '/TestBase/TestBaseProfiles/gt3_%s_%s_vtorD.dat' % (self.shotid, self.timeid), comments='#')
-        self.vtorC_data = np.genfromtxt(os.getcwd() + '/TestBase/TestBaseProfiles/gt3_%s_%s_vtorC.dat' % (self.shotid, self.timeid), comments='#')
-        self.psirz_exp = np.genfromtxt(os.getcwd() + '/TestBase/TestBaseProfiles/gt3_%s_%s_psirz.txt' % (self.shotid, self.timeid), comments='#')
-        self.wall_exp = np.genfromtxt(os.getcwd() + '/TestBase/TestBaseProfiles/gt3_diiid_wall.dat', comments='#')
+        self.er_data = np.genfromtxt(os.path.dirname(__file__) + '/TestBaseProfiles/gt3_%s_%s_er.dat' % (self.shotid, self.timeid), comments='#')
+        self.ne_data = np.genfromtxt(os.path.dirname(__file__) + '/TestBaseProfiles/gt3_%s_%s_ne.dat' % (self.shotid, self.timeid), comments='#')
+        self.nD_data = np.genfromtxt(os.path.dirname(__file__) + '/TestBaseProfiles/gt3_%s_%s_nd.dat' % (self.shotid, self.timeid), comments='#')
+        self.nC_data = np.genfromtxt(os.path.dirname(__file__) + '/TestBaseProfiles/gt3_%s_%s_nc.dat' % (self.shotid, self.timeid), comments='#')
+        self.Te_data = np.genfromtxt(os.path.dirname(__file__) + '/TestBaseProfiles/gt3_%s_%s_Te.dat' % (self.shotid, self.timeid), comments='#')
+        self.Ti_data = np.genfromtxt(os.path.dirname(__file__) + '/TestBaseProfiles/gt3_%s_%s_Ti.dat' % (self.shotid, self.timeid), comments='#')
+        self.vpolC_data = np.genfromtxt(os.path.dirname(__file__) + '/TestBaseProfiles/gt3_%s_%s_vpolC.dat' % (self.shotid, self.timeid), comments='#')
+        self.vpolD_data = np.genfromtxt(os.path.dirname(__file__) + '/TestBaseProfiles/gt3_%s_%s_vpolD.dat' % (self.shotid, self.timeid), comments='#')
+        self.vtorD_data = np.genfromtxt(os.path.dirname(__file__) + '/TestBaseProfiles/gt3_%s_%s_vtorD.dat' % (self.shotid, self.timeid), comments='#')
+        self.vtorC_data = np.genfromtxt(os.path.dirname(__file__) + '/TestBaseProfiles/gt3_%s_%s_vtorC.dat' % (self.shotid, self.timeid), comments='#')
+        self.psirz_exp = np.genfromtxt(os.path.dirname(__file__) + '/TestBaseProfiles/gt3_%s_%s_psirz.txt' % (self.shotid, self.timeid), comments='#')
+        self.wall_exp = np.genfromtxt(os.path.dirname(__file__) + '/TestBaseProfiles/gt3_diiid_wall.dat', comments='#')
         self.wall_line = LineString(self.wall_exp)
-        self.nbeams_loc = os.getcwd() + '/../../nbeams/bin/Release/nbeams'
+        self.nbeams_loc = os.path.dirname(__file__) + '/../nbeams/bin/Release/nbeams'
 
     def print_summary(self):
         print "0D Parameters \n"
@@ -162,3 +162,5 @@ class GT3TestBase:
                          ["numcos", "Number of cosine angles used in IOL calculation", self.numcos]
                          ])
         print table3.draw()
+
+        print "Nbeams location: %s" % self.nbeams_loc

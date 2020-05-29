@@ -4,6 +4,7 @@
 from BeamDeposition.Functions.CalcPwrFrac import calc_pwr_frac
 from scipy.interpolate import interp1d
 import numpy as np
+import os
 
 def prep_nbi_infile(inp, core, index = False, indBeam = False):
     i = index
@@ -16,8 +17,8 @@ def prep_nbi_infile(inp, core, index = False, indBeam = False):
     if __name__=="__main__":
         f = open("inputs/inbeams_test.dat", "w")
     else:
-        if indBeam: f=open("inbeams_%s.dat" % str(i), "w")
-        else: f = open("inbeams.dat", "w")
+        if indBeam: f=open(os.path.dirname(__file__) + "/../inbeams_%s.dat" % str(i), "w")
+        else: f = open(os.path.dirname(__file__) + "/../inbeams.dat", "w")
     f.write("$nbin\n")
     f.write("nbeams = 1\n")
     f.write("inbfus = 1\n")

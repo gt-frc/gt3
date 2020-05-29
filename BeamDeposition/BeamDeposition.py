@@ -91,11 +91,21 @@ class BeamDeposition:
                             p.communicate()
                         except:
                             try:
-                                # otherwise use the location specified in the input file
-                                p = Popen([inp.nbeams_loc, os.getcwd() + '/inbeams.dat', os.getcwd() + "/outbeams.dat"],
+                                # Is it loaded in this module's directory?
+
+                                # p = Popen([os.path.dirname(__file__) + "/nbeams/bin/Release/nbeams", os.path.dirname(__file__) + '/inbeams.dat', os.path.dirname(__file__) + '/outbeams.dat'],
+                                #           stdin=PIPE, stdout=PIPE).wait()
+                                p = Popen(["/home/jonathan/Dropbox/GTEDGE/gt3-dev/BeamDeposition/nbeams/nbeams",
+                                           "/home/jonathan/Dropbox/GTEDGE/gt3-dev/BeamDeposition/inbeams.dat",
+                                           "/home/jonathan/Dropbox/GTEDGE/gt3-dev/BeamDeposition/outbeams.dat"],
                                           stdin=PIPE, stdout=PIPE).wait()
                             except:
-                                print 'Unable to find nbeams executable. Stopping.'
+                                try:
+                                    # otherwise use the location specified in the input file
+                                    p = Popen([inp.nbeams_loc, os.getcwd() + '/inbeams.dat', os.getcwd() + "/outbeams.dat"],
+                                              stdin=PIPE, stdout=PIPE).wait()
+                                except:
+                                    print 'Unable to find nbeams executable. Stopping.'
                                 sys.exit()
                         # instantiate class with nbeams output file information
                         nbi_vals = read_nbi_outfile(inp, core)

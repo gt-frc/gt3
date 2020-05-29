@@ -16,7 +16,7 @@ from RadialTransport.radial_transport import RadialTransport
 
 class gt3:
 
-    def __init__(self, preparedInput = None, shotlabel=None, mode=None, iolFlag=True, neutFlag=True, debugRT=False):
+    def __init__(self, preparedInput = None, shotlabel=None, mode=None, iolFlag=True, neutFlag=True, verbose=False):
         sys.dont_write_bytecode = True
         # Create shotlabel as an attribute of plasma class
         self.shotlabel = shotlabel
@@ -27,7 +27,7 @@ class gt3:
         self.core = Core(self.inp)
         self.iolFlag = iolFlag
         self.neutFlag = neutFlag
-        self.debugRT = debugRT
+        self.verbose = verbose
 
         if mode == 'coreonly':
             pass
@@ -74,7 +74,7 @@ class gt3:
             self.ntrl = Neutrals(self.inp, self.core)
             self.imp = ImpRad(z=None, core=self.core)
             self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag,
-                                          debugFlag=self.debugRT)
+                                          debugFlag=self.verbose)
 
     def run_SOL(self):
         self.sol = Sol(self.inp, self.core)
@@ -105,8 +105,18 @@ class gt3:
         return self
 
     def run_radial_transport(self):
-        if not self.iol: self.run_IOL()
-        if not self.nbi: self.run_NBI()
+        try:
+            self.iol
+        except AttributeError:
+            print ("IOL module not run. Running now...")
+            self.run_IOL()
+        try:
+
+            self.nbi
+        except AttributeError:
+            print ("MBI module not run. Running now...")
+            self.run_NBI()
+
         self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag,
-                                      debugFlag=self.debugRT)
+                                      debugFlag=self.verbose)
         return self

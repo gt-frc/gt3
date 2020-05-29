@@ -7,6 +7,7 @@ Created on Tue Mar 20 08:58:46 2018
 """
 from __future__ import division
 import numpy as np
+import matplotlib.pyplot as plt
 import sys
 from collections import namedtuple
 from scipy import constants
@@ -369,41 +370,26 @@ class RadialTransport(Chi):
             core.n.n.t,  # thermal
             core.n.n.tot  # total
         )
-        if debugFlag:
-            """Beam source debugging"""
-            nbiDebug(self.rhor, core.a, en_src_nbi_i_kept, en_src_nbi_e, part_src_nbi_kept, self.mom_src_nbi, core.dVdrho)
-            """Particle flux debuggin"""
-            gammaDebug(self.rhor, core.a, core.r2sa, core.dVdrho, part_src_nbi, part_src_nbi_kept, izn_rate, self.gamma_int_D, self.gamma_diff_D)
-            """Energy flux debugging"""
-            QDebug(self.rhor, core.a, core.r2sa, core.dVdrho, calc_qie(n, T, ion_species='D'), en_src_nbi_i, en_src_nbi_i_kept, cool_rate, E_orb_d, self.chi.Qi, T)
-            """IOL Debugging"""
-            IOLDebug(self.rhor, F_orb_d, E_orb_d, M_orb_d)
-        ##############################################################
-        # Release profiles used for rtransport calculations
-        ##############################################################
 
-        self.profiles = namedtuple('profiles', 'n T L nn')(
-            namedtuple('n', 'i e')(
-                core.n_fsa.i,
-                core.n_fsa.e
-            ),
-            namedtuple('T', 'i e')(
-                core.T_fsa.i,
-                core.T_fsa.e
-            ),
-            namedtuple('L', 'n T')(
-                namedtuple('n', 'i e')(
-                    core.L_fsa.n.i,
-                    core.L_fsa.n.e
-                ),
-                namedtuple('T', 'i e')(
-                    core.L_fsa.T.i,
-                    core.L_fsa.T.e)
-            ),
-            namedtuple('nn',' s t tot')(
-                core.n_fsa.n.s,
-                core.n_fsa.n.t,
-                core.n_fsa.n.tot
-            )
-        )
+    def plot_Q_e_int(self):
 
+
+        plot = plt.figure()
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$Q_e^{int} [W/m^2]$', fontsize=20)
+        fig.set_title('GT3.RT electron heat flux')
+        fig.scatter(self.rhor, self.Qe_int, marker='o', color='red')
+        plt.figtext(.5, .01, "Electron heat flux using the integral method", wrap=True)
+
+        #
+        #
+        # if debugFlag:
+        #     """Beam source debugging"""
+        #     nbiDebug(self.rhor, core.a, en_src_nbi_i_kept, en_src_nbi_e, part_src_nbi_kept, self.mom_src_nbi, core.dVdrho)
+        #     """Particle flux debuggin"""
+        #     gammaDebug(self.rhor, core.a, core.r2sa, core.dVdrho, part_src_nbi, part_src_nbi_kept, izn_rate, self.gamma_int_D, self.gamma_diff_D)
+        #     """Energy flux debugging"""
+        #     QDebug(self.rhor, core.a, core.r2sa, core.dVdrho, calc_qie(n, T, ion_species='D'), en_src_nbi_i, en_src_nbi_i_kept, cool_rate, E_orb_d, self.chi.Qi, T)
+        #     """IOL Debugging"""
+        #     IOLDebug(self.rhor, F_orb_d, E_orb_d, M_orb_d)

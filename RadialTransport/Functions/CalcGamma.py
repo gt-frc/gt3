@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 from scipy.interpolate import UnivariateSpline
+import numpy as np
+from math import exp
 
 def calc_gamma_diff_method(r, a, part_src_nbi_tot, part_src_nbi_lost, izn_rate, dVdrho, iol_adjusted=False, F_orb=None):
     dVdr = UnivariateSpline(r, dVdrho(r / a) / a, k=3, s=0)

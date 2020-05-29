@@ -64,7 +64,7 @@ psirz_file      = 164436_3720/gt3_164436_3720_psirz.txt
 wall_file        = machine/gt3_diiid_wall.dat
 
 #NEUTRAL BEAM DEPOSITION
-nbeams_loc = /home/jonathan/Dropbox/GTEDGE/MyPrograms/GTEDGE/lib/beams/NBeamsMDS/NBeams/bin/Release/nbeams
+nbeams_loc = /home/jonathan/Dropbox/GTEDGE/gt3-dev/BeamDeposition/nbeams/bin/Release/nbeams
 ebeam = 64.72
 abeam = 2
 alphain = 0.6475
