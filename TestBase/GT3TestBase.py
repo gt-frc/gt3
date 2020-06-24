@@ -3,10 +3,19 @@
 import numpy as np
 import os
 import texttable
+import sys
 from shapely.geometry import LineString
+import matplotlib.pyplot as plt
 
+def getGT3Test():
+    try:
+        from GT3.gt3 import gt3
+    except ImportError:
+        print "Unable to load GT3 module"
+        sys.exit(status=1)
+    return gt3(preparedInput=TestClass())
 
-class GT3TestBase:
+class TestClass:
 
     def __init__(self, shotid=164436, timeid=3740):
         self.shotid = shotid

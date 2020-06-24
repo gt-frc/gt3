@@ -55,12 +55,12 @@ class Core:
         # this assumes that psi is given as a square array
         psi_shape = int(np.sqrt(inp.psirz_exp[:, 0].shape[0]))  # type: int
 
-        raw_psi_R = inp.psirz_exp[:, 0].reshape(-1, psi_shape)
-        raw_psi_Z = inp.psirz_exp[:, 1].reshape(-1, psi_shape)
+        raw_psi_R = inp.psirz_exp[:, 0].reshape(-1, psi_shape)  # type: np.ndarray
+        raw_psi_Z = inp.psirz_exp[:, 1].reshape(-1, psi_shape)  # type: np.ndarray
         try:
-            raw_psi = inp.psirz_exp[:, 2].reshape(-1, psi_shape) * inp.psi_scale
+            raw_psi = inp.psirz_exp[:, 2].reshape(-1, psi_shape) * inp.psi_scale  # type: np.ndarray
         except AttributeError:
-            raw_psi = inp.psirz_exp[:, 2].reshape(-1, psi_shape)
+            raw_psi = inp.psirz_exp[:, 2].reshape(-1, psi_shape)  # type: np.ndarray
 
 
         xpt, mag_axis = find_xpt_mag_axis(raw_psi_R, raw_psi_Z, raw_psi)
@@ -171,6 +171,7 @@ class Core:
 
         # initialize dVdrho interpolator
         self.dVdrho = UnivariateSpline(np.linspace(0, 1, 100), self.rho2vol(np.linspace(0, 1, 100)), k=3, s=0).derivative()
+        self.dVdr = UnivariateSpline(np.linspace(0, 1, 100), self.dVdrho(np.linspace(0, 1, 100)) / self.a, k=3, s=0)
 
         # initialize total plasma volume
         self.vol = self.rho2vol(1.0)

@@ -12,6 +12,7 @@ from subprocess import Popen, PIPE
 from collections import namedtuple
 from scipy.constants import physical_constants
 import os, sys
+from Functions.Beam import Beam
 
 m_d = physical_constants['deuteron mass'][0]
 z_d = 1
@@ -30,89 +31,53 @@ class BeamDeposition:
             nbi_vals = calc_nbi_vals(inp, core)
             # If no deposition profile is provided, then prepare nbeams input file and run nbeams
         except:
+            # Call signature: def calcHofRho(rho, rho2vol, dVdrho, rtang, shaf_shift, kappa_vals, beamHeight, beamWidth, Te, TC, R0, ne, beamE, Zeff, a, gaussR, gaussZ)
+            inp.beamWidth = 0.11
+            inp.beamHeight = 0.28
+            inp.beamE = 77
+            inp.beamA = 2.
+            inp.beamP = 0.9
+            inp.bgaussZ = .188
+            inp.bgaussR = .066
+            inp.rtang = 1.2
 
-            # set the name of the executable based on the operating system
-            if os.name == 'nt':
-                nbeams_name = 'nbeams.exe'
-            elif os.name == 'posix':
-                nbeams_name = 'nbeams'
-            else:
-                print 'not sure what os you\'re running. If mac, you might need to add some code \
-                        to the beamdep module to help it find and run nbeams.'
-                sys.exit()
 
-                # Attempt to run multi-beam NBeams module
+            nbeams_space = np.linspace(0., 1.0, 50)
+            self.Beam1 = Beam(nbeams_space, core.r2vol, core.dVdr, inp.rtang, core.shaf_shift, core.kappa_vals,
+                                     inp.beamHeight,
+                                     inp.beamWidth,
+                                     UnivariateSpline(core.rho[:, 0], core.T_fsa.e.kev)(nbeams_space),
+                                     UnivariateSpline(core.rho[:, 0], core.T_fsa.i.kev)(nbeams_space),
+                                     core.R0_a,
+                                     UnivariateSpline(core.rho[:, 0], core.n_fsa.e)(nbeams_space),
+                                     inp.beamE,
+                                     inp.beamA,
+                                     inp.beamP,
+                                     UnivariateSpline(core.rho[:, 0], core.z_eff_fsa)(nbeams_space),
+                                     core.a,
+                                     inp.bgaussR,
+                                     inp.bgaussZ,
+                                     verbose=True,
+                                     timing=False)
 
-            try:
-                inp.nbeamsJSON
-                try:
-                    import json
-                except BaseException as e:
-                    print ("Failed to import JSON library. Stopping.")
-                    raise e
-                with open(os.path.join("inputs", inp.nbeamsJSON)) as json_file:
-                    data = json.load(json_file)
-                print("Notice: Multi-beam NBeams file found. Running NBeams for all shots individually")
-                nbi_vals_list = []
-                for i, beam in enumerate(data, start=1):
-                    prep_nbi_infile(inp, core, index=i, indBeam=beam)
-                    print("Notice: NBI File #%s prepared for Beam ID %s" % (str(i), str(data[i - 1]["Beam ID"])))
-                    p = Popen([os.path.join(os.getcwd(), "nbeams", "bin", "Release", "nbeams"),
-                               os.path.join(os.getcwd(), "inbeams_%s.dat" % str(i)),
-                               os.path.join(os.getcwd(), "outbeams_%s.dat" % str(i))], stdin=PIPE, stdout=PIPE).wait()
-                    print("Notice: Nbeams active on output %s" % str(i))
-                    nbi_vals_list.append(read_nbi_outfile(inp, core, index=i, indBeam=beam))
-            except:
-                try:
-                    # prepare nbeams input file
-                    prep_nbi_infile(inp, core)
+            self.Beam2 = Beam(nbeams_space, core.r2vol, core.dVdr, inp.rtang, core.shaf_shift, core.kappa_vals,
+                                     inp.beamHeight,
+                                     inp.beamWidth,
+                                     UnivariateSpline(core.rho[:, 0], core.T_fsa.e.kev)(nbeams_space),
+                                     UnivariateSpline(core.rho[:, 0], core.T_fsa.i.kev)(nbeams_space),
+                                     core.R0_a,
+                                     UnivariateSpline(core.rho[:, 0], core.n_fsa.e)(nbeams_space),
+                                     inp.beamE,
+                                     inp.beamA,
+                                     inp.beamP,
+                                     UnivariateSpline(core.rho[:, 0], core.z_eff_fsa)(nbeams_space),
+                                     core.a,
+                                     inp.bgaussR,
+                                     inp.bgaussZ,
+                                     verbose=True,
+                                     timing=False)
 
-                    # call nbeams. Note to those familiar with the old nbeams, I modified
-                    # the source code to take the input file as a commandline argument. - MH
 
-                    # If run as debug script, look at "/inputs" for inbeams_test.dat"
-                    if __name__ == "__main__":
-                        try:
-                            # try to find nbeams in the system path
-                            p = Popen([nbeams_name, os.path.join(os.getcwd(), 'inputs', 'inbeams_test.dat')],
-                                      stdin=PIPE, stdout=PIPE).wait()
-                        except:
-                            try:
-                                # otherwise use the location specified in the input file
-                                p = Popen([inp.nbeams_loc, os.path.join(os.getcwd(), 'inputs', 'inbeams_test.dat')],
-                                          stdin=PIPE, stdout=PIPE).wait()
-                            except:
-                                print 'Unable to find nbeams executable. Stopping.'
-                                sys.exit()
-                    else:
-                        try:
-                            # try to find nbeams in the system path
-                            p = Popen(os.getcwd() + inp.nbeams_loc, stdin=PIPE, stdout=PIPE)
-                            p.communicate()
-                        except:
-                            try:
-                                # Is it loaded in this module's directory?
-
-                                # p = Popen([os.path.dirname(__file__) + "/nbeams/bin/Release/nbeams", os.path.dirname(__file__) + '/inbeams.dat', os.path.dirname(__file__) + '/outbeams.dat'],
-                                #           stdin=PIPE, stdout=PIPE).wait()
-                                p = Popen(["/home/jonathan/Dropbox/GTEDGE/gt3-dev/BeamDeposition/nbeams/nbeams",
-                                           "/home/jonathan/Dropbox/GTEDGE/gt3-dev/BeamDeposition/inbeams.dat",
-                                           "/home/jonathan/Dropbox/GTEDGE/gt3-dev/BeamDeposition/outbeams.dat"],
-                                          stdin=PIPE, stdout=PIPE).wait()
-                            except:
-                                try:
-                                    # otherwise use the location specified in the input file
-                                    p = Popen([inp.nbeams_loc, os.getcwd() + '/inbeams.dat', os.getcwd() + "/outbeams.dat"],
-                                              stdin=PIPE, stdout=PIPE).wait()
-                                except:
-                                    print 'Unable to find nbeams executable. Stopping.'
-                                sys.exit()
-                        # instantiate class with nbeams output file information
-                        nbi_vals = read_nbi_outfile(inp, core)
-
-                except:
-                    print 'unable to create beam deposition information. Stopping.'
-                    sys.exit()
         try:
             if nbi_vals: self.debug = nbi_vals.debug
         except:
