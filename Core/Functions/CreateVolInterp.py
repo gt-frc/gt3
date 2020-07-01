@@ -8,6 +8,10 @@ from scipy.interpolate import  UnivariateSpline
 from shapely.geometry import LineString, Polygon
 
 def create_vol_interp(rho2psinorm, psinorm2rho, psi_data, sep_pts, R0_a, a):
+    """
+
+    :rtype:
+    """
     rho_vals = np.linspace(0, 1, 50, endpoint=True)
     r_vals = rho_vals * a
     psi_vals = rho2psinorm(rho_vals)

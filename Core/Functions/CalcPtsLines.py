@@ -9,6 +9,18 @@ from collections import namedtuple
 
 
 def calc_pts_lines(psi_data, xpt, wall, mag_axis):
+
+    """
+    Calculates points and lines for the flux surfaces
+
+    :param psi_data:
+    :type psi_data: psi
+    :param xpt:
+    :param wall:
+    :param mag_axis:
+    :return:
+    :rtype: object
+    """
     # create lines for seperatrix and divertor legs of seperatrix
 
     c = QuadContourGenerator.from_rectilinear(psi_data.R[0], psi_data.Z[:, 0], psi_data.psi_norm)

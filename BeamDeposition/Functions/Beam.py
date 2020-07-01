@@ -1,33 +1,67 @@
 #!/usr/bin/python2.7
-
+from numpy.core.multiarray import ndarray
 
 from BeamDeposition.Functions.GetMFP import get_mfp, sigeff
 from scipy.interpolate import UnivariateSpline
-from scipy.integrate import quad, fixed_quad, cumtrapz, dblquad
+from scipy.integrate import quad, fixed_quad, cumtrapz
 from math import sqrt, exp
 from time import time
 import warnings
-import exceptions
-import logging
 import numpy as np
 from scipy.optimize import root_scalar
 from math import pi, isinf
 import matplotlib.pyplot as plt
 from collections import namedtuple
-from mpl_toolkits import mplot3d
-import matplotlib.ticker as mtick
+from scipy import constants
+from Core.Functions.eVConvert import eVConvert
 
-
-
+m_d = constants.physical_constants['deuteron mass'][0]
 
 class Beam:
-    def __init__(self, rho, r2vol, dVdr, rtang, shaf_shift, kappa_vals,
-                 beamHeight, beamWidth, Te, TC, R0, ne, beamE, beamA, beamP, Zeff, a, gaussR, gaussZ, verbose=False, timing=False):
+
+    beamE = None  # type: float
+    beamP = None # type: float
+    beamA = None # type: float
+    beamWidth = None  # type: float
+    shaf_shift_0 = None  # type: float
+    dVdr = None  # type: UnivariateSpline
+    rtang = None  # type: float
+    kappa_vals = None  # type: object
+    r2vol = None  # type: UnivariateSpline
+    timing = None  # type: bool
+    rho = None  # type: np.ndarray
+    verbose = None  # type: bool
+    R0 = None # type: float
+    Ti = None # type: np.ndarray
+    Te = None # type: np.ndarray
+    ne = None # type: np.ndarray
+    iolFlag = True # type: bool
+    coCurr = True # type: bool
+
+    DepositionProfiles = namedtuple('DepositionProfiles', ['D1', 'D2', 'D3'])
+    EnergySplit = namedtuple('EnergySplit', ['D1', 'D2', 'D3'])
+    PowerProfiles = namedtuple('PowerProfiles', ['D1', 'D2', 'D3', 'total'])
+    MomentumProfiles = namedtuple('MomentumProfiles', ['D1', 'D2', 'D3', 'total', 'coCurr'])
+    IOLSplit = namedtuple('IOLSplit', 'total lost kept')
+
+
+
+    #def __init__(self, rho, r2vol, dVdr, rtang, shaf_shift, kappa_vals,
+    #             beamWidth, Te, TC, R0, ne, beamE, beamA, beamP, Zeff, a, gaussR, verbose=False, timing=False):
+
+    def __init__(self, config):
         """
         The Beams class for a single neutral beam injecter beam
 
-        This class mimicks NBEAMS
+        This class mimicks NBEAMS and provides the deposition profile H(rho,i) for the three molecular species.
 
+        LIMITATIONS:
+
+        This model assumes a circular beam with gaussian current density J. Beam shinethrough is not currently calculated
+        correctly.
+
+        Parameters
+        ----------
 
         :param verbose: Enable verbose output
         :type verbose: bool
@@ -45,8 +79,6 @@ class Beam:
         :type shaf_shift:  UnivariateSpline
         :param kappa_vals: The kappa values at the mag axes/sep
         :type kappa_vals:  np.ndarary(2)
-        :param beamHeight: The beam height
-        :type beamHeight:  float
         :param beamWidth: The beam width (2x the radius for circular)
         :type beamWidth:  float
         :param Te: The electron temperature np.ndarray
@@ -69,32 +101,35 @@ class Beam:
         :type a:  float
         :param gaussR: The gaussian radius of hte circular beam
         :type gaussR:  float
-        :param gaussZ: The gaussian height of the circular beam
-        :type gaussZ:  float
+
         """
 
+        self.config = config
+        self.name = config.name
         start = time()
-        self.verbose = verbose
-        self.timing = timing
-        self.rho = rho
-        self.r2vol = r2vol
-        self.dVdr = dVdr
-        self.rtang = rtang
-        self.shaf_shift_0 = shaf_shift
-        self.kappa_vals = kappa_vals
-        self.beamHeight = beamHeight
-        self.beamWidth = beamWidth
-        self.Te = Te
-        self.Tc = TC
-        self.R0 = R0
-        self.ne = ne
-        self.beamE = beamE
-        self.beamA = beamA
-        self.beamP = beamP
-        self.Zeff = Zeff
-        self.a = a
-        self.gaussR = gaussR
-        self.gaussZ = gaussZ
+        self.verbose = config.verbose
+        self.timing = config.timing
+        self.coCurr = config.coCurr
+        self.rho = config.rho
+        self.iol = config.iol
+        self.iolFlag = config.iolFlag
+
+        self.r2vol = config.r2vol
+        self.dVdr = config.dVdr
+        self.rtang = config.rtang
+        self.shaf_shift_0 = config.shaf_shift
+        self.kappa_vals = config.kappa_vals
+        self.beamWidth = config.beamWidth
+        self.Te = config.Te
+        self.Tc = config.Ti
+        self.R0 = config.R0
+        self.ne = config.ne
+        self.beamE = config.beamE
+        self.beamA = config.beamA
+        self.beamP = config.beamP
+        self.Zeff = config.Z_eff
+        self.a = config.a
+        self.gaussR = config.gaussR
         self.quad = "fixed_quad"
         self.prof_root = {}
         self.prof_mfp = {}
@@ -114,39 +149,60 @@ class Beam:
         self.prof_D['count'] = 0
         self.prof_D['time'] = []
 
-        print "Calculating energy group 1"
+        if not config.beamResult:
+            self.is_new(config)
+        else:
+            old_result = config.beamResult
+            try:
+
+                self.angle_1 = UnivariateSpline(old_result[6], old_result[7], k=3, s=0)
+                self.angle_2 = UnivariateSpline(old_result[6], old_result[8], k=3, s=0)
+                self.angle_3 = UnivariateSpline(old_result[6], old_result[9], k=3, s=0)
+                self.Hofrho = self.DepositionProfiles(UnivariateSpline(old_result[6], old_result[10], k=3, s=0),
+                                                  UnivariateSpline(old_result[6], old_result[11], k=3, s=0),
+                                                  UnivariateSpline(old_result[6], old_result[12], k=3, s=0))
+                self.shine = old_result[13]
+                self.Hofr = self.calc_Hofr(self.Hofrho, self.DepositionProfiles)
+                self.pwrfrac = self.calc_power_frac(self.beamE)
+                self.dPdV = self.calc_dPdV(self.PowerProfiles)
+                self.energies = self.EnergySplit(eVConvert(self.beamE), eVConvert(self.beamE / 2.),
+                                            eVConvert(self.beamE / 3.))
+                self.calc_iol(self.iol)
+                self.part_sources = self.calc_part_sources(self.IOLSplit)
+                self.heat_sources = self.calc_heat_sources(self.IOLSplit)
+                self.mom_sources = self.calc_mom_sources(self.IOLSplit)
+
+            except Exception as e:
+                print "Failed to rebuild beam %s with error: %s" % (self.name, str(e))
+
+
+    def is_new(self, config):
+        print "Running %s Beam" % config.name
+        if self.verbose: print "Calculating energy group 1"
         h_res_1, self.angle_1 = self.calcHofRho(self.beamE)
 
-        print "Calculating energy group 2"
+        if self.verbose: print  "Calculating energy group 2"
         h_res_2, self.angle_2 = self.calcHofRho(self.beamE / 2.)
 
-        print "Calculating energy group 3"
+        if self.verbose: print "Calculating energy group 3"
         h_res_3, self.angle_3 = self.calcHofRho(self.beamE / 3.)
 
-        DepositionProfiles = namedtuple('DepositionProfiles', ['D1', 'D2', 'D3'])
 
-        self.Hofrho_unnorm = DepositionProfiles(h_res_1,
+        self.Hofrho_unnorm = self.DepositionProfiles(h_res_1,
                                                 h_res_2,
                                                 h_res_3)
 
         self.shine = self.calc_shine()
-
-        self.Hofrho = self.normalize_Hofrho(DepositionProfiles)
-        self.Hofr = self.calc_Hofr(self.Hofrho, DepositionProfiles)
-
+        self.Hofrho = self.normalize_Hofrho(self.DepositionProfiles)
+        self.Hofr = self.calc_Hofr(self.Hofrho, self.DepositionProfiles)
         self.pwrfrac = self.calc_power_frac(self.beamE)
+        self.dPdV = self.calc_dPdV(self.PowerProfiles)
+        self.energies = self.EnergySplit(eVConvert(self.beamE), eVConvert(self.beamE / 2.), eVConvert(self.beamE / 3.))
+        self.calc_iol(self.iol)
+        self.part_sources = self.calc_part_sources(self.IOLSplit)
+        self.heat_sources = self.calc_heat_sources(self.IOLSplit)
+        self.mom_sources = self.calc_mom_sources(self.IOLSplit)
 
-        PowerProfiles = namedtuple('PowerProfiles', ['D1', 'D2', 'D3', 'total'])  # type: object
-
-        self.power_profile = PowerProfiles(self.beamP * self.pwrfrac[0] * self.Hofrho.D1 / self.vol,
-                                           self.beamP * self.pwrfrac[1] * self.Hofrho.D2 / self.vol,
-                                           self.beamP * self.pwrfrac[2] * self.Hofrho.D3 / self.vol,
-                                           self.beamP * self.pwrfrac[0] * self.Hofrho.D1 / self.vol +
-                                           self.beamP * self.pwrfrac[1] * self.Hofrho.D2 / self.vol +
-                                           self.beamP * self.pwrfrac[2] * self.Hofrho.D3 / self.vol)
-
-        EnergySplit = namedtuple('EnergySplit', ['D1', 'D2', 'D3'])
-        self.energies = EnergySplit(self.beamE, self.beamE / 2., self.beamE / 3.)
 
         end=time()
 
@@ -170,6 +226,170 @@ class Beam:
                                                            np.sum(self.prof_D['time']))
 
 
+    def calc_iol(self, iol):
+
+        """
+        Calculate the Ion Orbit Loss coefficients from the given iol module results. Returns nothing.
+        The momentum loss fraction is retuned as the absolute value since there shouldn't realistically be any direction
+        change.
+
+        :param iol:
+        """
+        # TODO: Introduce accurate launch angles
+
+        D1_iol = iol.calc_iol_beams(1,m_d, iol.iol_p, 33,  sqrt(2 * self.beamE * 1.E3 * 1.6021E-19 / m_d), -.96, iol.coslist)
+        D2_iol = iol.calc_iol_beams(1, m_d, iol.iol_p, 33, sqrt(2 * self.beamE * 1.E3 * 1.6021E-19 / (m_d * 2.)), -.96,
+                                    iol.coslist)
+        D3_iol = iol.calc_iol_beams(1, m_d, iol.iol_p, 33, sqrt(2 * self.beamE * 1.E3 * 1.6021E-19 / (3. * m_d)), -.96,
+                                    iol.coslist)
+
+        self.F_orb_D1 = UnivariateSpline(iol.rho[:,0], D1_iol[0][:,0], k=3, s=0)(self.rho)
+        self.M_orb_D1 = UnivariateSpline(iol.rho[:,0], D1_iol[1][:,0], k=3, s=0)(self.rho)
+        self.E_orb_D1 = np.abs(UnivariateSpline(iol.rho[:,0], D1_iol[2][:,0], k=3, s=0)(self.rho))
+
+        self.F_orb_D2 = UnivariateSpline(iol.rho[:,0], D2_iol[0][:,0], k=3, s=0)(self.rho)
+        self.M_orb_D2 = UnivariateSpline(iol.rho[:,0], D2_iol[1][:,0], k=3, s=0)(self.rho)
+        self.E_orb_D2 = np.abs(UnivariateSpline(iol.rho[:,0], D2_iol[2][:,0], k=3, s=0)(self.rho))
+
+        self.F_orb_D3 = UnivariateSpline(iol.rho[:,0], D3_iol[0][:,0], k=3, s=0)(self.rho)
+        self.M_orb_D3 = UnivariateSpline(iol.rho[:,0], D3_iol[1][:,0], k=3, s=0)(self.rho)
+        self.E_orb_D3 = np.abs(UnivariateSpline(iol.rho[:,0], D3_iol[2][:,0], k=3, s=0)(self.rho))
+
+    def calc_part_sources(self, IOLSplit):
+        """
+        Calculate the particle sources in #/m^3*s
+        """
+
+        if self.iolFlag:
+            self.part_src_D1 = IOLSplit(self.dPdV.D1(self.rho) / self.energies.D1.J,  # total
+                                        self.F_orb_D1 * self.dPdV.D1(self.rho) / self.energies.D1.J,  # lost
+                                        (1. - self.F_orb_D1) * self.dPdV.D1(self.rho) / self.energies.D1.J)  # kept
+
+            self.part_src_D2 = IOLSplit(self.dPdV.D2(self.rho) / self.energies.D2.J,  # total
+                                        self.F_orb_D2 * self.dPdV.D2(self.rho) / self.energies.D2.J,  # lost
+                                        (1. - self.F_orb_D2) * self.dPdV.D2(self.rho) / self.energies.D2.J)  # kept
+
+            self.part_src_D3 = IOLSplit(self.dPdV.D3(self.rho) / self.energies.D3.J,  # total
+                                        self.F_orb_D3 * self.dPdV.D3(self.rho) / self.energies.D3.J,  # lost
+                                        (1. - self.F_orb_D3) * self.dPdV.D3(self.rho) / self.energies.D3.J)  # kept
+
+
+        else:
+            self.part_src_D1 = IOLSplit(self.dPdV.D1(self.rho) / self.energies.D1.J,
+                                        np.zeros(len(self.rho)),
+                                        self.dPdV.D1(self.rho) / self.energies.D1.J)
+
+            self.part_src_D2 = IOLSplit(self.dPdV.D1(self.rho) / self.energies.D2.J,
+                                        np.zeros(len(self.rho)),
+                                        self.dPdV.D1(self.rho) / self.energies.D2.J)
+
+            self.part_src_D3 = IOLSplit(self.dPdV.D1(self.rho) / self.energies.D3.J,
+                                        np.zeros(len(self.rho)),
+                                        self.dPdV.D1(self.rho) / self.energies.D3.J)
+
+        self.part_src_tot_total = self.part_src_D1.total + self.part_src_D2.total + self.part_src_D3.total
+        self.part_src_tot_lost = self.part_src_D1.lost + self.part_src_D2.lost + self.part_src_D3.lost
+        self.part_src_tot_kept = self.part_src_D1.kept + self.part_src_D2.kept + self.part_src_D3.kept
+
+    def calc_heat_sources(self, IOLSplit):
+
+        if self.iolFlag:
+            self.en_src_D1 = IOLSplit(self.dPdV.D1(self.rho),  # total
+                                      self.E_orb_D1 * self.dPdV.D1(self.rho),  # lost
+                                      (1. - self.E_orb_D1) * self.dPdV.D1(self.rho))   # kept
+
+            self.en_src_D2 = IOLSplit(self.dPdV.D2(self.rho),  # total
+                                      self.E_orb_D2 * self.dPdV.D2(self.rho),  # lost
+                                      (1. - self.E_orb_D2) * self.dPdV.D2(self.rho))   # kept
+
+            self.en_src_D3 = IOLSplit(self.dPdV.D3(self.rho),  # total
+                                      self.E_orb_D3 * self.dPdV.D3(self.rho),  # lost
+                                      (1. - self.E_orb_D3) * self.dPdV.D3(self.rho))   # kept
+
+        else:
+            self.en_src_D1 = IOLSplit(self.dPdV.D1(self.rho),  # total
+                                      np.zeros(len(self.rho)),  # lost
+                                      self.dPdV.D1(self.rho))   # kept
+
+            self.en_src_D2 = IOLSplit(self.dPdV.D2(self.rho),  # total
+                                      np.zeros(len(self.rho)),  # lost
+                                      self.dPdV.D2(self.rho))   # kept
+
+            self.en_src_D3 = IOLSplit(self.dPdV.D3(self.rho),  # total
+                                      np.zeros(len(self.rho)),  # lost
+                                      self.dPdV.D3(self.rho))   # kept
+
+        self.en_src_tot_total = self.en_src_D1.total + self.en_src_D2.total + self.en_src_D3.total
+        self.en_src_tot_lost = self.en_src_D1.lost + self.en_src_D2.lost + self.en_src_D3.lost
+        self.en_src_tot_kept = self.en_src_D1.kept + self.en_src_D2.kept + self.en_src_D3.kept
+
+    def calc_mom_sources(self, IOLSplit):
+
+        if self.iolFlag:
+            self.mom_src_D1 = IOLSplit(self.dPdV.D1(self.rho) * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1(self.rho),
+                                       self.M_orb_D1 * self.dPdV.D1(self.rho)  * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1(self.rho),
+                                       (1. - self.M_orb_D1) * self.dPdV.D1(self.rho) * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1(self.rho))
+
+            self.mom_src_D2 = IOLSplit(self.dPdV.D2(self.rho)  * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2(self.rho),
+                                       self.M_orb_D2 * self.dPdV.D2(self.rho)  * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2(self.rho),
+                                       (1. - self.M_orb_D2) * self.dPdV.D2(self.rho)  * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2(self.rho))
+
+            self.mom_src_D3 = IOLSplit(self.dPdV.D3(self.rho)  * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3(self.rho),
+                                       self.M_orb_D3 * self.dPdV.D3(self.rho)  * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3(self.rho),
+                                       (1. - self.M_orb_D3) * self.dPdV.D3(self.rho)  * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3(self.rho))
+
+
+            if not self.coCurr:
+                self.mom_src_D1 = -1. * self.mom_src_D1
+                self.mom_src_D2 = -1. * self.mom_src_D2
+                self.mom_src_D3 = -1. * self.mom_src_D3
+
+        else:
+            self.mom_src_D1 = IOLSplit(self.dPdV.D1 * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1,
+                                       np.zeros(len(self.rho)),
+                                       self.dPdV.D1 * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1)
+
+            self.mom_src_D2 = IOLSplit(self.dPdV.D2 * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2,
+                                       np.zeros(len(self.rho)),
+                                       self.dPdV.D2 * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2)
+
+            self.mom_src_D3 = IOLSplit(self.dPdV.D3 * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3,
+                                       np.zeros(len(self.rho)),
+                                       self.dPdV.D3 * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3)
+            if not self.coCurr:
+                self.mom_src_D1 = -1. * self.mom_src_D1
+                self.mom_src_D2 = -1. * self.mom_src_D2
+                self.mom_src_D3 = -1. * self.mom_src_D3
+
+        self.mom_src_tot_total = self.mom_src_D1.total + self.mom_src_D2.total + self.mom_src_D3.total
+        self.mom_src_tot_lost = self.mom_src_D1.lost + self.mom_src_D2.lost + self.mom_src_D3.lost
+        self.mom_src_tot_kept = self.mom_src_D1.kept + self.mom_src_D2.kept + self.mom_src_D3.kept
+
+
+
+    def calc_dPdV(self, Profile):
+        """
+
+        :param Profile:
+        :return: Univariate splines of D1, D2, D3, and the total
+        :rtype: Profile(UnivariateSpline)
+        """
+        y1 = lambda x: self.Hofrho.D1(x) * self.beamP *self.pwrfrac[0] * 1E6 / self.vol
+        y2 = lambda x: self.Hofrho.D2(x) * self.beamP *self.pwrfrac[1] * 1E6 / self.vol
+        y3 = lambda x: self.Hofrho.D3(x) * self.beamP *self.pwrfrac[2] * 1E6 / self.vol
+        y4 = lambda x: y1(x) + y2(x) + y3(x)
+
+        interp_1 = UnivariateSpline(self.rho, y1(self.rho), k=3, s=2)
+        interp_2 = UnivariateSpline(self.rho, y2(self.rho), k=3, s=2)
+        interp_3 = UnivariateSpline(self.rho, y3(self.rho), k=3, s=2)
+        interp_4 = UnivariateSpline(self.rho, y4(self.rho), k=3, s=2)
+
+
+        return Profile(interp_1,
+                       interp_2,
+                       interp_3,
+                       interp_4)
+
     def calc_power_frac(self, beamE):
         """
         Calculate the D3D power fraction
@@ -180,6 +400,7 @@ class Beam:
         :type beamE: float
         :return:
         """
+
         pwr_frac = np.zeros(3)
         pwr_frac[0] = (68 + 0.11 * beamE) / 100
         pwr_frac[1] = (-159 + 6.53 * beamE - 0.082 * (beamE ** 2) + 0.00034 * (beamE ** 3)) / 100
@@ -187,60 +408,62 @@ class Beam:
         return pwr_frac
 
     def calc_shine(self):
-        shine_func_1 = lambda n: self.dVdr(self.rho[n] * self.a) * self.Hofrho_unnorm.D1
-        shine_func_2 = lambda n: self.dVdr(self.rho[n] * self.a) * self.Hofrho_unnorm.D2
-        shine_func_3 = lambda n: self.dVdr(self.rho[n] * self.a) * self.Hofrho_unnorm.D3
+        shine_func_1 = lambda x: self.dVdr(x * self.a) * self.Hofrho_unnorm.D1(x)
+        shine_func_2 = lambda x: self.dVdr(x * self.a) * self.Hofrho_unnorm.D2(x)
+        shine_func_3 = lambda x: self.dVdr(x * self.a) * self.Hofrho_unnorm.D3(x)
 
-        self.shine = 1 - (cumtrapz(shine_func_1(range(0, len(self.rho))), self.rho)[-1] / self.vol +
-                          cumtrapz(shine_func_2(range(0, len(self.rho))), self.rho)[-1] / self.vol +
-                          cumtrapz(shine_func_3(range(0, len(self.rho))), self.rho)[-1] / self.vol)
+        shine = 1 - (cumtrapz(shine_func_1(self.rho), self.rho)[-1] / self.vol +
+                          cumtrapz(shine_func_2(self.rho), self.rho)[-1] / self.vol +
+                          cumtrapz(shine_func_3(self.rho), self.rho)[-1] / self.vol)
 
-        if self.shine <= 0. or self.shine > 1.:
+        if shine <= 0. or shine > 1.:
 
-             warnings.warn("Shinethrough is out of range at %s" % self.shine)
+             warnings.warn("Shinethrough is out of range at %s" % shine)
 
-        return self.shine
+        return shine
 
     def normalize_Hofrho(self, DepClass):
         """
-        Normalize H(rho) such that integral(H(rho)dV) = Vpol.
+        Normalize H(rho) such that integral(H(rho)dV) = Vpol and provide an interpolator
         Note that to do this integration from 0->1, you must multiply the integrand by dV/d(rho)
 
         :type DepClass:
         """
 
-        norm_int_D1 = lambda n: self.dVdr(self.rho[n] * self.a) * self.Hofrho_unnorm.D1[n] * self.a
-        norm_int_D2 = lambda n: self.dVdr(self.rho[n] * self.a) * self.Hofrho_unnorm.D2[n] * self.a
-        norm_int_D3 = lambda n: self.dVdr(self.rho[n] * self.a) * self.Hofrho_unnorm.D3[n] * self.a
+        norm_int_D1 = lambda x: self.dVdr(x * self.a) * self.Hofrho_unnorm.D1(x) * self.a
+        norm_int_D2 = lambda x: self.dVdr(x * self.a) * self.Hofrho_unnorm.D2(x) * self.a
+        norm_int_D3 = lambda x: self.dVdr(x * self.a) * self.Hofrho_unnorm.D3(x) * self.a
 
-        normal_const_D1 = self.vol / cumtrapz([norm_int_D1(a) for a in range(0, len(self.rho))], self.rho)[-1]
-        normal_const_D2 = self.vol / cumtrapz([norm_int_D2(a) for a in range(0, len(self.rho))], self.rho)[-1]
-        normal_const_D3 = self.vol / cumtrapz([norm_int_D3(a) for a in range(0, len(self.rho))], self.rho)[-1]
+        normal_const_D1 = self.vol / cumtrapz(norm_int_D1(self.rho), self.rho)[-1]
+        normal_const_D2 = self.vol / cumtrapz(norm_int_D2(self.rho), self.rho)[-1]
+        normal_const_D3 = self.vol / cumtrapz(norm_int_D3(self.rho), self.rho)[-1]
 
+        interp_1 = UnivariateSpline(self.rho, self.Hofrho_unnorm.D1(self.rho) * normal_const_D1)
+        interp_2 = UnivariateSpline(self.rho, self.Hofrho_unnorm.D2(self.rho) * normal_const_D2)
+        interp_3 = UnivariateSpline(self.rho, self.Hofrho_unnorm.D3(self.rho) * normal_const_D3)
 
-
-        return DepClass(self.Hofrho_unnorm.D1 * normal_const_D1,
-                        self.Hofrho_unnorm.D2 * normal_const_D2,
-                        self.Hofrho_unnorm.D3 * normal_const_D3)
+        return DepClass(interp_1,
+                        interp_2,
+                        interp_3)
 
     def calc_Hofr(self, Hofrho, depClass):
         """
+        Calculate H(r) and returns the depClass named tuple containing 3 interpolators as functions of r
 
+        :param depClass: The deposition class object to be used
         :param Hofrho: The H(rho) function
-        :type Hofrho: np.ndarray
-        :return: The H(r) Univariate spline
-        :rtype: UnivariateSpline
+        :type Hofrho: DepositionProfiles
+        :return: The H(r) np.ndarray
+        :rtype: depClass
         """
-        x = self.rho * self.a
-        y1 = Hofrho.D1
-        y2 = Hofrho.D2
-        y3 = Hofrho.D3
-        interp_1 = UnivariateSpline(x, y1, k=3, s=2)
-        interp_2 = UnivariateSpline(x, y2, k=3, s=2)
-        interp_3 = UnivariateSpline(x, y3, k=3, s=2)
-        return depClass(interp_1(np.linspace(0., self.a, len(self.rho))),
-                        interp_2(np.linspace(0., self.a, len(self.rho))),
-                        interp_3(np.linspace(0., self.a, len(self.rho))))
+        y1 = lambda x: Hofrho.D1(x * self.a)
+        y2 = lambda x: Hofrho.D2(x * self.a)
+        y3 = lambda x: Hofrho.D3(x * self.a)
+        interp_space = np.linspace(0., self.a, len(self.rho))
+
+        return  depClass(UnivariateSpline(interp_space, y1(self.rho), k=3, s=0),
+                             UnivariateSpline(interp_space, y2(self.rho), k=3, s=0),
+                             UnivariateSpline(interp_space, y3(self.rho), k=3, s=0))
 
     def calcHofRho(self, energy):
         """
@@ -255,8 +478,8 @@ class Beam:
 
         TODO: Run more extensive tests to validate quadrature choice
         :param energy: The energy group (in keV)
-        :return: The H(rho) array
-        :rtype: np.ndarray
+        :return: UnivariateSplines of H(rho) and ksi(rho)
+        :rtype: list(UnivariateSpline)
 
         """
 
@@ -295,14 +518,14 @@ class Beam:
 
             if self.verbose: print "Running positive"
             if smallFlag:
-                result_pos[n] = pi * self.kappa(val) * self.beamdblquad(hofrpzJLambda, 0, Zulimit, RLowerLimit, RUpperLimit, val)
+                result_pos[n] = pi * self.kappa(val) * self.beamdblquad(hofrpzJLambda, 0., Zulimit, RLowerLimit, RUpperLimit, val)
             else:
-                result_pos[n] = 2.0 * self.beamdblquad(hofrpzJLambda, 0, Zulimit, RLowerLimit, RUpperLimit, val)
+                result_pos[n] = 2.0 * self.beamdblquad(hofrpzJLambda, 0., Zulimit, RLowerLimit, RUpperLimit, val)
             posFlag = False
 
             if self.verbose: print "Running negative"
             if smallFlag:
-                result_minus[n] = pi * self.kappa(val) * self.beamdblquad(hofrpzJLambda, 0, Zulimit, RLowerLimit, RUpperLimit,
+                result_minus[n] = pi * self.kappa(val) * self.beamdblquad(hofrpzJLambda, 0., Zulimit, RLowerLimit, RUpperLimit,
                                                                         val)
             else:
                 result_minus[n] = 2.0 * self.beamdblquad(hofrpzJLambda, 0.0, Zulimit, RLowerLimit, RUpperLimit, val)
@@ -310,11 +533,14 @@ class Beam:
             Hresult[n] = result_pos[n] + result_minus[n]
 
             posFlag = True
-            angle_top_pos = self.beamdblquad(angleFunTopLambda, 0, Zulimit, RLowerLimit, RUpperLimit, val)
+            angle_top_pos = self.beamdblquad(angleFunTopLambda, 0., Zulimit, RLowerLimit, RUpperLimit, val)
             angle_bottom_pos = result_pos[n] / 2.
             posFlag = False
-            angle_top_neg = self.beamdblquad(angleFunTopLambda, 0, Zulimit, RLowerLimit, RUpperLimit, val)
+            angle_top_neg = self.beamdblquad(angleFunTopLambda, 0., Zulimit, RLowerLimit, RUpperLimit, val)
             angle_bottom_neg = result_minus[n] / 2.
+
+            # TODO: Still don't know which is correct
+
             angle_result[n] = (angle_top_pos + angle_top_neg)/(angle_bottom_neg + angle_bottom_pos)
             #angle_result[n] = (angle_top_pos / angle_bottom_pos) + (angle_top_neg / angle_bottom_neg)
 
@@ -328,10 +554,30 @@ class Beam:
             if self.timing: print "D calc total time: %s" % np.sum(self.prof_D['time'])
 
 
-        return Hresult, angle_result
+        return UnivariateSpline(self.rho, Hresult, k=3, s=0), UnivariateSpline(self.rho, np.nan_to_num(angle_result), k=3, s=0),
 
     def beamdblquad(self, f, yllimit, yulimit, xllimit, xulimit, *args):
-        if yllimit == yulimit: return 0
+        """
+        Custom double integration function for f(Rb, Zb) integration.
+
+        Integration limits are Z -> [yllimit, yulimit], R->[xllimit, xulimit]
+
+        :rtype: float
+        :return: Returns the numerical result of this integration
+        :param f: The function to be ingrated in R,Z space
+        :type f: function
+        :param yllimit: The Zb lower limit
+        :type yllimit: float
+        :param yulimit: The Zb upper limit
+        :type yulimit: float
+        :param xllimit: The Rb lower limit
+        :type xllimit: float
+        :param xulimit: The Rb upper limit
+        :type xulimit: float
+        :param args:
+        """
+        if yllimit == yulimit:
+            return 0
         rho_val = args[0]
         yres = 10
         mesh = np.linspace(yllimit, yulimit, yres)
@@ -349,7 +595,6 @@ class Beam:
                 results[a] = fixed_quad(flambda, xllimit(mesh[a]), xulimit(mesh[a]), n=4)[0] * (yulimit - yllimit)/ yres
                 if self.verbose: print "Integration result for a = %s: %s" % (a, results[a])
         return np.sum(results)
-
 
     def hofrpzJ(self, Zb, Rb, rho_val, mfp, p, smallFlag):
         """
@@ -405,10 +650,9 @@ class Beam:
                     return 0
                 elif Rpm_of_Z(Zb) <= (self.rtang - sqrt((rho_val*self.a) ** 2 - ((Zb ** 2) / (self.kappa(rho_val) ** 2)))):
                     return 0
-                return self.hofrpz(Rb, Zb, rho_val, mfp, p) * self.J(Rb, Zb)
+                return self.hofrpz(Rb, Zb, rho_val, mfp, p, smallFlag) * self.J(Rb, Zb)
             else:
                 return 0.
-
 
     def J(self, Rb, Zb):
         """
@@ -430,11 +674,16 @@ class Beam:
             result = exp(expTermUp)/(pi * self.gaussR**2 * (1. - exp(expTermDown)))
             return result
 
-
     def hofrpz(self, Rb, Zb, rho_val, mfp, p, smallFlag):
         """
-        The h(rho, Rb, Zb) function
+        The h(rho, Rb, Zb) function.
 
+        :rtype: float
+        :param p: Whether this is for the positive or negative half of the integration
+        :type p: bool
+        :param smallFlag: Flag to indicate that we are at small rho and need to address the singularity
+        :type smallFlag: bool
+        :return: The numeric value of this function
         :param mfp: The mean free path interpolator for this plasma energy group
         :type mfp: UnivariateSpline
         :param Rb: The beam-R coordinate
@@ -459,8 +708,7 @@ class Beam:
             if (r)**2 - Zb**2/(self.kappa(rho_val)**2) >= 0:
                 Rplus = self.get_Rpm(Zb, rho_val, True)
                 if Rplus:
-                    #if Rplus > (self.rtang - sqrt((self.beamWidth / 2.) ** 2 - Zb**2)):
-                    if Rplus > (Rb - sqrt((self.beamWidth / 2.) ** 2 - Zb ** 2)):
+                    if Rplus > (self.rtang - sqrt((self.beamWidth / 2.) ** 2 - Zb**2)):
                         D0plus = self.D(Rplus, Rin, Zb, mfp)
                         if Rb >= Rin:
                             D1plus = self.D(Rb, Rplus, Zb, mfp)
@@ -468,7 +716,8 @@ class Beam:
                             D1plus = 0.
                             gamma = 0.
                         # Updated to use r2vol instead of full plasma volume since that seems to make more sense.
-                        part1plus = ((2 * r * self.r2vol(self.a)) / self.dVdr(r)) * (1 / lambda_mfp(rho_val)) * (Rplus / (sqrt(Rplus ** 2 - self.rtang ** 2)))
+                        #part1plus = ((2 * r * self.r2vol(self.a)) / self.dVdr(r)) * (1 / lambda_mfp(rho_val)) * (Rplus / (sqrt(Rplus ** 2 - self.rtang ** 2)))
+                        part1plus = ((2 * r * self.r2vol(self.a)) / self.dVdr(r)) * (1 / lambda_mfp(rho_val)) * (Rplus / (sqrt(Rplus ** 2 - Rb ** 2)))
                         if smallFlag:
                             part2plus = 1.
                         else:
@@ -496,7 +745,6 @@ class Beam:
                     return 0
             else:
                 return 0
-
         else:
             if (r)**2 - Zb**2/(self.kappa(rho_val)**2) >= 0:
                 Rminus = self.get_Rpm(Zb, rho_val, False)
@@ -509,7 +757,8 @@ class Beam:
                         else:
                             D1minus = 0.
                             gamma = 0.
-                        part1minus = ((2 * (r) * self.r2vol(self.a)) / self.dVdr(r)) * (1 / lambda_mfp(rho_val)) * (Rminus / (sqrt(Rminus**2 - self.rtang**2)))
+                        #part1minus = ((2 * (r) * self.r2vol(self.a)) / self.dVdr(r)) * (1 / lambda_mfp(rho_val)) * (Rminus / (sqrt(Rminus**2 - self.rtang**2)))
+                        part1minus = ((2 * (r) * self.r2vol(self.a)) / self.dVdr(r)) * (1 / lambda_mfp(rho_val)) * (Rminus / (sqrt(Rminus ** 2 - Rb ** 2)))
                         if smallFlag:
                             part2minus = 1.
                         else:
@@ -536,10 +785,10 @@ class Beam:
             else:
                 return 0
 
-
     def get_Rpm(self, Zb, rho_val, p):
         """
-        Get R_+- for a given (rho, Zb)
+        Get R_+- for a given (rho, Zb). This is the major radius of the outer (+) and inner (-) extents of the given
+        flux surface a distance Zb above the midplane.
 
         :param Zb: The Zb coordinate
         :type Zb:  float
@@ -560,11 +809,21 @@ class Beam:
             else:
                 return self.R0 + self.shift(rho_val) - sqrt((rho_val*self.a)**2 - (Zb**2)/(self.kappa(rho_val)**2))
 
-
     def D(self, R1, R2, Zb, mfp):
+        """
+        This is the D function
 
-        # type: (float, float, float, UnivariateSpline) -> float
-
+        :param R1: The lower bound of the integration
+        :type R1: float
+        :param R2: The upper bound of the integration
+        :type R2: float
+        :param Zb: The Zb value that this integration is being performed at
+        :type Zb: float
+        :param mfp: The mean free path interpolator function passed to the Lambda function
+        :type mfp: UnivariateSpline
+        :return: The numeric value for this calculation
+        :rtype: float
+        """
         DfunLambda = lambda x, mfp=mfp: self.Dfun(x, Zb, mfp)
 
         if self.quad == 'quad':
@@ -584,7 +843,18 @@ class Beam:
             return cumtrapz([DfunLambda(a) for a in np.linspace(R1, R2, 10)], np.linspace(R1, R2, 10))[-1]
 
     def Dfun(self, x, Zb, mfp):
+        """
+        The function for use in the integration for calculating D. This takes Rb as a float or array depending on
+        the integration scheme.
 
+        :param x: The Rb value for the D integration at this point
+        :type x: float
+        :param Zb: The Zb value for the D integration at this point
+        :type Zb: float
+        :param mfp: The mean free path interpolator
+        :type mfp: UnivariateSpline
+        :return: The result of this function
+        """
         if type(x) == np.ndarray:
             return[(a / (sqrt(a**2 - self.rtang**2))) * (1 / self.lam_special(a, Zb, mfp)) for a in x]
         else:
@@ -594,7 +864,8 @@ class Beam:
         """
         Attempts to find the special lambda for this R, Zb coordinate for this beam energy
 
-        :param mfp:
+        :return: Returns the mean free path in m
+        :param mfp: The mean free path interpolator
         :type mfp: UnivariateSpline
         :param R: The major radius coordinate of the beam
         :type R:  float
@@ -668,10 +939,22 @@ class Beam:
         fig1.set_xlabel(r'$/rho$')
         fig1.set_ylabel(r'$H(\rho)$')
         #fig1.set_ylim(np.min(y, 0), np.max(y, 0))
-        fig1.scatter(self.rho, self.Hofrho.D1, color='red')
-        fig1.scatter(self.rho, self.Hofrho.D2, color='blue')
-        fig1.scatter(self.rho, self.Hofrho.D3, color='green')
+        fig1.scatter(self.rho, self.Hofrho.D1(self.rho), color='red')
+        fig1.scatter(self.rho, self.Hofrho.D2(self.rho), color='blue')
+        fig1.scatter(self.rho, self.Hofrho.D3(self.rho), color='green')
         #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+
+    def plot_Hofr(self):
+        fig = plt.figure()
+        fig1 = fig.add_subplot(111)
+        # fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+        fig1.set_xlabel(r'$/rho$')
+        fig1.set_ylabel(r'$H(r)$')
+        fig1.set_xlabel(0, self.a)
+        fig1.scatter(self.rho, self.Hofr.D1(self.rho / self.a), color='red')
+        fig1.scatter(self.rho, self.Hofr.D2(self.rho / self.a), color='blue')
+        fig1.scatter(self.rho, self.Hofr.D3(self.rho / self.a), color='green')
+        # fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
     def plot_power(self):
 
@@ -679,14 +962,13 @@ class Beam:
         fig1 = fig.add_subplot(111)
         #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
         fig1.set_xlabel(r'$/rho$')
-        fig1.set_ylabel(r'$P_{nb}(\rho)$')
+        fig1.set_ylabel(r'$\frac{dP}{dV}_{nb}(\rho) [W/{m^3}]$')
         #fig1.set_ylim(np.min(y, 0), np.max(y, 0))
-        fig1.scatter(self.rho, self.power_profile.D1, color='red')
-        fig1.scatter(self.rho, self.power_profile.D2, color='blue')
-        fig1.scatter(self.rho, self.power_profile.D3, color='green')
-        fig1.scatter(self.rho, self.power_profile.total, color='black')
+        fig1.scatter(self.rho, self.dPdV.D1(self.rho), color='red')
+        fig1.scatter(self.rho, self.dPdV.D2(self.rho), color='blue')
+        fig1.scatter(self.rho, self.dPdV.D3(self.rho), color='green')
+        fig1.scatter(self.rho, self.dPdV.total(self.rho), color='black')
         #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-
 
     def plot_hofRho(self, rho, energy):
         r = np.linspace(1, 1.3, 50)
@@ -710,11 +992,10 @@ class Beam:
         fig1.set_xlabel(r'$/rho$')
         fig1.set_ylabel(r'$P_{nb}(\rho)$')
         #fig1.set_ylim(np.min(y, 0), np.max(y, 0))
-        fig1.scatter(self.rho, self.Hofrho_unnorm.D1, color='red')
-        fig1.scatter(self.rho, self.Hofrho_unnorm.D2, color='blue')
-        fig1.scatter(self.rho, self.Hofrho_unnorm.D3, color='green')
+        fig1.scatter(self.rho, self.Hofrho_unnorm.D1(self.rho), color='red')
+        fig1.scatter(self.rho, self.Hofrho_unnorm.D2(self.rho), color='blue')
+        fig1.scatter(self.rho, self.Hofrho_unnorm.D3(self.rho), color='green')
         #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-
 
     def plot_J(self):
         r = np.linspace(1, 1.3, 50)
@@ -730,5 +1011,65 @@ class Beam:
         ax = plt.axes(projection='3d')
         ax.scatter(R, Z, values, cmap='viridis', linewidth=0.5)
 
+    def plot_part_src_kept(self):
+        fig = plt.figure()
+        fig1 = fig.add_subplot(111)
+        #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+        fig1.set_xlabel(r'$/rho$')
+        fig1.set_ylabel(r'$S_{nb}(\rho) [#/m^3 s]$')
+        #fig1.set_ylim(np.min(y, 0), np.max(y, 0))
+        fig1.scatter(self.rho, self.part_src_D1.kept, color='red')
+        fig1.scatter(self.rho, self.part_src_D2.kept, color='blue')
+        fig1.scatter(self.rho, self.part_src_D3.kept, color='green')
+        fig1.scatter(self.rho, self.part_src_total.kept, color='green')
+        #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
+    def plot_energy_src_kep(self):
+        fig = plt.figure()
+        fig1 = fig.add_subplot(111)
+        # fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+        fig1.set_xlabel(r'$/rho$')
+        fig1.set_ylabel(r'$Q_{nb}(\rho) [W/m^2 s]$')
+        # fig1.set_ylim(np.min(y, 0), np.max(y, 0))
+        fig1.scatter(self.rho, self.en_src_D1.kept, color='red')
+        fig1.scatter(self.rho, self.en_src_D2.kept, color='blue')
+        fig1.scatter(self.rho, self.en_src_D3.kept, color='green')
+        fig1.scatter(self.rho, self.en_src_tot_kept, color='black')
+        # fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+
+    def plot_mom_src_kept(self):
+        fig = plt.figure()
+        fig1 = fig.add_subplot(111)
+        #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+        fig1.set_xlabel(r'$/rho$')
+        fig1.set_ylabel(r'$M_{nb}(\rho)$')
+        #fig1.set_ylim(np.min(y, 0), np.max(y, 0))
+        fig1.scatter(self.rho, self.mom_src_D1.kept, color='red')
+        fig1.scatter(self.rho, self.mom_src_D2.kept, color='blue')
+        fig1.scatter(self.rho, self.mom_src_D3.kept, color='green')
+        fig1.scatter(self.rho, self.mom_src_tot_kept, color='black')
+        #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+
+    def plot_iol(self):
+        fig = plt.figure()
+        fig1 = fig.add_subplot(131)
+        fig1.set_xlabel(r'$/rho$')
+        fig1.set_ylabel(r'F_{iol}(\rho)$')
+        fig1.scatter(self.rho, self.F_orb_D1, color='red')
+        fig1.scatter(self.rho, self.F_orb_D2, color='blue')
+        fig1.scatter(self.rho, self.F_orb_D3, color='green')
+
+        fig2 = fig.add_subplot(132)
+        fig2.set_xlabel(r'$/rho$')
+        fig2.set_ylabel(r'E_{iol}(\rho)$')
+        fig2.scatter(self.rho, self.E_orb_D1, color='red')
+        fig2.scatter(self.rho, self.E_orb_D2, color='blue')
+        fig2.scatter(self.rho, self.E_orb_D3, color='green')
+
+        fig3 = fig.add_subplot(133)
+        fig3.set_xlabel(r'$/rho$')
+        fig3.set_ylabel(r'M_{iol}(\rho)$')
+        fig3.scatter(self.rho, self.M_orb_D1, color='red')
+        fig3.scatter(self.rho, self.M_orb_D2, color='blue')
+        fig3.scatter(self.rho, self.M_orb_D3, color='green')
 

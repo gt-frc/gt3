@@ -31,7 +31,7 @@ class IOL:
         angles = np.linspace(-1, 1, inp.numcos + 1)
         self.coslist = ((angles + np.roll(angles, -1)) / 2)[:-1]
         self.rho = core.rho
-
+        self.calc_iol_beams = calc_iol_beams
         polpts = len(core.rho[-1])
         radpts = len(core.rho.T[-1])
 
@@ -118,7 +118,7 @@ class IOL:
         # iol_params['Tprofile'] = Tprofile
 
         # convert iol_params to namedtuple so individual parameters can be accessed as normal attributes
-        iol_p = namedtuple('iol_p', 'r0 B0 f0 psi0 phi0 zeta0 R1 f1 B1 psi1 phi1')(
+        self.iol_p = namedtuple('iol_p', 'r0 B0 f0 psi0 phi0 zeta0 R1 f1 B1 psi1 phi1')(
             r0,
             B0,
             f0,
@@ -135,7 +135,7 @@ class IOL:
         # Calculate IOL for thermal deuterium
         forb_d_therm, morb_d_therm, eorb_d_therm = calc_iol_maxwellian(1,
                                                                        m_d,
-                                                                       iol_p,
+                                                                       self.iol_p,
                                                                        core.thetapts,
                                                                        Tprofile.i,
                                                                        self.coslist,
@@ -150,7 +150,7 @@ class IOL:
         # Calculate IOL for thermal tritium
         forb_t_therm, morb_t_therm, eorb_t_therm = calc_iol_maxwellian(1,
                                                                        m_t,
-                                                                       iol_p,
+                                                                       self.iol_p,
                                                                        core.thetapts,
                                                                        Tprofile.i,
                                                                        self.coslist,
@@ -165,7 +165,7 @@ class IOL:
         # Calculate IOL for thermal carbon
         forb_c_therm, morb_c_therm, eorb_c_therm = calc_iol_maxwellian(6,
                                                                        m_c,
-                                                                       iol_p,
+                                                                       self.iol_p,
                                                                        core.thetapts,
                                                                        Tprofile.C,
                                                                        self.coslist,
@@ -180,7 +180,7 @@ class IOL:
         # Calculate IOL for thermal alphas
         forb_a_therm, morb_a_therm, eorb_a_therm = calc_iol_maxwellian(2,
                                                                        m_a,
-                                                                       iol_p,
+                                                                       self.iol_p,
                                                                        core.thetapts,
                                                                        Tprofile.i,
                                                                        self.coslist,
@@ -196,7 +196,7 @@ class IOL:
         v_alpha = sqrt(2*3.5E6*1.6021E-19/m_a)
         forb_a_fast, morb_a_fast, eorb_a_fast = calc_iol_mono_en(2,
                                                                  m_a,
-                                                                 iol_p,
+                                                                 self.iol_p,
                                                                  core.thetapts,
                                                                  v_alpha,
                                                                  self.coslist,
@@ -213,9 +213,9 @@ class IOL:
         # Calculate IOL for neutral deuterium beams
         v_beam = sqrt(2*80.0E3*1.6021E-19/m_d)
         zeta_beam = -0.96
-        forb_d_nbi, morb_d_nbi, eorb_d_nbi = calc_iol_beams(1,
+        forb_d_nbi, morb_d_nbi, eorb_d_nbi = self.calc_iol_beams(1,
                                                             m_d,
-                                                            iol_p,
+                                                            self.iol_p,
                                                             core.thetapts,
                                                             v_beam,
                                                             zeta_beam,

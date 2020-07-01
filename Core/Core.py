@@ -12,6 +12,8 @@ from scipy.interpolate import griddata, UnivariateSpline
 from math import  pi
 from collections import namedtuple
 from scipy import constants
+
+
 from Functions.FindXPtMagAxis import find_xpt_mag_axis
 from Functions.CalcPsiNorm import calc_psi_norm
 from Functions.CalcRho2PsiInterp import calc_rho2psi_interp
@@ -44,12 +46,19 @@ m_a = 6.643e-27
 #     return
 
 
+# noinspection SpellCheckingInspection
 class Core:
+
     def __init__(self, inp):
         """
         The class for the plasma core
-        
-        :param inp:
+
+
+        Attributes:
+            psi_data   The
+
+
+        :param inp: The input object class
         :type inp: object
         """
         # this assumes that psi is given as a square array
@@ -75,7 +84,10 @@ class Core:
         raw_dpsidr = raw_dpsidR + raw_dpsidZ
         raw_j = -(raw_d_dR_1_R_dpsidR*raw_psi_R + raw_d2psidZ2)/(raw_psi_R*u_0)
 
-        self.psi_data = namedtuple('psi_data', 'R Z psi psi_norm dpsidR dpsidZ dpsidr j')(
+        PsiData = namedtuple('PsiData', 'R Z psi psi_norm dpsidR dpsidZ dpsidr j')
+        """NamedTuple containing psi data, including R, Z, psi, psi_norm, dpsidR, dpsidZ, dpsidr, j"""
+
+        self.psi_data = PsiData(
             raw_psi_R,
             raw_psi_Z,
             raw_psi,
@@ -753,9 +765,7 @@ class Core:
         fig1.scatter(self.rho[:,0], self.p_fsa.C, marker='o', color='red')
 
     def plot_pressure_D(self):
-        """
-        Plots the 1D GT3.Core deuterium pressure
-        """
+
 
         plot = plt.figure()
         fig1 = plot.add_subplot(111)

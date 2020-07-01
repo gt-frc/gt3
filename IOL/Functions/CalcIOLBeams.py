@@ -7,7 +7,20 @@ from IOL.Functions.CalcVSep import calc_vsep
 
 
 def calc_iol_beams(z, m, param, thetapts, v_mono, zeta_beam, coslist):
-    """calculates IOL for a monoenergetic species with a single known launch angle (i.e. beam ions)"""
+    """calculates IOL for a monoenergetic species with a single known launch angle (i.e. beam ions)
+    :param z: The Z value of the beam ions
+    :type z: float
+    :param m: The mass of the beam ions in kg
+    :type m: float
+    :param param: The IOL parameters
+    :param thetapts: The number of theta points
+    :type thetapts: int
+    :param v_mono: The particle velocity in m/s
+    :type v_mono: float
+    :param zeta_beam: The zeta value
+    :param coslist:
+    :return:
+    """
 
     v_sep, v_sep_min = calc_vsep(z, m, param)
 
