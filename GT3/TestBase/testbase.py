@@ -8,13 +8,13 @@ from shapely.geometry import LineString
 import matplotlib.pyplot as plt
 
 
-def getGT3Test():
+def getGT3Test(iolFlag=True, verbose=False, neutFlag=True):
     try:
         from GT3 import gt3
     except ImportError:
         print "Unable to load GT3 module"
         sys.exit()
-    return gt3(preparedInput=TestClass())
+    return gt3(preparedInput=TestClass(), iolFlag=iolFlag, verbose=verbose, neutFlag=neutFlag)
 
 class TestClass:
 
@@ -28,7 +28,7 @@ class TestClass:
         """
         Generate various 0D parameters for the plasma from shot 164436.3740
         """
-
+        self.iolFlag = True
         self.j0 = 2.53E6
         self.j_sep = 7.95E4
         self.nu_j = 3.0

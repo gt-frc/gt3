@@ -47,6 +47,13 @@ m_a = 6.643e-27
 # noinspection SpellCheckingInspection
 class Core:
 
+    r2vol = None  # type: UnivariateSpline
+    """The V(r) interpolator"""
+    rho2vol = None  # type: UnivariateSpline
+    """The V(rho) interpolator"""
+    psinorm2vol = None  # type: UnivariateSpline
+    """The V(psi) interpolator on [0., 1.]"""
+
     def __init__(self, inp):
         """
         The class for the plasma core
@@ -175,14 +182,17 @@ class Core:
 
         # initialize volume as a function of rho
         self.vol_rho = self.rho2vol(self.rho)
+        """The volume as a function of rho V(rho)"""
 
-        # initialize dVdrho interpolator
         self.dVdrho = UnivariateSpline(np.linspace(0, 1, 100), self.rho2vol(np.linspace(0, 1, 100)), k=3,
                                        s=0).derivative()
-        self.dVdr = UnivariateSpline(np.linspace(0, 1, 100), self.dVdrho(np.linspace(0, 1, 100)) / self.a, k=3, s=0)
+        """The dV/drho(rho) interpolator interpolated on [0.,1.]"""
 
-        # initialize total plasma volume
+        self.dVdr = UnivariateSpline(np.linspace(0, 1, 100), self.dVdrho(np.linspace(0, 1, 100)) / self.a, k=3, s=0)
+        """The dV/r(rho) interpolator interpolated on [0.,1.]"""
+
         self.vol = self.rho2vol(1.0)
+        """THe total volume of the plasma"""
 
         # initialize ionization rate arrays with zero
         self.izn_rate = namedtuple('izn_rate', 's t tot')(

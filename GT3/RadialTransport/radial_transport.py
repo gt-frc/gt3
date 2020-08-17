@@ -9,11 +9,12 @@ from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+from GT3 import Core, BeamDeposition
 from collections import namedtuple
 from scipy import constants
 from Chi import Chi
+from scipy.interpolate import UnivariateSpline
 from GT3.RadialTransport.Functions.CorePatch import corePatch
-from GT3.RadialTransport.Functions.CalcPartSrcNBI import calc_part_src_nbi
 from GT3.RadialTransport.Functions.CalcMomSrcNBI import calc_mom_src_nbi
 from GT3.RadialTransport.Functions.CalcReturnCur import calc_return_cur
 from GT3.RadialTransport.Functions.CalcNu import calc_nu_j_k, calc_nustar, calc_nu_drag
@@ -21,10 +22,6 @@ from GT3.RadialTransport.Functions.CalcMbalRHS import calc_mbal_rhs
 from GT3.RadialTransport.Functions.CalcT90 import calc_t90
 from GT3.RadialTransport.Functions.CalcQ import calc_Qe_diff_method, calc_qie, calc_Qe_int_method, calc_Qi_int_method, \
     calc_Qi_diff_method
-from GT3.RadialTransport.Test.QDebug import QDebug
-from GT3.RadialTransport.Test.GammaDebug import gammaDebug
-from GT3.RadialTransport.Test.NBIDebug import nbiDebug
-from GT3.RadialTransport.Test.IOLDebug import IOLDebug
 from GT3.RadialTransport.Functions.NeutPatch import neutPatch
 from GT3.RadialTransport.Functions.CalcGamma import calc_gamma_diff_method, calc_gamma_int_method
 from GT3.RadialTransport.Functions.CalcIntrinRot import calc_intrin_rot
@@ -156,6 +153,11 @@ def calc_pinch_velocity(ext_term, pol_term, Er_term, tor_term):
 class RadialTransport(Chi):
 
     def __init__(self, core, iol, nbi, iolFlag=True, neutFlag=True, debugFlag=False):
+        """
+
+        :type nbi: BeamDeposition
+        :type core: Core
+        """
         sys.dont_write_bytecode = True
 
         ##############################################################
@@ -163,9 +165,6 @@ class RadialTransport(Chi):
         ##############################################################
 
         # prepare beams object
-        beam_D = nbi.beams.D1  # Piper changes: Changed beam object references to match beamdep.
-        beam_D2 = nbi.beams.D2
-        beam_D3 = nbi.beams.D3
         corePatch(core, neutFlag)  # Patch to update values not brought in via ffiles (ni, zeff)
         neutPatch(core)
         dn_dr = core.dn_dr_fsa
@@ -173,6 +172,7 @@ class RadialTransport(Chi):
         # prepare core and iol quantities
         r = core.r.T[0]  # TODO: Should this be a flux surface average?
         self.rhor = core.r[:, 0] / core.a
+        """The rho vector"""
 
         if neutFlag:
             izn_rate = core.izn_rate_fsa  # TODO: Should this be a flux surface average or a flux surface total?
@@ -215,21 +215,21 @@ class RadialTransport(Chi):
         ##############################################################
 
         # Piper Changes: Function now has 4 outputs, so we set 4 variables. The first variable is for the differential balance methods, and the other 3 are for the integral methods.
-        part_src_nbi_D, part_src_nbi_D_tot, part_src_nbi_D_lost, part_src_nbi_D_kept = calc_part_src_nbi(beam_D,
-                                                                                                         iol_adjusted=iolFlag,
-                                                                                                         F_orb_nbi=F_orb_d_nbi)
-        part_src_nbi_D2, part_src_nbi_D2_tot, part_src_nbi_D2_lost, part_src_nbi_D2_kept = calc_part_src_nbi(beam_D2,
-                                                                                                             iol_adjusted=iolFlag,
-                                                                                                             F_orb_nbi=F_orb_d_nbi)
-        part_src_nbi_D3, part_src_nbi_D3_tot, part_src_nbi_D3_lost, part_src_nbi_D3_kept = calc_part_src_nbi(beam_D3,
-                                                                                                             iol_adjusted=iolFlag,
-                                                                                                             F_orb_nbi=F_orb_d_nbi)
+        # part_src_nbi_D, part_src_nbi_D_tot, part_src_nbi_D_lost, part_src_nbi_D_kept = calc_part_src_nbi(beam_D,
+        #                                                                                                  iol_adjusted=iolFlag,
+        #                                                                                                  F_orb_nbi=F_orb_d_nbi)
+        # part_src_nbi_D2, part_src_nbi_D2_tot, part_src_nbi_D2_lost, part_src_nbi_D2_kept = calc_part_src_nbi(beam_D2,
+        #                                                                                                      iol_adjusted=iolFlag,
+        #                                                                                                      F_orb_nbi=F_orb_d_nbi)
+        # part_src_nbi_D3, part_src_nbi_D3_tot, part_src_nbi_D3_lost, part_src_nbi_D3_kept = calc_part_src_nbi(beam_D3,
+        #                                                                                                      iol_adjusted=iolFlag,
+        #                                                                                                     F_orb_nbi=F_orb_d_nbi)
 
         # Piper changes: Calculate beam totals for sources, sinks, and totals.
-        part_src_nbi = part_src_nbi_D + part_src_nbi_D2 + part_src_nbi_D3
-        part_src_nbi_tot = part_src_nbi_D_tot + part_src_nbi_D2_tot + part_src_nbi_D3_tot
-        part_src_nbi_lost = part_src_nbi_D_lost + part_src_nbi_D2_lost + part_src_nbi_D3_lost
-        part_src_nbi_kept = part_src_nbi_D_kept + part_src_nbi_D2_kept + part_src_nbi_D3_kept
+        part_src_nbi = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_total.Snbi)(self.rhor))
+        part_src_nbi_tot = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_total.Snbi)(self.rhor))
+        part_src_nbi_lost = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_lost.Snbi)(self.rhor))
+        part_src_nbi_kept = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_kept.Snbi)(self.rhor))
 
         # Piper changes: Changed names of particle and heat flux so it's easier to tell what method is used.
         self.gamma_diff_D = calc_gamma_diff_method(r, core.a, part_src_nbi, part_src_nbi_lost, izn_rate, core.dVdrho,
@@ -257,11 +257,7 @@ class RadialTransport(Chi):
         # momentum balance
         ##############################################################
 
-        # calculate toroidal momentum source rates from beams
-        mom_src_nbi_D = calc_mom_src_nbi(beam_D, n, z_eff, R0_a, F_orb_d_nbi)
-        mom_src_nbi_D2 = calc_mom_src_nbi(beam_D2, n, z_eff, R0_a, F_orb_d_nbi)
-        mom_src_nbi_D3 = calc_mom_src_nbi(beam_D3, n, z_eff, R0_a, F_orb_d_nbi)
-        self.mom_src_nbi = (mom_src_nbi_D + mom_src_nbi_D2 + mom_src_nbi_D3) / vol_P
+        self.mom_src_nbi = np.array([UnivariateSpline(nbi.beams_space, a.part_src.total)(self.rhor) for a in nbi.beam_result])
 
         # calculate momentum source from anomalous torque
         self.mom_src_anom = np.zeros(r.shape)  # TODO: Anomolous torque
@@ -342,6 +338,7 @@ class RadialTransport(Chi):
 
         # Piper Changes: Added pinch velocity section and calculations.
 
+
         self.vrpinch_ext_term = calc_external_term(self.mom_src_tor_D_tot, n.i, ch_d, B_p)
         self.vrpinch_poloidal_term = calc_poloidal_term(n.i, m_d, ch_d, nu_c_DC, self.nu_drag_D, B_t, B_p, self.vpol_D)
         self.vrpinch_Er_term = calc_radial_E_field_term(n.i, m_d, ch_d, nu_c_DC, self.nu_drag_D, Er, B_p)
@@ -354,15 +351,16 @@ class RadialTransport(Chi):
         ##############################################################
 
         # Piper Changes: Same as changes made to particle balance.
-        en_src_nbi_i_D, en_src_nbi_i_D_tot, en_src_nbi_i_D_lost, en_src_nbi_i_D_kept = calc_en_src_nbi(beam_D,
-                                                                                                       iol_adjusted=iolFlag,
-                                                                                                       E_orb_nbi=E_orb_d_nbi)
-        en_src_nbi_i_D2, en_src_nbi_i_D2_tot, en_src_nbi_i_D2_lost, en_src_nbi_i_D2_kept = calc_en_src_nbi(beam_D2,
-                                                                                                           iol_adjusted=iolFlag,
-                                                                                                           E_orb_nbi=E_orb_d_nbi)
-        en_src_nbi_i_D3, en_src_nbi_i_D3_tot, en_src_nbi_i_D3_lost, en_src_nbi_i_D3_kept = calc_en_src_nbi(beam_D3,
-                                                                                                           iol_adjusted=iolFlag,
-                                                                                                           E_orb_nbi=E_orb_d_nbi)
+
+        part_src_nbi = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_total.Snbi)(self.rhor))
+        part_src_nbi_tot = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_total.Snbi)(self.rhor))
+        part_src_nbi_lost = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_lost.Snbi)(self.rhor))
+        part_src_nbi_kept = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_kept.Snbi)(self.rhor))
+
+        en_src_nbi_i = 0.5 * np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_total.Qnbi)(self.rhor))
+        en_src_nbi_i_tot = 0.5 * np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_total.Qnbi)(self.rhor))
+        en_src_nbi_i_lost = 0.5 * np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_lost.Qnbi)(self.rhor))
+        en_src_nbi_i_kept = 0.5 * np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_kept.Qnbi)(self.rhor))
 
         ################################################################################################################
         #
@@ -372,17 +370,6 @@ class RadialTransport(Chi):
         #
         ################################################################################################################
 
-        # calculate beam totals
-        en_src_nbi_i = 0.5 * (en_src_nbi_i_D + en_src_nbi_i_D2 + en_src_nbi_i_D3)
-        en_src_nbi_i_tot = .5 * (en_src_nbi_i_D_tot + en_src_nbi_i_D2_tot + en_src_nbi_i_D3_tot)
-        en_src_nbi_i_lost = .5 * (en_src_nbi_i_D_lost + en_src_nbi_i_D2_lost + en_src_nbi_i_D3_lost)
-        en_src_nbi_i_kept = .5 * (en_src_nbi_i_D_kept + en_src_nbi_i_D2_kept + en_src_nbi_i_D3_kept)
-
-        en_src_nbi_e_D = np.zeros(en_src_nbi_i_D.shape)  # TODO: This isn't correct.
-        en_src_nbi_e_D2 = np.zeros(en_src_nbi_i_D2.shape)  # TODO: This isn't correct.
-        en_src_nbi_e_D3 = np.zeros(en_src_nbi_i_D3.shape)  # TODO: This isn't correct.
-
-        # en_src_nbi_e = en_src_nbi_e_D + en_src_nbi_e_D2 + en_src_nbi_e_D3
         en_src_nbi_e = en_src_nbi_i_kept
 
         # calculate radial heat flux. Piper changes: Separated heat flux equations into differential and integral cylindrical methods.

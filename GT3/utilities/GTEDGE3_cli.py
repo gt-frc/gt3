@@ -84,7 +84,6 @@ def runGT3(shotargs):
     warnings.simplefilter('always', RuntimeWarning)
     warnings.showwarning = customwarn
 
-    #fileNames = funcs.dataCat.CatalogueCall(shotid, timeid, runid)
 
     print "shotid=%s   runid=%s    timeid=%s   IOL Correction=%s" % (str(shotid),str(runid),str(timeid),str(IOL))
     maxfile='togt3_d3d_'+str(shotid)+'_'+str(timeid)

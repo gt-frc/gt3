@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from scipy.interpolate import UnivariateSpline
-from math import sqrt, pi
+from math import sqrt, pi, exp
 from GT3.RadialTransport.Functions.CalcCoulLog import calc_coul_log
 from scipy import constants
 import numpy as np
@@ -70,6 +70,7 @@ def calc_Qi_diff_method(r, a, cxcool, Qie, en_src_nbi_kept, en_src_nbi_lost, dVd
         else:
             return S - (flux * (dEdr(t) + 1 ) / (t + 0.003))
 
+    from scipy.integrate import ode
 
     flux = ode(f).set_integrator('vode', with_jacobian=False)
     flux.set_initial_value(0., 0.).set_f_params(cxcoolint, Qie_int, en_src_nbi_keptint, en_src_nbi_lostint, dE_orb,

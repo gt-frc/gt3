@@ -16,7 +16,7 @@ from RadialTransport.radial_transport import RadialTransport
 
 class gt3:
 
-    def __init__(self, preparedInput = None, shotlabel=None, mode=None, **kwargs):
+    def __init__(self, inputFile=None, preparedInput = None, mode="coreonly", **kwargs):
         sys.dont_write_bytecode = True
         # Create shotlabel as an attribute of plasma class
         if "iolFlag" in kwargs:
@@ -31,12 +31,12 @@ class gt3:
             verbose = kwargs['verbose']
         else:
             verbose = False
-
-        self.shotlabel = shotlabel
+        if inputFile:
+            self.inputFile = inputFile
         if preparedInput:
             self.inp = preparedInput
         else:
-            self.inp = ReadInfile(self.shotlabel)
+            self.inp = ReadInfile(self.inputFile)
         self.core = Core(self.inp)
         self.iolFlag = iolFlag
         self.neutFlag = neutFlag
@@ -50,44 +50,63 @@ class gt3:
         elif mode == 'thermaliol':
             self.iol = IOL(self.inp, self.core)
         elif mode == 'fulliol':
-            self.nbi = BeamDeposition(self.inp, self.core)
             self.iol = IOL(self.inp, self.core)
+            self.nbi = BeamDeposition(self.inp, self.core, self.iol)
         elif mode == 'imp':
             self.imp = ImpRad(core=self.core)
         elif mode == 'ntrls':
             self.ntrl = Neutrals(self.inp, self.core)
         elif mode == 'ntrlsandiol':
-            self.nbi = BeamDeposition(self.inp, self.core)
             self.iol = IOL(self.inp, self.core)
+            self.nbi = BeamDeposition(self.inp, self.core, self.iol)
             self.ntrl = Neutrals(self.inp, self.core)
         elif mode == 'nbi':
-            self.nbi = BeamDeposition(self.inp, self.core)
+            if self.iolFlag:
+                self.iol = IOL(self.inp, self.core)
+                self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+            else:
+                self.nbi = BeamDeposition(self.inp, self.core)
         elif mode == 'marfe_denlim':
-            self.nbi = BeamDeposition(self.inp, self.core)
+            if self.iolFlag:
+                self.iol = IOL(self.inp, self.core)
+                self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+            else:
+                self.nbi = BeamDeposition(self.inp, self.core)
             self.ntrl = Neutrals(self.inp, self.core)
             self.imp = ImpRad(core=self.core)
             self.dl = DensityLimit(self.core, self.nbi)
             self.mar = Marfe(core=self.core)
         elif mode == 'marfe':
-            self.nbi = BeamDeposition(self.inp, self.core)
+            if self.iolFlag:
+                self.iol = IOL(self.inp, self.core)
+                self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+            else:
+                self.nbi = BeamDeposition(self.inp, self.core)
             self.ntrl = Neutrals(self.inp, self.core)
             self.imp = ImpRad(core=self.core)
             self.mar = Marfe(core=self.core)
         elif mode == 'allthethings':
-            self.nbi = BeamDeposition(self.inp, self.core)
-            self.iol = IOL(self.inp, self.core)
+            if self.iolFlag:
+                self.iol = IOL(self.inp, self.core)
+                self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+            else:
+                self.nbi = BeamDeposition(self.inp, self.core)
             self.ntrl = Neutrals(self.inp, self.core)
             self.imp = ImpRad(core=self.core)
             self.dl = DensityLimit(self.core, self.nbi)
             self.mar = Marfe(self.inp, self.core, self.imp)
         elif mode == 'radialtrans':
+            if self.iolFlag:
+                self.iol = IOL(self.inp, self.core)
+                self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+            else:
+                self.nbi = BeamDeposition(self.inp, self.core)
             self.sol = Sol(self.inp, self.core)
-            self.iol = IOL(self.inp, self.core)
-            self.nbi = BeamDeposition(self.inp, self.core)
             self.ntrl = Neutrals(self.inp, self.core)
             self.imp = ImpRad(z=None, core=self.core)
             self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag,
                                           debugFlag=self.verbose)
+
 
     def run_SOL(self):
         self.sol = Sol(self.inp, self.core)
@@ -98,7 +117,10 @@ class gt3:
         return self
 
     def run_NBI(self):
-        self.nbi = BeamDeposition(self.inp, self.core)
+        if self.iolFlag:
+            self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+        else:
+            self.nbi = BeamDeposition(self.inp, self.core)
         return self
 
     def run_impurities(self):
@@ -110,6 +132,10 @@ class gt3:
         return self
 
     def run_density_limit(self):
+        if self.iolFlag:
+            self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+        else:
+            self.nbi = BeamDeposition(self.inp, self.core)
         self.dl = DensityLimit(self.core, self.nbi)
         return self
 
@@ -127,7 +153,7 @@ class gt3:
 
             self.nbi
         except AttributeError:
-            print ("MBI module not run. Running now...")
+            print ("NBI module not run. Running now...")
             self.run_NBI()
 
         self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag,

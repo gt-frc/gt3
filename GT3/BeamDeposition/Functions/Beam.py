@@ -25,6 +25,7 @@ class Beam:
     beamWidth = None  # type: float
     shaf_shift_0 = None  # type: float
     dVdr = None  # type: UnivariateSpline
+    dVdrho = None  # type: UnivariateSpline
     rtang = None  # type: float
     kappa_vals = None  # type: object
     r2vol = None  # type: UnivariateSpline
@@ -39,6 +40,7 @@ class Beam:
     coCurr = True # type: bool
 
     DepositionProfiles = namedtuple('DepositionProfiles', ['D1', 'D2', 'D3'])
+    """A named tuple for deposition profiles for D1, D2 and D3 molecules"""
     EnergySplit = namedtuple('EnergySplit', ['D1', 'D2', 'D3'])
     PowerProfiles = namedtuple('PowerProfiles', ['D1', 'D2', 'D3', 'total'])
     MomentumProfiles = namedtuple('MomentumProfiles', ['D1', 'D2', 'D3', 'total', 'coCurr'])
@@ -59,6 +61,8 @@ class Beam:
 
         This model assumes a circular beam with gaussian current density J. Beam shinethrough is not currently calculated
         correctly.
+
+        TODO: Verify that r vs. rho is being used correctly in this code.
 
         Parameters
         ----------
@@ -116,6 +120,7 @@ class Beam:
 
         self.r2vol = config.r2vol
         self.dVdr = config.dVdr
+        self.dVdrho = config.dVdrho
         self.rtang = config.rtang
         self.shaf_shift_0 = config.shaf_shift
         self.kappa_vals = config.kappa_vals
@@ -163,29 +168,47 @@ class Beam:
                                                   UnivariateSpline(old_result[6], old_result[12], k=3, s=0))
                 self.shine = old_result[13]
                 self.Hofr = self.calc_Hofr(self.Hofrho, self.DepositionProfiles)
+                """The normalized H(r) function on [0., a]"""
                 self.pwrfrac = self.calc_power_frac(self.beamE)
                 self.dPdV = self.calc_dPdV(self.PowerProfiles)
                 self.energies = self.EnergySplit(eVConvert(self.beamE), eVConvert(self.beamE / 2.),
                                             eVConvert(self.beamE / 3.))
+
                 self.calc_iol(self.iol)
-                self.part_sources = self.calc_part_sources(self.IOLSplit)
-                self.heat_sources = self.calc_heat_sources(self.IOLSplit)
-                self.mom_sources = self.calc_mom_sources(self.IOLSplit)
+                self.calc_part_sources(self.IOLSplit)
+                self.calc_heat_sources(self.IOLSplit)
+                self.calc_mom_sources(self.IOLSplit)
 
             except Exception as e:
                 print "Failed to rebuild beam %s with error: %s" % (self.name, str(e))
 
 
     def is_new(self, config):
+        h_res_1 = None
+        """The unnormalized H(rho) interpolator for Energy Group 1 on [0., 1.]"""
+        h_res_2 = None
+        """The unnormalized H(rho) interpolator for Energy Group 2 on [0., 1.]"""
+        h_res_3 = None
+        """The unnormalized H(rho) interpolator for Energy Group 3 on [0., 1.]"""
+
+        self.angle_1 = None
+        """The interpolator for Energy Group 1 for the launch angle on [0., 1.]"""
+        self.angle_2 = None
+        """The interpolator for Energy Group 2 for the launch angle on [0., 1.]"""
+        self.angle_3 = None
+        """The interpolator for Energy Group 3 for the launch angle on [0., 1.]"""
+
         print "Running %s Beam" % config.name
         if self.verbose: print "Calculating energy group 1"
         h_res_1, self.angle_1 = self.calcHofRho(self.beamE)
 
         if self.verbose: print  "Calculating energy group 2"
         h_res_2, self.angle_2 = self.calcHofRho(self.beamE / 2.)
+        """The H(rho) and launch angle(rho) for Energy Group 2 on [0., 1.]"""
 
         if self.verbose: print "Calculating energy group 3"
-        h_res_3, self.angle_3 = self.calcHofRho(self.beamE / 3.)
+        h_res_3, self.angle_3 = self.calcHofRho(self.beamE / 3.)  # type: (UnivariateSpline, UnivariateSpline)
+        """The H(rho) and launch angle(rho) for Energy Group 3 on [0., 1.]"""
 
 
         self.Hofrho_unnorm = self.DepositionProfiles(h_res_1,
@@ -195,6 +218,7 @@ class Beam:
         self.shine = self.calc_shine()
         self.Hofrho = self.normalize_Hofrho(self.DepositionProfiles)
         self.Hofr = self.calc_Hofr(self.Hofrho, self.DepositionProfiles)
+        """The normalized H(r) function on [0., a]"""
         self.pwrfrac = self.calc_power_frac(self.beamE)
         self.dPdV = self.calc_dPdV(self.PowerProfiles)
         self.energies = self.EnergySplit(eVConvert(self.beamE), eVConvert(self.beamE / 2.), eVConvert(self.beamE / 3.))
@@ -257,114 +281,253 @@ class Beam:
 
     def calc_part_sources(self, IOLSplit):
         """
-        Calculate the particle sources in #/m^3*s
+        Calculate the particle sources in #/m^3*s as well as dS/d(rho)
         """
+        self.part_src_dens_D1 = None  # type: ndarray
+        """The particle source density as a function of r in #/(m^3 s) for the D1 beam"""
+        self.part_src_dens_D2 = None  # type: ndarray
+        """The particle source density as a function of r in #/(m^3 s) for the D2 beam"""
+        self.part_src_dens_D3 = None  # type: ndarray
+        """The particle source density as a function of r in #/(m^3 s) for the D3 beam"""
+        self.part_src_D1 = None  #type: ndarray
+        """The particle source as a function of r in #/(s) for the D1 beam"""
+        self.part_src_D2 = None  #type: ndarray
+        """The particle source as a function of r in #/(s) for the D2 beam"""
+        self.part_src_D2 = None  #type: ndarray
+        """The particle source as a function of r in #/(s) for the D3 beam"""
 
         if self.iolFlag:
-            self.part_src_D1 = IOLSplit(self.dPdV.D1(self.rho) / self.energies.D1.J,  # total
-                                        self.F_orb_D1 * self.dPdV.D1(self.rho) / self.energies.D1.J,  # lost
-                                        (1. - self.F_orb_D1) * self.dPdV.D1(self.rho) / self.energies.D1.J)  # kept
 
-            self.part_src_D2 = IOLSplit(self.dPdV.D2(self.rho) / self.energies.D2.J,  # total
-                                        self.F_orb_D2 * self.dPdV.D2(self.rho) / self.energies.D2.J,  # lost
-                                        (1. - self.F_orb_D2) * self.dPdV.D2(self.rho) / self.energies.D2.J)  # kept
+            self.part_src_dens_D1 = IOLSplit(self.dPdV.D1(self.rho) / self.energies.D1.J,  # total
+                                             self.F_orb_D1 * self.dPdV.D1(self.rho) / self.energies.D1.J,  # lost
+                                             (1. - self.F_orb_D1) * self.dPdV.D1(self.rho) / self.energies.D1.J)  # kept
 
-            self.part_src_D3 = IOLSplit(self.dPdV.D3(self.rho) / self.energies.D3.J,  # total
+            self.part_src_dens_D2 = IOLSplit(self.dPdV.D2(self.rho) / self.energies.D2.J,  # total
+                                             self.F_orb_D2 * self.dPdV.D2(self.rho) / self.energies.D2.J,  # lost
+                                             (1. - self.F_orb_D2) * self.dPdV.D2(self.rho) / self.energies.D2.J)  # kept
+
+            self.part_src_dens_D3 = IOLSplit(self.dPdV.D3(self.rho) / self.energies.D3.J,  # total
                                         self.F_orb_D3 * self.dPdV.D3(self.rho) / self.energies.D3.J,  # lost
                                         (1. - self.F_orb_D3) * self.dPdV.D3(self.rho) / self.energies.D3.J)  # kept
 
+            self.part_src_D1 = IOLSplit(self.dPdV.D1(self.rho) * self.dVdrho(self.rho) / self.energies.D1.J,  # total
+                                        self.F_orb_D1 * self.dPdV.D1(self.rho) * self.dVdrho(self.rho) / self.energies.D1.J,  # lost
+                                        (1. - self.F_orb_D1) * self.dPdV.D1(self.rho) * self.dVdrho(self.rho) / self.energies.D1.J)  # kept
+
+            self.part_src_D2= IOLSplit(self.dPdV.D2(self.rho) * self.dVdrho(self.rho) / self.energies.D2.J,  # total
+                                        self.F_orb_D2 * self.dPdV.D2(self.rho) * self.dVdrho(self.rho) / self.energies.D2.J,  # lost
+                                        (1. - self.F_orb_D2) * self.dPdV.D2(self.rho) * self.dVdrho(self.rho) / self.energies.D2.J)  # kept
+
+            self.part_src_D3 = IOLSplit(self.dPdV.D3(self.rho) * self.dVdrho(self.rho) / self.energies.D3.J,  # total
+                                        self.F_orb_D3 * self.dPdV.D3(self.rho) * self.dVdrho(self.rho) / self.energies.D3.J,  # lost
+                                        (1. - self.F_orb_D3) * self.dPdV.D3(self.rho) * self.dVdrho(self.rho) / self.energies.D3.J)  # kept
+
 
         else:
-            self.part_src_D1 = IOLSplit(self.dPdV.D1(self.rho) / self.energies.D1.J,
+            self.part_src_dens_D1 = IOLSplit(self.dPdV.D1(self.rho) / self.energies.D1.J,
                                         np.zeros(len(self.rho)),
                                         self.dPdV.D1(self.rho) / self.energies.D1.J)
 
-            self.part_src_D2 = IOLSplit(self.dPdV.D1(self.rho) / self.energies.D2.J,
+            self.part_src_dens_D2 = IOLSplit(self.dPdV.D1(self.rho) / self.energies.D2.J,
                                         np.zeros(len(self.rho)),
                                         self.dPdV.D1(self.rho) / self.energies.D2.J)
 
-            self.part_src_D3 = IOLSplit(self.dPdV.D1(self.rho) / self.energies.D3.J,
+            self.part_src_dens_D3 = IOLSplit(self.dPdV.D1(self.rho) / self.energies.D3.J,
                                         np.zeros(len(self.rho)),
                                         self.dPdV.D1(self.rho) / self.energies.D3.J)
 
-        self.part_src_tot_total = self.part_src_D1.total + self.part_src_D2.total + self.part_src_D3.total
-        self.part_src_tot_lost = self.part_src_D1.lost + self.part_src_D2.lost + self.part_src_D3.lost
-        self.part_src_tot_kept = self.part_src_D1.kept + self.part_src_D2.kept + self.part_src_D3.kept
+            self.part_src_D1 = IOLSplit(self.dPdV.D1(self.rho) * self.dVdrho(self.rho) / self.energies.D1.J,  # total
+                                        self.dPdV.D1(self.rho) * self.dVdrho(self.rho) / self.energies.D1.J,  # lost
+                                        self.dPdV.D1(self.rho) * self.dVdrho(self.rho) / self.energies.D1.J)  # kept
+
+            self.part_src_D2 = IOLSplit(self.dPdV.D2(self.rho) * self.dVdrho(self.rho) / self.energies.D2.J,  # total
+                                        self.dPdV.D2(self.rho) * self.dVdrho(self.rho) / self.energies.D2.J,  # lost
+                                        self.dPdV.D2(self.rho) * self.dVdrho(self.rho) / self.energies.D2.J)  # kept
+
+            self.part_src_D3 = IOLSplit(self.dPdV.D3(self.rho) * self.dVdrho(self.rho) / self.energies.D3.J,  # total
+                                        self.dPdV.D3(self.rho) * self.dVdrho(self.rho) / self.energies.D3.J,  # lost
+                                        self.dPdV.D3(self.rho) * self.dVdrho(self.rho) / self.energies.D3.J)  # kept
+
+
+        self.part_src_dens = IOLSplit(self.part_src_dens_D1.total + self.part_src_dens_D2.total + self.part_src_dens_D3.total,
+                                      self.part_src_dens_D1.lost + self.part_src_dens_D2.lost + self.part_src_dens_D3.lost,
+                                      self.part_src_dens_D1.kept + self.part_src_dens_D2.kept + self.part_src_dens_D3.kept)
+        """The particle source density IOL split as a function of r in #/(m^3 s) """
+
+        self.part_src = IOLSplit(self.part_src_D1.total + self.part_src_D2.total + self.part_src_D3.total,
+                                 self.part_src_D1.lost + self.part_src_D2.lost + self.part_src_D3.lost,
+                                 self.part_src_D1.kept + self.part_src_D2.kept + self.part_src_D3.kept)
+        """The particle source IOL split as a function of r in #/s """
+
+        # Remove any values that are stupidly small but not 0.
+        #
+        # self.part_src_tot_total[self.part_src_tot_total < 1E8] = 0.0
+        # self.part_src_tot_kept[self.part_src_tot_kept < 1E8] = 0.0
+        # self.part_src_tot_lost[self.part_src_tot_lost < 1E8] = 0.0
+        # self.part_src_tot_of_rho[self.part_src_tot_of_rho < 1E8] = 0.0
+
 
     def calc_heat_sources(self, IOLSplit):
 
+        self.en_src_dens_D1 = None  # type: ndarray
+        """The energy source density as a function of r in #/(m^3 s) for the D1 beam"""
+        self.en_src_dens_D2 = None  # type: ndarray
+        """The energy source density as a function of r in #/(m^3 s) for the D2 beam"""
+        self.en_src_dens_D3 = None  # type: ndarray
+        """The energy source density as a function of r in #/(m^3 s) for the D3 beam"""
+        self.en_src_D1 = None  #type: ndarray
+        """The energy source as a function of r in #/(s) for the D1 beam"""
+        self.en_src_D2 = None  #type: ndarray
+        """The energy source as a function of r in #/(s) for the D2 beam"""
+        self.en_src_D2 = None  #type: ndarray
+        """The energy source as a function of r in #/(s) for the D3 beam"""
+
         if self.iolFlag:
-            self.en_src_D1 = IOLSplit(self.dPdV.D1(self.rho),  # total
+            self.en_src_dens_D1 = IOLSplit(self.dPdV.D1(self.rho),  # total
                                       self.E_orb_D1 * self.dPdV.D1(self.rho),  # lost
                                       (1. - self.E_orb_D1) * self.dPdV.D1(self.rho))   # kept
 
-            self.en_src_D2 = IOLSplit(self.dPdV.D2(self.rho),  # total
+            self.en_src_dens_D2 = IOLSplit(self.dPdV.D2(self.rho),  # total
                                       self.E_orb_D2 * self.dPdV.D2(self.rho),  # lost
                                       (1. - self.E_orb_D2) * self.dPdV.D2(self.rho))   # kept
 
-            self.en_src_D3 = IOLSplit(self.dPdV.D3(self.rho),  # total
+            self.en_src_dens_D3 = IOLSplit(self.dPdV.D3(self.rho),  # total
                                       self.E_orb_D3 * self.dPdV.D3(self.rho),  # lost
                                       (1. - self.E_orb_D3) * self.dPdV.D3(self.rho))   # kept
 
+            self.en_src_D1 = IOLSplit(self.dPdV.D1(self.rho) * self.dVdrho(self.rho),  # total
+                                        self.F_orb_D1 * self.dPdV.D1(self.rho) * self.dVdrho(self.rho),  # lost
+                                        (1. - self.F_orb_D1) * self.dPdV.D1(self.rho) * self.dVdrho(self.rho))  # kept
+
+            self.en_src_D2 = IOLSplit(self.dPdV.D2(self.rho) * self.dVdrho(self.rho),  # total
+                                        self.F_orb_D2 * self.dPdV.D2(self.rho) * self.dVdrho(self.rho),  # lost
+                                        (1. - self.F_orb_D2) * self.dPdV.D2(self.rho) * self.dVdrho(self.rho))  # kept
+
+            self.en_src_D3 = IOLSplit(self.dPdV.D3(self.rho) * self.dVdrho(self.rho),  # total
+                                        self.F_orb_D3 * self.dPdV.D3(self.rho) * self.dVdrho(self.rho) ,  # lost
+                                        (1. - self.F_orb_D3) * self.dPdV.D3(self.rho) * self.dVdrho(self.rho))  # kept
+
         else:
-            self.en_src_D1 = IOLSplit(self.dPdV.D1(self.rho),  # total
+            self.en_src_dens_D1 = IOLSplit(self.dPdV.D1(self.rho),  # total
                                       np.zeros(len(self.rho)),  # lost
                                       self.dPdV.D1(self.rho))   # kept
 
-            self.en_src_D2 = IOLSplit(self.dPdV.D2(self.rho),  # total
+            self.en_src_dens_D2 = IOLSplit(self.dPdV.D2(self.rho),  # total
                                       np.zeros(len(self.rho)),  # lost
                                       self.dPdV.D2(self.rho))   # kept
 
-            self.en_src_D3 = IOLSplit(self.dPdV.D3(self.rho),  # total
+            self.en_src_dens_D3 = IOLSplit(self.dPdV.D3(self.rho),  # total
                                       np.zeros(len(self.rho)),  # lost
                                       self.dPdV.D3(self.rho))   # kept
 
-        self.en_src_tot_total = self.en_src_D1.total + self.en_src_D2.total + self.en_src_D3.total
-        self.en_src_tot_lost = self.en_src_D1.lost + self.en_src_D2.lost + self.en_src_D3.lost
-        self.en_src_tot_kept = self.en_src_D1.kept + self.en_src_D2.kept + self.en_src_D3.kept
+            self.en_src_D1 = IOLSplit(self.dPdV.D1(self.rho) * self.dVdrho(self.rho),  # total
+                                        self.dPdV.D1(self.rho) * self.dVdrho(self.rho),  # lost
+                                        self.dPdV.D1(self.rho) * self.dVdrho(self.rho))  # kept
+
+            self.en_src_D2 = IOLSplit(self.dPdV.D2(self.rho) * self.dVdrho(self.rho),  # total
+                                        self.dPdV.D2(self.rho) * self.dVdrho(self.rho),  # lost
+                                        self.dPdV.D2(self.rho) * self.dVdrho(self.rho))  # kept
+
+            self.en_src_D3 = IOLSplit(self.dPdV.D3(self.rho) * self.dVdrho(self.rho),  # total
+                                        self.dPdV.D3(self.rho) * self.dVdrho(self.rho),  # lost
+                                        self.dPdV.D3(self.rho) * self.dVdrho(self.rho))  # kept
+
+
+        self.en_src_dens = IOLSplit(self.en_src_dens_D1.total + self.en_src_dens_D2.total + self.en_src_dens_D3.total,
+                                      self.en_src_dens_D1.lost + self.en_src_dens_D2.lost + self.en_src_dens_D3.lost,
+                                      self.en_src_dens_D1.kept + self.en_src_dens_D2.kept + self.en_src_dens_D3.kept)
+        """The particle source density IOL split as a function of r in J/(m^3 s) """
+
+        self.en_src = IOLSplit(self.en_src_D1.total + self.en_src_D2.total + self.en_src_D3.total,
+                                 self.en_src_D1.lost + self.en_src_D2.lost + self.en_src_D3.lost,
+                                 self.en_src_D1.kept + self.en_src_D2.kept + self.en_src_D3.kept)
+        """The particle source IOL split as a function of r in #/s """
+
+        # Zero out very small values
+        #
+        # self.en_src_tot_total[self.en_src_tot_total < 1E2] = 0.0
+        # self.en_src_tot_kept[self.en_src_tot_kept < 1E2] = 0.0
+        # self.en_src_tot_lost[self.en_src_tot_lost < 1E2] = 0.0
+        # self.en_src_tot_of_rho[self.en_src_tot_of_rho < 1E2] = 0.0
+
 
     def calc_mom_sources(self, IOLSplit):
 
         if self.iolFlag:
-            self.mom_src_D1 = IOLSplit(self.dPdV.D1(self.rho) * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1(self.rho),
+            self.mom_src_dens_D1 = IOLSplit(self.dPdV.D1(self.rho) * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1(self.rho),
                                        self.M_orb_D1 * self.dPdV.D1(self.rho)  * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1(self.rho),
                                        (1. - self.M_orb_D1) * self.dPdV.D1(self.rho) * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1(self.rho))
 
-            self.mom_src_D2 = IOLSplit(self.dPdV.D2(self.rho)  * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2(self.rho),
+            self.mom_src_dens_D2 = IOLSplit(self.dPdV.D2(self.rho) * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2(self.rho),
                                        self.M_orb_D2 * self.dPdV.D2(self.rho)  * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2(self.rho),
                                        (1. - self.M_orb_D2) * self.dPdV.D2(self.rho)  * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2(self.rho))
 
-            self.mom_src_D3 = IOLSplit(self.dPdV.D3(self.rho)  * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3(self.rho),
+            self.mom_src_dens_D3 = IOLSplit(self.dPdV.D3(self.rho) * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3(self.rho),
                                        self.M_orb_D3 * self.dPdV.D3(self.rho)  * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3(self.rho),
                                        (1. - self.M_orb_D3) * self.dPdV.D3(self.rho)  * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3(self.rho))
 
+            self.mom_src_D1 = IOLSplit(self.dPdV.D1(self.rho) * self.dVdrho(self.rho) * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1(self.rho),
+                                       self.M_orb_D1 * self.dPdV.D1(self.rho) * self.dVdrho(self.rho) * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1(self.rho),
+                                       (1. - self.M_orb_D1) * self.dPdV.D1(self.rho) * self.dVdrho(self.rho) * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1(self.rho))
+
+            self.mom_src_D2 = IOLSplit(self.dPdV.D2(self.rho) * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2(self.rho),
+                                       self.M_orb_D2 * self.dPdV.D2(self.rho) * self.dVdrho(self.rho) * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2(self.rho),
+                                       (1. - self.M_orb_D2) * self.dPdV.D2(self.rho) * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2(self.rho))
+
+            self.mom_src_D3 = IOLSplit(self.dPdV.D3(self.rho) * self.dVdrho(self.rho) * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3(self.rho),
+                                       self.M_orb_D3 * self.dPdV.D3(self.rho)  * self.dVdrho(self.rho) * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3(self.rho),
+                                       (1. - self.M_orb_D3) * self.dPdV.D3(self.rho)  * self.dVdrho(self.rho) * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3(self.rho))
+
 
             if not self.coCurr:
                 self.mom_src_D1 = -1. * self.mom_src_D1
                 self.mom_src_D2 = -1. * self.mom_src_D2
                 self.mom_src_D3 = -1. * self.mom_src_D3
+                self.mom_src_D1_of_rho = -1 * self.mom_src_D1_of_rho
+                self.mom_src_D2_of_rho = -1 * self.mom_src_D2_of_rho
+                self.mom_src_D3_of_rho = -1 * self.mom_src_D3_of_rho
 
         else:
-            self.mom_src_D1 = IOLSplit(self.dPdV.D1 * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1,
+            self.mom_src_dens_D1 = IOLSplit(self.dPdV.D1(self.rho) * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1,
                                        np.zeros(len(self.rho)),
-                                       self.dPdV.D1 * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1)
+                                       self.dPdV.D1(self.rho) * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1)
 
-            self.mom_src_D2 = IOLSplit(self.dPdV.D2 * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2,
+            self.mom_src_dens_D2 = IOLSplit(self.dPdV.D2(self.rho) * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2,
                                        np.zeros(len(self.rho)),
-                                       self.dPdV.D2 * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2)
+                                       self.dPdV.D2(self.rho) * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2)
 
-            self.mom_src_D3 = IOLSplit(self.dPdV.D3 * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3,
+            self.mom_src_dens_D3 = IOLSplit(self.dPdV.D3(self.rho) * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3,
                                        np.zeros(len(self.rho)),
                                        self.dPdV.D3 * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3)
+
+            self.mom_src_D1 = IOLSplit(self.dPdV.D1(self.rho) * self.dVdrho(self.rho) * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1,
+                                       np.zeros(len(self.rho)),
+                                       self.dPdV.D1(self.rho) * self.dVdrho(self.rho) * np.sqrt(0.5 * m_d / self.energies.D1.J) * self.rtang * self.angle_1)
+
+            self.mom_src_D2 = IOLSplit(self.dPdV.D2(self.rho) * self.dVdrho(self.rho) * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2,
+                                       np.zeros(len(self.rho)),
+                                       self.dPdV.D2(self.rho) * self.dVdrho(self.rho) * np.sqrt(0.5 * m_d / self.energies.D2.J) * self.rtang * self.angle_2)
+
+            self.mom_src_D3 = IOLSplit(self.dPdV.D3(self.rho) * self.dVdrho(self.rho) * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3,
+                                       np.zeros(len(self.rho)),
+                                       self.dPdV.D3(self.rho) * self.dVdrho(self.rho) * np.sqrt(0.5 * m_d / self.energies.D3.J) * self.rtang * self.angle_3)
             if not self.coCurr:
-                self.mom_src_D1 = -1. * self.mom_src_D1
-                self.mom_src_D2 = -1. * self.mom_src_D2
-                self.mom_src_D3 = -1. * self.mom_src_D3
+                self.mom_src_dens_D1 = -1. * self.mom_src_D1
+                self.mom_src_dens_D2 = -1. * self.mom_src_D2
+                self.mom_src_dens_D3 = -1. * self.mom_src_D3
+                self.mom_src_D1 = -1 * self.mom_src_D1_of_rho
+                self.mom_src_D2 = -1 * self.mom_src_D2_of_rho
+                self.mom_src_D3 = -1 * self.mom_src_D3_of_rho
 
-        self.mom_src_tot_total = self.mom_src_D1.total + self.mom_src_D2.total + self.mom_src_D3.total
-        self.mom_src_tot_lost = self.mom_src_D1.lost + self.mom_src_D2.lost + self.mom_src_D3.lost
-        self.mom_src_tot_kept = self.mom_src_D1.kept + self.mom_src_D2.kept + self.mom_src_D3.kept
+        self.mom_src_dens = IOLSplit(self.mom_src_dens_D1.total + self.mom_src_dens_D2.total + self.mom_src_dens_D3.total,
+                                      self.mom_src_dens_D1.lost + self.mom_src_dens_D2.lost + self.mom_src_dens_D3.lost,
+                                      self.mom_src_dens_D1.kept + self.mom_src_dens_D2.kept + self.mom_src_dens_D3.kept)
+        """The momentum source density IOL split as a function of r in #/(m^3 s) """
 
+        self.mom_src = IOLSplit(self.mom_src_D1.total + self.mom_src_D2.total + self.mom_src_D3.total,
+                                 self.mom_src_D1.lost + self.mom_src_D2.lost + self.mom_src_D3.lost,
+                                 self.mom_src_D1.kept + self.mom_src_D2.kept + self.mom_src_D3.kept)
+        """The momentum source IOL split as a function of r in #/s """
 
 
     def calc_dPdV(self, Profile):
@@ -380,6 +543,7 @@ class Beam:
         y4 = lambda x: y1(x) + y2(x) + y3(x)
 
         interp_1 = UnivariateSpline(self.rho, y1(self.rho), k=3, s=2)
+        """The dP(rho)/dV"""
         interp_2 = UnivariateSpline(self.rho, y2(self.rho), k=3, s=2)
         interp_3 = UnivariateSpline(self.rho, y3(self.rho), k=3, s=2)
         interp_4 = UnivariateSpline(self.rho, y4(self.rho), k=3, s=2)
@@ -424,7 +588,7 @@ class Beam:
 
     def normalize_Hofrho(self, DepClass):
         """
-        Normalize H(rho) such that integral(H(rho)dV) = Vpol and provide an interpolator
+        Normalize H(rho) such that integral(H(rho)dV) = Vplasma and provide an interpolator
         Note that to do this integration from 0->1, you must multiply the integrand by dV/d(rho)
 
         :type DepClass:
@@ -448,7 +612,7 @@ class Beam:
 
     def calc_Hofr(self, Hofrho, depClass):
         """
-        Calculate H(r) and returns the depClass named tuple containing 3 interpolators as functions of r
+        Calculate H(r) and return the depClass named tuple containing 3 interpolators as functions of r
 
         :param depClass: The deposition class object to be used
         :param Hofrho: The H(rho) function
@@ -461,7 +625,7 @@ class Beam:
         y3 = lambda x: Hofrho.D3(x * self.a)
         interp_space = np.linspace(0., self.a, len(self.rho))
 
-        return  depClass(UnivariateSpline(interp_space, y1(self.rho), k=3, s=0),
+        return depClass(UnivariateSpline(interp_space, y1(self.rho), k=3, s=0),
                              UnivariateSpline(interp_space, y2(self.rho), k=3, s=0),
                              UnivariateSpline(interp_space, y3(self.rho), k=3, s=0))
 
@@ -478,7 +642,7 @@ class Beam:
 
         TODO: Run more extensive tests to validate quadrature choice
         :param energy: The energy group (in keV)
-        :return: UnivariateSplines of H(rho) and ksi(rho)
+        :return: UnivariateSplines of H(rho) and ksi(rho) interpolated on [0., 1.]
         :rtype: list(UnivariateSpline)
 
         """
@@ -553,8 +717,11 @@ class Beam:
             if self.timing: print "D calc count: %s" % self.prof_D["count"]
             if self.timing: print "D calc total time: %s" % np.sum(self.prof_D['time'])
 
-
-        return UnivariateSpline(self.rho, Hresult, k=3, s=0), UnivariateSpline(self.rho, np.nan_to_num(angle_result), k=3, s=0),
+        Hofrho=UnivariateSpline(self.rho, Hresult, k=3, s=0)
+        """The H(rho) interpolator on [0., 1.]"""
+        angle = UnivariateSpline(self.rho, np.nan_to_num(angle_result), k=3, s=0)
+        """The launch angle as a function of rho interpolator on [0., 1.]"""
+        return Hofrho, angle
 
     def beamdblquad(self, f, yllimit, yulimit, xllimit, xulimit, *args):
         """
@@ -1015,13 +1182,13 @@ class Beam:
         fig = plt.figure()
         fig1 = fig.add_subplot(111)
         #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-        fig1.set_xlabel(r'$/rho$')
-        fig1.set_ylabel(r'$S_{nb}(\rho) [#/m^3 s]$')
+        fig1.set_xlabel(r'$r$')
+        fig1.set_ylabel(r'$S_{nb}(r) [#/m^3 s]$')
         #fig1.set_ylim(np.min(y, 0), np.max(y, 0))
-        fig1.scatter(self.rho, self.part_src_D1.kept, color='red')
-        fig1.scatter(self.rho, self.part_src_D2.kept, color='blue')
-        fig1.scatter(self.rho, self.part_src_D3.kept, color='green')
-        fig1.scatter(self.rho, self.part_src_total.kept, color='green')
+        fig1.scatter(self.rho * self.a, self.part_src_D1.kept, color='red')
+        fig1.scatter(self.rho * self.a, self.part_src_D2.kept, color='blue')
+        fig1.scatter(self.rho * self.a, self.part_src_D3.kept, color='green')
+        fig1.scatter(self.rho * self.a, self.part_src_total.kept, color='green')
         #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
     def plot_energy_src_kep(self):
@@ -1029,25 +1196,25 @@ class Beam:
         fig1 = fig.add_subplot(111)
         # fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
         fig1.set_xlabel(r'$/rho$')
-        fig1.set_ylabel(r'$Q_{nb}(\rho) [W/m^2 s]$')
+        fig1.set_ylabel(r'$Q_{nb}(r) [W/m^3]$')
         # fig1.set_ylim(np.min(y, 0), np.max(y, 0))
-        fig1.scatter(self.rho, self.en_src_D1.kept, color='red')
-        fig1.scatter(self.rho, self.en_src_D2.kept, color='blue')
-        fig1.scatter(self.rho, self.en_src_D3.kept, color='green')
-        fig1.scatter(self.rho, self.en_src_tot_kept, color='black')
+        fig1.scatter(self.rho * self.a, self.en_src_D1.kept, color='red')
+        fig1.scatter(self.rho * self.a, self.en_src_D2.kept, color='blue')
+        fig1.scatter(self.rho * self.a, self.en_src_D3.kept, color='green')
+        fig1.scatter(self.rho * self.a, self.en_src_tot_kept, color='black')
         # fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
     def plot_mom_src_kept(self):
         fig = plt.figure()
         fig1 = fig.add_subplot(111)
         #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-        fig1.set_xlabel(r'$/rho$')
-        fig1.set_ylabel(r'$M_{nb}(\rho)$')
+        fig1.set_xlabel(r'$r')
+        fig1.set_ylabel(r'$M_{nb}(r)$')
         #fig1.set_ylim(np.min(y, 0), np.max(y, 0))
-        fig1.scatter(self.rho, self.mom_src_D1.kept, color='red')
-        fig1.scatter(self.rho, self.mom_src_D2.kept, color='blue')
-        fig1.scatter(self.rho, self.mom_src_D3.kept, color='green')
-        fig1.scatter(self.rho, self.mom_src_tot_kept, color='black')
+        fig1.scatter(self.rho * self.a, self.mom_src_D1.kept, color='red')
+        fig1.scatter(self.rho * self.a, self.mom_src_D2.kept, color='blue')
+        fig1.scatter(self.rho * self.a, self.mom_src_D3.kept, color='green')
+        fig1.scatter(self.rho * self.a, self.mom_src_tot_kept, color='black')
         #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
     def plot_iol(self):
