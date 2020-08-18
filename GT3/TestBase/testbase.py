@@ -8,13 +8,13 @@ from shapely.geometry import LineString
 import matplotlib.pyplot as plt
 
 
-def getGT3Test(iolFlag=True, verbose=False, neutFlag=True):
+def getGT3Test(iolFlag=True, verbose=False, neutFlag=True, mode="coreonly"):
     try:
         from GT3 import gt3
     except ImportError:
         print "Unable to load GT3 module"
         sys.exit()
-    return gt3(preparedInput=TestClass(), iolFlag=iolFlag, verbose=verbose, neutFlag=neutFlag)
+    return gt3(preparedInput=TestClass(), iolFlag=iolFlag, verbose=verbose, neutFlag=neutFlag, mode=mode)
 
 class TestClass:
 
@@ -95,6 +95,7 @@ class TestClass:
         self.nbeams_loc = os.path.dirname(__file__) + '/../nbeams/bin/Release/nbeams'
         self.beams_json = os.path.dirname(__file__) + '/TestBaseProfiles/gt3_%s_%s_beams.json' % (self.shotid, self.timeid)
         self.beams_out_json = os.path.dirname(__file__) + '/TestBaseProfiles/gt3_%s_%s_outbeams.json' % (self.shotid, self.timeid)
+        self.neutfile_loc = os.path.dirname(__file__) + '/TestBaseProfiles/gt3_%s_%s_outneuts.json' % (self.shotid, self.timeid)
 
     def print_summary(self):
         print "0D Parameters \n"

@@ -173,6 +173,9 @@ class RadialTransport(Chi):
         r = core.r.T[0]  # TODO: Should this be a flux surface average?
         self.rhor = core.r[:, 0] / core.a
         """The rho vector"""
+        self.core = core
+        """The utilized GT3 core background plasma"""
+
 
         if neutFlag:
             izn_rate = core.izn_rate_fsa  # TODO: Should this be a flux surface average or a flux surface total?
@@ -410,3 +413,49 @@ class RadialTransport(Chi):
         #     QDebug(self.rhor, core.a, core.r2sa, core.dVdrho, calc_qie(n, T, ion_species='D'), en_src_nbi_i, en_src_nbi_i_kept, cool_rate, E_orb_d, self.chi.Qi, T)
         #     """IOL Debugging"""
         #     IOLDebug(self.rhor, F_orb_d, E_orb_d, M_orb_d)
+
+    def _plot_base(self, val, xLabel=r'$\rho$', yLabel="Value", title="Title", color='red'):
+
+        plot = plt.figure()
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(xLabel, fontsize=20)
+        fig.set_ylabel(yLabel, fontsize=20)
+        fig.set_title(title)
+        fig.scatter(self.rhor, val, color=color, s=4)
+        plt.show()
+        return fig
+
+    def plot_ni(self):
+        return self._plot_base(self.core.n_fsa.i, yLabel=r'$n_i[\#/m^3]$', title="Ion Density")
+
+    def plot_ne(self):
+        return self._plot_base(self.core.n_fsa.e, yLabel=r'$n_e[\#/m^3]$', title="Electron Density")
+
+    def plot_n(self):
+        fig = self._plot_base(self.core.n_fsa.e, yLabel=r'$n_e[\#/m^3]$', title="Plasma Densities")
+        fig.scatter(self.rhor, self.core.n_fsa.i, color="blue", s=4)
+        return fig
+
+    def plot_nn_therm(self):
+        return self._plot_base(self.core.n_fsa.n.t, yLabel=r'$n_{n,therm}[\#/m^3]$', title="Thermal Neutral Density")
+
+    def plot_nn_cold(self):
+        return self._plot_base(self.core.n_fsa.n.s, yLabel=r'$n_{n,slow}[\#/m^3]$', title="Cold Neutral Density")
+
+    def plot_nn_total(self):
+        return self._plot_base(self.core.n_fsa.n.tot, yLabel=r'$n_{n,total}[\#/m^3]$', title="Total Neutral Density")
+
+    def plot_Ti(self):
+        return self._plot_base(self.core.T_fsa.i.kev, yLabel=r'$T_i[keV]$', title="Ion Temperature")
+
+    def plot_Te(self):
+        return self._plot_base(self.core.T_fsa.e.kev, yLabel=r'$T_e[keV]$', title="Electron Temperature")
+
+    def plot_T(self):
+        fig = self._plot_base(self.core.T_fsa.e.kev, yLabel=r'$T[keV]$', title="Plasma Temperature")
+        fig.scatter(self.rhor, self.core.T_fsa.i.kev,  color="blue", s=4)
+        plt.show()
+        return fig
+
+    def plot_Er(self):
+        return self._plot_base(self.Er_calc_C, yLabel=r'$E_r[V/m]$', title="Radial Electric Field")
