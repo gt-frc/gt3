@@ -2,57 +2,36 @@ d3d_iter = 1
 exp_inp = 1 
 
 #1D PROFILE INPUT FILES 
-ne_file         = 118888_1570/gt3_118888_1570_ne.dat 
-nD_file         = 118888_1570/gt3_118888_1570_nD.dat 
-Te_file         = 118888_1570/gt3_118888_1570_Te.dat 
-Ti_file         = 118888_1570/gt3_118888_1570_Ti.dat 
-er_file         = 118888_1570/gt3_118888_1570_er.dat 
-fz1_file        = 118888_1570/gt3_118888_1570_fz1.dat 
-fracz_file      = 118888_1570/gt3_118888_1570_fracz.dat 
-exlti_file      = 118888_1570/gt3_118888_1570_exlti.dat 
-exlte_file      = 118888_1570/gt3_118888_1570_exlte.dat 
-exlni_file      = 118888_1570/gt3_118888_1570_exlni.dat 
-vpolC_file      = 118888_1570/gt3_118888_1570_vpolC.dat 
-vtorC_file      = 118888_1570/gt3_118888_1570_vtorC.dat 
-vpolD_file      = 118888_1570/gt3_118888_1570_vpolD.dat 
-vtorD_file      = 118888_1570/gt3_118888_1570_vtorD.dat 
-q_file          = 118888_1570/gt3_118888_1570_q.dat 
-zbar2_file      = 118888_1570/gt3_118888_1570_zbar2.dat    
+ne_file         = inputs/118888_1570/gt3_118888_1570_ne.dat
+nD_file         = inputs/118888_1570/gt3_118888_1570_nD.dat
+Te_file         = inputs/118888_1570/gt3_118888_1570_Te.dat
+Ti_file         = inputs/118888_1570/gt3_118888_1570_Ti.dat
+er_file         = inputs/118888_1570/gt3_118888_1570_er.dat
+fz1_file        = inputs/118888_1570/gt3_118888_1570_fz1.dat
+fracz_file      = inputs/118888_1570/gt3_118888_1570_fracz.dat
+exlti_file      = inputs/118888_1570/gt3_118888_1570_exlti.dat
+exlte_file      = inputs/118888_1570/gt3_118888_1570_exlte.dat
+exlni_file      = inputs/118888_1570/gt3_118888_1570_exlni.dat
+vpolC_file      = inputs/118888_1570/gt3_118888_1570_vpolC.dat
+vtorC_file      = inputs/118888_1570/gt3_118888_1570_vtorC.dat
+vpolD_file      = inputs/118888_1570/gt3_118888_1570_vpolD.dat
+vtorD_file      = inputs/118888_1570/gt3_118888_1570_vtorD.dat
+q_file          = inputs/118888_1570/gt3_118888_1570_q.dat
+zbar2_file      = inputs/118888_1570/gt3_118888_1570_zbar2.dat
+beams_json      = inputs/118888_1570/gt3_118888_1570_beams.json
+beams_out_json  = inputs/118888_1570/gt3_118888_1570_beamOut.json
+neutfile_loc    = inputs/118888_1570/gt3_118888_1570_neutsOut.json
 
 2D QUANTITIES INPUT FILES 
-bpol_file       = 118888_1570/gt3_118888_1570_bpol.dat  
-btor_file       = 118888_1570/gt3_118888_1570_btor.dat  
-psirz_file      = 118888_1570/gt3_118888_1570_psirz.dat 
+bpol_file       = inputs/118888_1570/gt3_118888_1570_bpol.dat
+btor_file       = inputs/118888_1570/gt3_118888_1570_btor.dat
+psirz_file      = inputs/118888_1570/gt3_118888_1570_psirz.dat
 
 2D LINE INPUT FILES 
-sep_file        = 118888_1570/gt3_118888_1570_sep.dat 
-wall_file       = 118888_1570/gt3_diiid_wall.dat 
+sep_file        = inputs/118888_1570/gt3_118888_1570_sep.dat
+wall_file       = inputs/118888_1570/gt3_diiid_wall.dat
 
-# CONSTANTS 
-eq1 = 1.6e-19 
-eq2 = 9.6e-19 
-xmas1 = 3.35e-27 
-xmas2 = 2.01e-26 
-ephia = 0.04 
-xk = 1.6e-19 
-delma = 0.005 
-xnuioni = 0.0 
-xnuati = 0.0 
-
-#NEUTRAL BEAM DEPOSITION 
-nbeams_loc = /home/jonathan/Dropbox/GTEDGE/MyPrograms/GTEDGE/lib/beams/NBeamsMDS/NBeams/bin/Release/nbeams 
-ebeam = 77.48 
-abeam = 2 
-alphain = .6475 
-pbeam = 4.6 
-rtang = 1.09 
-bknot = 2.0 
-pwrfrac1 = 0.76 
-pwrfrac2 = 0.13 
-pwrfrac3 = 0.11 
-epsknot = 1.265 
-eps_sep = 1.82 
-shftknot = 0.033 
+ephia = 0.04
 
 #IMPURITY CALCULATION 
 adpak_loc = /home/jonathan/Dropbox/GTEDGE/MyPrograms/GTEDGE/MaxPlasma/adpak/ 

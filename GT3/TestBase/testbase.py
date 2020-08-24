@@ -59,13 +59,9 @@ class TestClass:
         self.rhopts_edge = 100
         self.rhopts_core = 10
         self.core_thetapts_ntrl = 50
-        self.ib_thetapts_ntrl = 10
-        self.ob_thetapts_ntrl = 10
         self.edge_rho_ntrl = 0.8
         self.rhopts_edge_ntrl = 5
         self.rhopts_core_ntrl = 10
-        self.tri_min_angle = 20
-        self.tri_min_area = 0.01
         self.sollines_psi_max = 1.07
         self.num_sollines = 3
         self.xi_sep_pts = 30
@@ -158,20 +154,11 @@ class TestClass:
                          ["rhopts_edge", "Number of rho values in the edge", self.rhopts_edge],
                          ["rhopts_core", "Number of rho values in the core", self.rhopts_core],
                          ["core_thetapts_ntrl", "Number of theta values in the neutrals core calculation", self.core_thetapts_ntrl],
-                         ["ib_thetapts_ntrl", "Number of thetapoints for the inboard neutrals calculation", self.ib_thetapts_ntrl],
-                         ["ob_thetapts_ntrl", "Number of thetapoints for the outboard neutrals calculation", self.ob_thetapts_ntrl],
                          ["edge_rho_ntrl", "Definition of the edge in the neutrals calculation", self.edge_rho_ntrl],
                          ["rhopts_edge_ntrl", "Number of rho values in the edge in the neutrals calculation", self.rhopts_edge_ntrl],
                          ["rhopts_core_ntrl", "Number of rho values in the core in the neutrals calculation", self.rhopts_core_ntrl],
-                         ["tri_min_angle", "Minimum angle in the Triangle routine", self.tri_min_angle],
-                         ["tri_min_area", "Minimum area of the Triangle routine", self.tri_min_area],
                          ["sollines_psi_max", "Maximum psi value after the scrape-off layer", self.sollines_psi_max],
                          ["num_sollines", "Number of lines after the scrape-off layer", self.num_sollines],
-                         ["xi_sep_pts", "??", self.xi_sep_pts],
-                         ["xi_ib_pts", "??", self.xi_ib_pts],
-                         ["xi_ob_pts", "??", self.xi_ob_pts],
-                         ["ib_trim_off", "??", self.ib_trim_off],
-                         ["ob_trim_off", "??", self.ob_trim_off],
                          ["numcos", "Number of cosine angles used in IOL calculation", self.numcos]
                          ])
         print table3.draw()

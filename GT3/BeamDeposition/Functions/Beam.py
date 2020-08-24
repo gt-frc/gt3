@@ -260,24 +260,50 @@ class Beam:
         :param iol:
         """
         # TODO: Introduce accurate launch angles
+        if iol:
+            D1_iol = iol.calc_iol_beams(1, m_d, iol.iol_p, 33,  sqrt(2 * self.beamE * 1.E3 * 1.6021E-19 / m_d), -.96, iol.coslist)
+            D2_iol = iol.calc_iol_beams(1, m_d, iol.iol_p, 33, sqrt(2 * self.beamE * 1.E3 * 1.6021E-19 / (m_d * 2.)), -.96,
+                                        iol.coslist)
+            D3_iol = iol.calc_iol_beams(1, m_d, iol.iol_p, 33, sqrt(2 * self.beamE * 1.E3 * 1.6021E-19 / (3. * m_d)), -.96,
+                                        iol.coslist)
+            # Since we don't know if the beam meshing will be the same as the iol rho meshing, we map by index
 
-        D1_iol = iol.calc_iol_beams(1,m_d, iol.iol_p, 33,  sqrt(2 * self.beamE * 1.E3 * 1.6021E-19 / m_d), -.96, iol.coslist)
-        D2_iol = iol.calc_iol_beams(1, m_d, iol.iol_p, 33, sqrt(2 * self.beamE * 1.E3 * 1.6021E-19 / (m_d * 2.)), -.96,
-                                    iol.coslist)
-        D3_iol = iol.calc_iol_beams(1, m_d, iol.iol_p, 33, sqrt(2 * self.beamE * 1.E3 * 1.6021E-19 / (3. * m_d)), -.96,
-                                    iol.coslist)
+            self.F_orb_D1 = np.zeros(len(self.rho))
+            self.M_orb_D1 = np.zeros(len(self.rho))
+            self.E_orb_D1 = np.zeros(len(self.rho))
+            self.F_orb_D1[np.where(self.rho > iol.rho[:, 0][np.where(D1_iol[0][:, 0] > .1)[0].min()])[0].min():] = 0.5
+            self.M_orb_D1[np.where(self.rho > iol.rho[:, 0][np.where(np.abs(D1_iol[1][:, 0]) > .1)[0].min()])[0].min():] = 0.5
+            self.E_orb_D1[np.where(self.rho > iol.rho[:, 0][np.where(D1_iol[2][:, 0] > .1)[0].min()])[0].min():] = 0.5
 
-        self.F_orb_D1 = UnivariateSpline(iol.rho[:,0], D1_iol[0][:,0], k=3, s=0)(self.rho)
-        self.M_orb_D1 = UnivariateSpline(iol.rho[:,0], D1_iol[1][:,0], k=3, s=0)(self.rho)
-        self.E_orb_D1 = np.abs(UnivariateSpline(iol.rho[:,0], D1_iol[2][:,0], k=3, s=0)(self.rho))
+            self.F_orb_D2 = np.zeros(len(self.rho))
+            self.M_orb_D2 = np.zeros(len(self.rho))
+            self.E_orb_D2 = np.zeros(len(self.rho))
+            self.F_orb_D2[np.where(self.rho > iol.rho[:, 0][np.where(D2_iol[0][:, 0] > .1)[0].min()])[0].min():] = 0.5
+            self.M_orb_D2[np.where(self.rho > iol.rho[:, 0][np.where(np.abs(D2_iol[1][:, 0]) > .1)[0].min()])[0].min():] = 0.5
+            self.E_orb_D2[np.where(self.rho > iol.rho[:, 0][np.where(D2_iol[2][:, 0] > .1)[0].min()])[0].min():] = 0.5
 
-        self.F_orb_D2 = UnivariateSpline(iol.rho[:,0], D2_iol[0][:,0], k=3, s=0)(self.rho)
-        self.M_orb_D2 = UnivariateSpline(iol.rho[:,0], D2_iol[1][:,0], k=3, s=0)(self.rho)
-        self.E_orb_D2 = np.abs(UnivariateSpline(iol.rho[:,0], D2_iol[2][:,0], k=3, s=0)(self.rho))
+            self.F_orb_D3 = np.zeros(len(self.rho))
+            self.M_orb_D3 = np.zeros(len(self.rho))
+            self.E_orb_D3 = np.zeros(len(self.rho))
+            self.F_orb_D3[np.where(self.rho > iol.rho[:, 0][np.where(D3_iol[0][:,0]>.1)[0].min()])[0].min():] = 0.5
+            self.M_orb_D3[np.where(self.rho > iol.rho[:, 0][np.where(np.abs(D3_iol[1][:, 0]) > .1)[0].min()])[0].min():] = 0.5
+            self.E_orb_D3[np.where(self.rho > iol.rho[:, 0][np.where(D3_iol[2][:, 0] > .1)[0].min()])[0].min():] = 0.5
 
-        self.F_orb_D3 = UnivariateSpline(iol.rho[:,0], D3_iol[0][:,0], k=3, s=0)(self.rho)
-        self.M_orb_D3 = UnivariateSpline(iol.rho[:,0], D3_iol[1][:,0], k=3, s=0)(self.rho)
-        self.E_orb_D3 = np.abs(UnivariateSpline(iol.rho[:,0], D3_iol[2][:,0], k=3, s=0)(self.rho))
+        else:
+            self.F_orb_D1 = np.zeros(len(self.rho))
+            self.F_orb_D2 = np.zeros(len(self.rho))
+            self.F_orb_D3 = np.zeros(len(self.rho))
+
+            self.E_orb_D1 = np.zeros(len(self.rho))
+            self.E_orb_D2 = np.zeros(len(self.rho))
+            self.E_orb_D3 = np.zeros(len(self.rho))
+
+            self.M_orb_D1 = np.zeros(len(self.rho))
+            self.M_orb_D2 = np.zeros(len(self.rho))
+            self.M_orb_D3 = np.zeros(len(self.rho))
+
+
+
 
     def calc_part_sources(self, IOLSplit):
         """
@@ -396,16 +422,16 @@ class Beam:
                                       (1. - self.E_orb_D3) * self.dPdV.D3(self.rho))   # kept
 
             self.en_src_D1 = IOLSplit(self.dPdV.D1(self.rho) * self.dVdrho(self.rho),  # total
-                                        self.F_orb_D1 * self.dPdV.D1(self.rho) * self.dVdrho(self.rho),  # lost
-                                        (1. - self.F_orb_D1) * self.dPdV.D1(self.rho) * self.dVdrho(self.rho))  # kept
+                                        self.E_orb_D1 * self.dPdV.D1(self.rho) * self.dVdrho(self.rho),  # lost
+                                        (1. - self.E_orb_D1) * self.dPdV.D1(self.rho) * self.dVdrho(self.rho))  # kept
 
             self.en_src_D2 = IOLSplit(self.dPdV.D2(self.rho) * self.dVdrho(self.rho),  # total
-                                        self.F_orb_D2 * self.dPdV.D2(self.rho) * self.dVdrho(self.rho),  # lost
-                                        (1. - self.F_orb_D2) * self.dPdV.D2(self.rho) * self.dVdrho(self.rho))  # kept
+                                        self.E_orb_D2 * self.dPdV.D2(self.rho) * self.dVdrho(self.rho),  # lost
+                                        (1. - self.E_orb_D2) * self.dPdV.D2(self.rho) * self.dVdrho(self.rho))  # kept
 
             self.en_src_D3 = IOLSplit(self.dPdV.D3(self.rho) * self.dVdrho(self.rho),  # total
-                                        self.F_orb_D3 * self.dPdV.D3(self.rho) * self.dVdrho(self.rho) ,  # lost
-                                        (1. - self.F_orb_D3) * self.dPdV.D3(self.rho) * self.dVdrho(self.rho))  # kept
+                                        self.E_orb_D3 * self.dPdV.D3(self.rho) * self.dVdrho(self.rho) ,  # lost
+                                        (1. - self.E_orb_D3) * self.dPdV.D3(self.rho) * self.dVdrho(self.rho))  # kept
 
         else:
             self.en_src_dens_D1 = IOLSplit(self.dPdV.D1(self.rho),  # total
@@ -1082,6 +1108,8 @@ class Beam:
         fig1.scatter(self.rho, [mfp_l_1(x) for x in self.rho], color='red')
         fig1.scatter(self.rho, [mfp_l_2(x) for x in self.rho], color='blue')
         fig1.scatter(self.rho, [mfp_l_3(x) for x in self.rho], color='green')
+        plt.show()
+        return fig1
 
     def plot_xs(self):
         sig_int_1 = sigeff(self.ne, self.beamE, self.Te, self.beamA, self.Zeff, self.rho)
@@ -1097,6 +1125,8 @@ class Beam:
         fig1.scatter(self.rho, sig_int_2(self.rho), color="blue")
         fig1.scatter(self.rho, sig_int_3(self.rho), color="green")
         fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+        plt.show()
+        return fig1
 
     def plot_HofRho(self):
 
@@ -1109,6 +1139,8 @@ class Beam:
         fig1.scatter(self.rho, self.Hofrho.D1(self.rho), color='red')
         fig1.scatter(self.rho, self.Hofrho.D2(self.rho), color='blue')
         fig1.scatter(self.rho, self.Hofrho.D3(self.rho), color='green')
+        plt.show()
+        return fig1
         #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
     def plot_Hofr(self):
@@ -1117,10 +1149,11 @@ class Beam:
         # fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
         fig1.set_xlabel(r'$/rho$')
         fig1.set_ylabel(r'$H(r)$')
-        fig1.set_xlabel(0, self.a)
         fig1.scatter(self.rho, self.Hofr.D1(self.rho / self.a), color='red')
         fig1.scatter(self.rho, self.Hofr.D2(self.rho / self.a), color='blue')
         fig1.scatter(self.rho, self.Hofr.D3(self.rho / self.a), color='green')
+        plt.show()
+        return fig1
         # fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
     def plot_power(self):
@@ -1136,6 +1169,8 @@ class Beam:
         fig1.scatter(self.rho, self.dPdV.D3(self.rho), color='green')
         fig1.scatter(self.rho, self.dPdV.total(self.rho), color='black')
         #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+        plt.show()
+        return fig1
 
     def plot_hofRho(self, rho, energy):
         r = np.linspace(1, 1.3, 50)
@@ -1150,6 +1185,8 @@ class Beam:
         fig = plt.figure()
         ax = plt.axes(projection='3d')
         ax.scatter(R, Z, values, cmap='viridis', linewidth=0.5)
+        plt.show()
+        return fig, ax
 
     def plot_hofrho_unnorm(self):
 
@@ -1162,6 +1199,8 @@ class Beam:
         fig1.scatter(self.rho, self.Hofrho_unnorm.D1(self.rho), color='red')
         fig1.scatter(self.rho, self.Hofrho_unnorm.D2(self.rho), color='blue')
         fig1.scatter(self.rho, self.Hofrho_unnorm.D3(self.rho), color='green')
+        plt.show()
+        return fig1
         #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
     def plot_J(self):
@@ -1177,6 +1216,8 @@ class Beam:
         fig = plt.figure()
         ax = plt.axes(projection='3d')
         ax.scatter(R, Z, values, cmap='viridis', linewidth=0.5)
+        plt.show()
+        return fig, ax
 
     def plot_part_src_kept(self):
         fig = plt.figure()
@@ -1189,6 +1230,8 @@ class Beam:
         fig1.scatter(self.rho * self.a, self.part_src_D2.kept, color='blue')
         fig1.scatter(self.rho * self.a, self.part_src_D3.kept, color='green')
         fig1.scatter(self.rho * self.a, self.part_src_total.kept, color='green')
+        plt.show()
+        return fig1
         #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
     def plot_energy_src_kep(self):
@@ -1201,7 +1244,9 @@ class Beam:
         fig1.scatter(self.rho * self.a, self.en_src_D1.kept, color='red')
         fig1.scatter(self.rho * self.a, self.en_src_D2.kept, color='blue')
         fig1.scatter(self.rho * self.a, self.en_src_D3.kept, color='green')
-        fig1.scatter(self.rho * self.a, self.en_src_tot_kept, color='black')
+        fig1.scatter(self.rho * self.a, self.en_src_dens, color='black')
+        plt.show()
+        return fig1
         # fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
     def plot_mom_src_kept(self):
@@ -1215,28 +1260,32 @@ class Beam:
         fig1.scatter(self.rho * self.a, self.mom_src_D2.kept, color='blue')
         fig1.scatter(self.rho * self.a, self.mom_src_D3.kept, color='green')
         fig1.scatter(self.rho * self.a, self.mom_src_tot_kept, color='black')
+        plt.show()
+        return fig1
         #fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
     def plot_iol(self):
         fig = plt.figure()
-        fig1 = fig.add_subplot(131)
+        fig1 = fig.add_subplot(311)
         fig1.set_xlabel(r'$/rho$')
-        fig1.set_ylabel(r'F_{iol}(\rho)$')
+        fig1.set_ylabel(r'$F_{iol}(\rho)$')
         fig1.scatter(self.rho, self.F_orb_D1, color='red')
         fig1.scatter(self.rho, self.F_orb_D2, color='blue')
         fig1.scatter(self.rho, self.F_orb_D3, color='green')
 
-        fig2 = fig.add_subplot(132)
+        fig2 = fig.add_subplot(312)
         fig2.set_xlabel(r'$/rho$')
-        fig2.set_ylabel(r'E_{iol}(\rho)$')
+        fig2.set_ylabel(r'$E_{iol}(\rho)$')
         fig2.scatter(self.rho, self.E_orb_D1, color='red')
         fig2.scatter(self.rho, self.E_orb_D2, color='blue')
         fig2.scatter(self.rho, self.E_orb_D3, color='green')
 
-        fig3 = fig.add_subplot(133)
+        fig3 = fig.add_subplot(313)
         fig3.set_xlabel(r'$/rho$')
-        fig3.set_ylabel(r'M_{iol}(\rho)$')
+        fig3.set_ylabel(r'$M_{iol}(\rho)$')
         fig3.scatter(self.rho, self.M_orb_D1, color='red')
         fig3.scatter(self.rho, self.M_orb_D2, color='blue')
         fig3.scatter(self.rho, self.M_orb_D3, color='green')
+
+        return fig
 

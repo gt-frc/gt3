@@ -22,11 +22,11 @@ class gt3:
         if "iolFlag" in kwargs:
             iolFlag = kwargs['iolFlag']
         else:
-            iolFlag = False
+            iolFlag = True
         if "neutFlag" in kwargs:
             neutFlag = kwargs['neutFlag']
         else:
-            neutFlag = False
+            neutFlag = True
         if "verbose" in kwargs:
             verbose = kwargs['verbose']
         else:
@@ -117,6 +117,11 @@ class gt3:
         return self
 
     def run_NBI(self):
+        try:
+            self.iol
+        except AttributeError:
+            print ("IOL module not run. Running now...")
+            self.run_IOL()
         if self.iolFlag:
             self.nbi = BeamDeposition(self.inp, self.core, self.iol)
         else:
@@ -150,12 +155,15 @@ class gt3:
             print ("IOL module not run. Running now...")
             self.run_IOL()
         try:
-
             self.nbi
         except AttributeError:
             print ("NBI module not run. Running now...")
             self.run_NBI()
-
+        try:
+            self.ntrl
+        except AttributeError:
+            print ("Neutrals module not run. Running now...")
+            self.run_neutrals()
         self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag,
                                       debugFlag=self.verbose)
         return self

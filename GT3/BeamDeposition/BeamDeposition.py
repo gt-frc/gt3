@@ -86,7 +86,7 @@ class BeamDeposition:
     def load_beams(self, inp, core, iol):
         try:
             self.beam_result = []
-            with open(inp.beams_out_json, "r") as f:
+            with open(os.path.join(os.getcwd(), inp.beams_out_json), "r") as f:
                 l = yaml.safe_load(f)
                 for a in l.keys():
                     beam = l[a]
@@ -136,7 +136,7 @@ class BeamDeposition:
 
         try:
             try:
-                f = open(inp.beams_json, "r")
+                f = open(os.path.join(os.getcwd(), inp.beams_json), "r")
             except IOError as error:
                 print "Could not open Beams JSON. Error: %s" % str(error)
                 raise
@@ -155,6 +155,7 @@ class BeamDeposition:
                                                              self.beams_space,
                                                              core.r2vol,
                                                              core.dVdr,
+                                                             core.dVdrho,
                                                              core.shaf_shift,
                                                              core.kappa_vals,
                                                              core.a,
@@ -212,35 +213,51 @@ class BeamDeposition:
         except:
             print "No Beams JSON file found. Using single-beam data"
 
-    def plot_S_nbi(self):
+    def _plot_single_val(self, title="Title", xLabel=r'$\rho$', yLabel="Y-Axis"):
 
         fig = plt.figure()
         fig1 = fig.add_subplot(111)
-        fig1.set_xlabel(r'$/rho$')
-        fig1.set_ylabel(r'$S_{nbi}(\rho) [#/{s*m^3}]$')
-        fig1.scatter(self.beams_space, self.beams.Snbi, color='red')
+        fig1.set_xlabel(xLabel)
+        fig1.set_ylabel(yLabel)
+        fig1.set_title(title)
+        return fig1
 
-        # fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+    def plot_S_nbi(self):
+        fig = self._plot_single_val(title="NBI Particle Source", yLabel=r'$S_{nbi}[\#/{m s}]$')
+        fig.scatter(self.beams_space, self.combined_beam_src_kept.Snbi, color='red')
+        plt.show()
+        return fig
 
     def plot_Q_nbi(self):
-
-        fig = plt.figure()
-        fig1 = fig.add_subplot(111)
-        fig1.set_xlabel(r'$/rho$')
-        fig1.set_ylabel(r'$Q_{nbi}(\rho) [W/{m^3}]$')
-        fig1.scatter(self.beams_space, self.beams.Qnbi, color='red')
-
-        # fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+        fig = self._plot_single_val(title="NBI Energy Source", yLabel=r'$Q_{nbi}[W/m]$')
+        fig.scatter(self.beams_space, self.combined_beam_src_kept.Qnbi, color='red')
+        plt.show()
+        return fig
 
     def plot_M_nbi(self):
+        fig = self._plot_single_val(title="NBI Momentum Source", yLabel=r'$S_{nbi}[M/s}]$')
+        fig.scatter(self.beams_space, self.combined_beam_src_kept.Qnbi, color='red')
+        plt.show()
+        return fig
 
-        fig = plt.figure()
-        fig1 = fig.add_subplot(111)
-        fig1.set_xlabel(r'$/rho$')
-        fig1.set_ylabel(r'$M_{nbi}(\rho) []$')
-        fig1.scatter(self.beams_space, self.beams.Mnbi, color='red')
+    def plot_S_dens_nbi(self):
+        fig = self._plot_single_val(title="NBI Particle Source Density", yLabel=r'$S_{nbi}[\#/{m^3 s}]$')
+        fig.scatter(self.beams_space, self.combined_beam_src_dens_kept.Snbi, color='red')
+        plt.show()
+        return fig
 
-        # fig1.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+    def plot_Q_dens_nbi(self):
+        fig = self._plot_single_val(title="NBI Energy Source Density", yLabel=r'$Q_{nbi}[W/{m^3}]$')
+        fig.scatter(self.beams_space, self.combined_beam_src_dens_kept.Qnbi, color='red')
+        plt.show()
+        return fig
+
+    def plot_M_dens_nbi(self):
+        fig = self._plot_single_val(title="NBI Momentum Source Density", yLabel=r'$S_{nbi}[\frac{M}{s}]$')
+        fig.scatter(self.beams_space, self.combined_beam_src_dens_kept.Qnbi, color='red')
+        plt.show()
+        return fig
+
 
 
 if __name__ == "__main__":

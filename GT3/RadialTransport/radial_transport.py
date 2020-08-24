@@ -166,7 +166,7 @@ class RadialTransport(Chi):
 
         # prepare beams object
         corePatch(core, neutFlag)  # Patch to update values not brought in via ffiles (ni, zeff)
-        neutPatch(core)
+        #neutPatch(core)
         dn_dr = core.dn_dr_fsa
 
         # prepare core and iol quantities

@@ -57,10 +57,6 @@ def getVals(s, t, f):
     #       'shftknot' : 0.033
     #       }
 
-    data['eq1'] = getNum("Enter charge of main ion: ", "f")
-    data['eq2'] = getNum("Enter charge of main impurity species: ", "f")
-    data['xmas1'] = getNum("Enter main ion mass: ", "f")
-    data['xmas2'] = getNum("Enter main impurity mass: ", "f")
     data['ephia'] = getNum("Enter the toroidal electric field: ", "f")
     data['xk'] = 1.6E-19
     data['delma'] = .005

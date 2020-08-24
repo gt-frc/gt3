@@ -661,55 +661,104 @@ class Core:
         Plots the GT3.Core electron temperature
         """
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$T_e [keV]$', fontsize=20)
-        fig1.set_title('GT3.Core Electron Temperature')
-        fig1.scatter(self.rho[:, 0], self.T_fsa.e.kev, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$T_e [keV]$', fontsize=20)
+        fig.set_title('GT3.Core Electron Temperature')
+        fig.scatter(self.rho[:, 0], self.T_fsa.e.kev, marker='o', color='red')
+        plt.show()
+        return fig
 
     def plot_ti(self):
         """
         Plots the 1D GT3.Core ion temperature
         """
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$T_i [keV]$', fontsize=20)
-        fig1.set_title('GT3.Core Ion Temperature')
-        fig1.scatter(self.rho[:, 0], self.T_fsa.i.kev, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$T_i [keV]$', fontsize=20)
+        fig.set_title('GT3.Core Ion Temperature')
+        fig.scatter(self.rho[:, 0], self.T_fsa.i.kev, marker='o', color='red')
+        plt.show()
+        return fig
 
     def plot_ni(self):
         """
         Plots the 1D GT3.Core ion density
         """
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$n_i [\#/m^3]$', fontsize=20)
-        fig1.set_title('GT3.Core Ion Density')
-        fig1.scatter(self.rho[:, 0], self.n_fsa.i, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$n_i [\#/m^3]$', fontsize=20)
+        fig.set_title('GT3.Core Ion Density')
+        fig.scatter(self.rho[:, 0], self.n_fsa.i, marker='o', color='red')
+        plt.show()
+        return fig
 
     def plot_ne(self):
         """
         Plots the 1D GT3.Core ion density
         """
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$n_e [\#/m^3]$', fontsize=20)
-        fig1.set_title('GT3.Core Electron Density')
-        fig1.scatter(self.rho[:, 0], self.n_fsa.e, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$n_e [\#/m^3]$', fontsize=20)
+        fig.set_title('GT3.Core Electron Density')
+        fig.scatter(self.rho[:, 0], self.n_fsa.e, marker='o', color='red')
+        plt.show()
+        return fig
+
+    def plot_ntrl_s(self):
+        """
+        Plots the 1D GT3.Core slow neutral density
+        """
+        plot = plt.figure()
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$n_0_s$', fontsize=20)
+        fig.set_title('GT3.Core Slow Neutral Density')
+        fig.scatter(self.rho[:, 0], self.n_fsa.n.s, marker='o', color='red')
+        plt.show()
+        return fig
+
+    def plot_ntrl_t(self):
+        """
+        Plots the 1D GT3.Core thermal neutral density
+        """
+        plot = plt.figure()
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$n_0_t$', fontsize=20)
+        fig.set_title('GT3.Core Thermal Neutral Density')
+        fig.scatter(self.rho[:, 0], self.n_fsa.n.t, marker='o', color='red')
+        plt.show()
+        return fig
+
+    def plot_ntrl_tot(self):
+        """
+        Plots the 1D GT3.Core total neutral density
+        """
+        plot = plt.figure()
+        fig = plot.add_subplot(111)
+        fig.set_xlabel('rho', fontsize=20)
+        fig.set_ylabel('n_tot', fontsize=20)
+        fig.set_title('GT3.Core Total Neutral Density')
+        fig.scatter(self.rho[:, 0], self.n_fsa.n.tot, marker='o', color='red')
+        plt.show()
+        return fig
 
     def plot_er(self):
         """
         Plots the 1D GT3.Core ion density
         """
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$E_r [V/m]$', fontsize=20)
-        fig1.set_title('GT3.Core Radial Electric Field')
-        fig1.scatter(self.rho[:, 0], self.E_r_fsa, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$E_r [V/m]$', fontsize=20)
+        fig.set_title('GT3.Core Radial Electric Field')
+        fig.scatter(self.rho[:, 0], self.E_r_fsa, marker='o', color='red')
+        plt.show()
+        return fig
 
     def plot_vpol_C(self):
         """
@@ -717,11 +766,13 @@ class Core:
         """
 
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$V_{c,\theta} [km/s]$', fontsize=20)
-        fig1.set_title('GT3.Core Carbon poloidal velocity')
-        fig1.scatter(self.rho[:, 0], self.v_1D.pol.C, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$V_{c,\theta} [km/s]$', fontsize=20)
+        fig.set_title('GT3.Core Carbon poloidal velocity')
+        fig.scatter(self.rho[:, 0], self.v_1D.pol.C, marker='o', color='red')
+        plt.show()
+        return fig
 
     def plot_vpol_D(self):
         """
@@ -729,11 +780,13 @@ class Core:
         """
 
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$V_{d,\theta} [km/s]$', fontsize=20)
-        fig1.set_title('GT3.Core deuterium poloidal velocity')
-        fig1.scatter(self.rho[:, 0], self.v_1D.pol.D, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$V_{d,\theta} [km/s]$', fontsize=20)
+        fig.set_title('GT3.Core deuterium poloidal velocity')
+        fig.scatter(self.rho[:, 0], self.v_1D.pol.D, marker='o', color='red')
+        plt.show()
+        return fig
 
     def plot_vtor_C(self):
         """
@@ -741,11 +794,13 @@ class Core:
         """
 
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$V_{c,\phi} [km/s]$', fontsize=20)
-        fig1.set_title('GT3.Core Carbon toroidal velocity')
-        fig1.scatter(self.rho[:, 0], self.v_1D.tor.C, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$V_{c,\phi} [km/s]$', fontsize=20)
+        fig.set_title('GT3.Core Carbon toroidal velocity')
+        fig.scatter(self.rho[:, 0], self.v_1D.tor.C, marker='o', color='red')
+        plt.show()
+        return fig
 
     def plot_vtor_D(self):
         """
@@ -753,11 +808,13 @@ class Core:
         """
 
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$V_{d,\phi} [km/s]$', fontsize=20)
-        fig1.set_title('GT3.Core deuterium toroidal velocity')
-        fig1.scatter(self.rho[:, 0], self.v_1D.tor.C, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$V_{d,\phi} [km/s]$', fontsize=20)
+        fig.set_title('GT3.Core deuterium toroidal velocity')
+        fig.scatter(self.rho[:, 0], self.v_1D.tor.C, marker='o', color='red')
+        plt.show()
+        return fig
 
     def plot_pressure_C(self):
         """
@@ -765,20 +822,24 @@ class Core:
         """
 
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$P_{c} [??]$', fontsize=20)
-        fig1.set_title('GT3.Core carbon pressure')
-        fig1.scatter(self.rho[:, 0], self.p_fsa.C, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$P_{c} [??]$', fontsize=20)
+        fig.set_title('GT3.Core carbon pressure')
+        fig.scatter(self.rho[:, 0], self.p_fsa.C, marker='o', color='red')
+        plt.show()
+        return fig
 
     def plot_pressure_D(self):
 
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$P_{d} [??]$', fontsize=20)
-        fig1.set_title('GT3.Core deuterium pressure')
-        fig1.scatter(self.rho[:, 0], self.p_fsa.i, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$P_{d} [??]$', fontsize=20)
+        fig.set_title('GT3.Core deuterium pressure')
+        fig.scatter(self.rho[:, 0], self.p_fsa.i, marker='o', color='red')
+        plt.show()
+        return fig
 
     def plot_pressure_e(self):
         """
@@ -786,11 +847,13 @@ class Core:
         """
 
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$P_{e} [??]$', fontsize=20)
-        fig1.set_title('GT3.Core electron pressure')
-        fig1.scatter(self.rho[:, 0], self.p_fsa.e, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$P_{e} [??]$', fontsize=20)
+        fig.set_title('GT3.Core electron pressure')
+        fig.scatter(self.rho[:, 0], self.p_fsa.e, marker='o', color='red')
+        plt.show()
+        return fig
 
     def plot_izn_rate_s(self):
         """
@@ -798,11 +861,13 @@ class Core:
         """
 
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$<\sigma v>_{slow} [??]$', fontsize=20)
-        fig1.set_title('GT3.Core slow neutral ionization rate')
-        fig1.scatter(self.rho[:, 0], self.izn_rate_fsa_s, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$<\sigma v>_{slow} [??]$', fontsize=20)
+        fig.set_title('GT3.Core slow neutral ionization rate')
+        fig.scatter(self.rho[:, 0], self.izn_rate_fsa_s, marker='o', color='red')
+        plt.show()
+        return fig
 
     def plot_izn_rate_t(self):
         """
@@ -810,11 +875,13 @@ class Core:
         """
 
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$<\sigma v>_{thermal} [??]$', fontsize=20)
-        fig1.set_title('GT3.Core thermal neutral ionization rate')
-        fig1.scatter(self.rho[:, 0], self.izn_rate_fsa_t, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$<\sigma v>_{thermal} [??]$', fontsize=20)
+        fig.set_title('GT3.Core thermal neutral ionization rate')
+        fig.scatter(self.rho[:, 0], self.izn_rate_fsa_t, marker='o', color='red')
+        plt.show()
+        return fig
 
     def plot_izn_rate_tot(self):
         """
@@ -822,11 +889,13 @@ class Core:
         """
 
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$<\sigma v>_{tot} [??]$', fontsize=20)
-        fig1.set_title('GT3.Core total neutral ionization rate')
-        fig1.scatter(self.rho[:, 0], self.izn_rate_fsa, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$<\sigma v>_{tot} [??]$', fontsize=20)
+        fig.set_title('GT3.Core total neutral ionization rate')
+        fig.scatter(self.rho[:, 0], self.izn_rate_fsa, marker='o', color='red')
+        plt.show()
+        return fig
 
     def plot_q(self):
         """
@@ -834,11 +903,13 @@ class Core:
         """
 
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$q [??]$', fontsize=20)
-        fig1.set_title('GT3.Core safety factor')
-        fig1.scatter(self.rho[:, 0], self.q_1D, marker='o', color='red')
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(r'$\rho$', fontsize=20)
+        fig.set_ylabel(r'$q [??]$', fontsize=20)
+        fig.set_title('GT3.Core safety factor')
+        fig.scatter(self.rho[:, 0], self.q_1D, marker='o', color='red')
+        plt.show()
+        return fig
 
     def update_ntrl_data(self, data):
         try:
@@ -880,6 +951,16 @@ class Core:
         )
 
         self.n = namedtuple('n', 'i e n C')(self.n.i, self.n.e, nn, self.n.C)
+
+        self.n_fsa = namedtuple('n', 'i e n C')(
+            calc_fsa(self.n.i, self.R, self.Z),
+            calc_fsa(self.n.e, self.R, self.Z),
+            namedtuple('nn', 's t tot')(
+                calc_fsa(self.n.n.s, self.R, self.Z),  # slow
+                calc_fsa(self.n.n.t, self.R, self.Z),  # thermal
+                calc_fsa(self.n.n.tot, self.R, self.Z)  # total
+            ),
+            calc_fsa(self.n.C, self.R, self.Z))
 
         self.izn_rate = namedtuple('izn_rate', 's t tot')(
             izn_rate_s,  # slow

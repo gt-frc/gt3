@@ -29,11 +29,6 @@ class ReadInfile:
         BT0          (float)    toroidal field strength at mag. axis (T)
         R0_a             (float)    tokamak major radius (m)
         Z0               (float)    vertical height of the magnetic axis (m)
-        kappa_up         (float)    upper elongation at the seperatrix
-        kappa_lo         (float)    lower elongation at the seperatrix
-        tri_up           (float)
-        tri_lo           (float)
-        xmil             (int)
         xpt_R            (float)
         xpt_Z            (float)
         xpt
@@ -60,8 +55,6 @@ class ReadInfile:
         j0               (float)
         j_sep            (float)
         nu_j             (float)
-        s_k_up           (float)
-        s_k_lo           (float)
         xtheta1          (float)
         xtheta2          (float)
         xtheta3          (float)
@@ -78,7 +71,6 @@ class ReadInfile:
         sys.dont_write_bytecode = True
         self.read_vars(infile)
         self.read_exp()
-        self.set_ntrl_switch()
         # if hasattr(self, 'wall_file'):
         #    self.wall_prep()
 
@@ -121,20 +113,6 @@ class ReadInfile:
         self.invars['xi_ib_pts'] = ['int', r0di]
         self.invars['xi_ob_pts'] = ['int', r0di]
 
-        # NEUTRALS PARAMETERS
-        self.invars['core_thetapts_ntrl'] = ['int', r0di]
-        self.invars['ib_thetapts_ntrl'] = ['int', r0di]
-        self.invars['ob_thetapts_ntrl'] = ['int', r0di]
-        self.invars['rhopts_ntrl'] = ['int', r0di]
-        self.invars['edge_rho_ntrl'] = ['float', r0df]
-        self.invars['rhopts_edge_ntrl'] = ['float', r0df]
-        self.invars['rhopts_core_ntrl'] = ['float', r0df]
-        self.invars['wall_ni_min'] = ['float', r0df]
-        self.invars['wall_ne_min'] = ['float', r0df]
-        self.invars['wall_Ti_min'] = ['float', r0df]
-        self.invars['wall_Te_min'] = ['float', r0df]
-        self.invars['tri_min_angle'] = ['float', r0df]
-        self.invars['tri_min_area'] = ['float', r0df]
 
         # PFR PARAMETERS
         self.invars['pfr_ni_val'] = ['float', r0df]
@@ -147,32 +125,15 @@ class ReadInfile:
         self.invars['R_loss'] = ['float', r0df]
 
         # RAD TRANS RELATED QUANTITIES - NEEDS WORK
-        self.invars['eq1'] = ['float', r0df]
-        self.invars['eq2'] = ['float', r0df]
-        self.invars['xmas1'] = ['float', r0df]
-        self.invars['xmas2'] = ['float', r0df]
         self.invars['ephia'] = ['float', r0df]
-        self.invars['xk'] = ['float', r0df]
-        self.invars['delma'] = ['float', r0df]
-        self.invars['xnuati'] = ['float', r0df]
-        self.invars['xnuioni'] = ['float', r0df]
         self.invars['q95'] = ['float', r0df]
 
         # NEUTRALS CALCULATION
         self.invars['neut_outfile'] = ['str', r0ds]
-        self.invars['ntrl_rho_start'] = ['float', r0df]
-        self.invars['ntrl_rpts'] = ['int', r0di]
-        self.invars['ntrl_thetapts'] = ['int', r0di]
-
-        # NEUTRAL BEAM CALCULATION
-        self.invars['ebeam'] = ['float', r0df]
-        self.invars['abeam'] = ['float', r0df]
-        self.invars['alphain'] = ['float', r0df]
-        self.invars['pbeam'] = ['float', r0df]
-        self.invars['rtang'] = ['float', r0df]
 
         # NBeams multi-beam location
-        self.invars['nbeamsJSON'] = ['str', r0ds]
+        self.invars['beams_json'] = ['str', r0ds]
+        self.invars['beams_out_json'] = ['str', r0ds]
 
         # EXECUTABLE LOCATIONS
         self.invars['nbeams_loc'] = ['str', r0ds]
@@ -198,6 +159,7 @@ class ReadInfile:
         self.in_prof['vpolD_file'] = ['str', r0ds, 'vpolD_data']
         self.in_prof['vtorD_file'] = ['str', r0ds, 'vtorD_data']
         self.in_prof['nbi_dep_file'] = ['str', r0ds, 'dPdr_norm1_data']
+        self.in_prof['neutfile_loc'] = ['str', r0ds, 'neutfile_loc']
 
         self.in_map2d = {}
         self.in_map2d['psirz_file'] = ['str', r0ds, 'psirz_exp']
@@ -206,7 +168,7 @@ class ReadInfile:
         self.in_line2d['wall_file'] = ['str', r0ds, 'wall_exp']
 
         # Read input variables
-        with open(os.getcwd() + '/inputs/' + infile, 'r') as f:
+        with open(os.path.join(os.getcwd(), infile), 'r') as f:
             for count, line in enumerate(f):
                 if not line.startswith('#'):
                     # read in 0d variables
@@ -250,7 +212,7 @@ class ReadInfile:
         for infile in self.in_prof:
             try:
                 exec ("filename = self.%s" % (infile))
-                filepath = os.path.join(os.getcwd(), "inputs", filename)
+                filepath = os.path.join(os.getcwd(), filename)
                 try:
                     exec ("self.%s = np.genfromtxt('%s',comments='#')" % (self.in_prof[infile][2], filepath))
                 except Exception as e:
@@ -262,7 +224,7 @@ class ReadInfile:
             try:
 
                 exec ("filename = self.%s" % (infile))
-                filepath = os.getcwd() + '/inputs/' + filename
+                filepath = os.path.join(os.getcwd(), filename)
                 try:
                     exec ("self.%s = np.genfromtxt('%s',comments='#')" % (self.in_map2d[infile][2], filepath))
                 except Exception as e:
@@ -273,7 +235,7 @@ class ReadInfile:
         for infile in self.in_line2d:
             try:
                 exec ("filename = self.%s" % (infile))
-                filepath = os.getcwd() + '/inputs/' + filename
+                filepath = os.path.join(os.getcwd(), filename)
                 try:
                     exec ("self.%s = np.genfromtxt('%s',comments='#')" % (self.in_line2d[infile][2], filepath))
                 except Exception as e:
@@ -282,34 +244,6 @@ class ReadInfile:
                 pass
 
         self.wall_line = LineString(self.wall_exp)
-
-    def set_ntrl_switch(self):
-        """
-        Sets the flagging about whether to run Neutpy to generate neutrals and whether a file already exists.
-        """
-        # set neutral switch for modes that need neutrals
-        # 0: don't run neutrals because not necessary for calculations being done
-        # 1: neutrals needed, but the neut_outfile specified in input file exists. Use that data rather than running neutpy
-        # 2: run neutpy
-
-        # check if specified neutpy_outfile exists. If so, read in and skip everything else.
-        outfile_found = 0
-        try:
-            for root, subdirs, files in os.walk(os.getcwd()):
-                for filename in files:
-                    if filename == self.neut_outfile:
-                        outfile_found = 1
-                        os.path.join(root, filename)
-                        self.neutfile_loc = os.path.join(root, filename)
-                        self.ntrl_switch = 1
-
-            if outfile_found == 0:
-                self.neutfile_loc = os.getcwd() + '/' + self.neut_outfile
-                self.ntrl_switch = 2
-        except AttributeError:
-            # neut_outfile wasn't specified in input file. Assign default value of neut_outfile.dat
-            self.neutfile_loc = os.getcwd() + '/neut_outfile.dat'
-            self.ntrl_switch = 2
 
     def wall_prep(self):
         """

@@ -10,7 +10,6 @@ class debugCore():
 
         rho1d= np.concatenate((np.linspace(0, 0.8, 10, endpoint=False), np.linspace(0.8, 1, 100, endpoint=True)))
         self.a = 0.5640316391827651
-        self.R0_a = 1.691071481388474
         self.kappa = namedtuple('kappa', 'axis sep')(1.2507812426138631,1.6533128554966692)
         self.shaf_shift = 0.04273763321406595
         self.theta, self.rho = np.meshgrid([0., 1.], rho1d)
