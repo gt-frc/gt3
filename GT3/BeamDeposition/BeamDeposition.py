@@ -197,7 +197,7 @@ class BeamDeposition:
                             out_dict[b.name] = self.BeamResult(b.rtang,
                                                                b.beamWidth,
                                                                b.gaussR,
-                                                               b.beamE,
+                                                               b.beamE / 1.E3,
                                                                b.beamA,
                                                                b.beamP,
                                                                b.rho.tolist(),

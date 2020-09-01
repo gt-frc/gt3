@@ -9,7 +9,6 @@ from __future__ import division
 from neutpy import neutrals
 from collections import namedtuple
 import json
-import yaml
 from GT3.Core.Processors import NumpyEncoder
 
 
@@ -23,7 +22,7 @@ class Neutrals:
         self.core = core
         try:
             with open(inp.neutfile_loc, "r") as f:
-                ntrl_data = yaml.safe_load(f)
+                ntrl_data = json.load(f)
                 self.data = self.NeutralDataNT(ntrl_data['R'],
                                         ntrl_data['Z'],
                                         ntrl_data['nn_s_raw'],

@@ -1,6 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
+from __future__ import division
 import sys
 from GT3.Neutrals import Neutrals
 from GT3.IOL import IOL
@@ -116,14 +117,14 @@ class gt3:
         self.iol = IOL(self.inp, self.core)
         return self
 
-    def run_NBI(self):
+    def run_NBI(self, reRun=False):
         try:
             self.iol
         except AttributeError:
             print ("IOL module not run. Running now...")
             self.run_IOL()
         if self.iolFlag:
-            self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+            self.nbi = BeamDeposition(self.inp, self.core, self.iol, reRun=reRun)
         else:
             self.nbi = BeamDeposition(self.inp, self.core)
         return self
@@ -164,6 +165,20 @@ class gt3:
         except AttributeError:
             print ("Neutrals module not run. Running now...")
             self.run_neutrals()
-        self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag,
-                                      debugFlag=self.verbose)
+
+        try:
+            self.imp
+        except AttributeError:
+            print ("Impurity radiation module not run. Running now...")
+            self.imp = ImpRad(z=6, core=self.core)
+        self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag)
+        return self
+
+    def disable_IOL(self):
+        self.iolFlag = False
+        print ("Re-running Radial Transport without IOL")
+        try:
+            self.rtrans
+        except:
+            self.run_radial_transport()
         return self

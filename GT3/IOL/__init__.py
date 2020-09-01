@@ -214,12 +214,12 @@ class IOL:
         v_beam = sqrt(2*80.0E3*1.6021E-19/m_d)
         zeta_beam = -0.96
         forb_d_nbi, morb_d_nbi, eorb_d_nbi = self.calc_iol_beams(1,
-                                                            m_d,
-                                                            self.iol_p,
-                                                            core.thetapts,
-                                                            v_beam,
-                                                            zeta_beam,
-                                                            self.coslist)
+                                                                 m_d,
+                                                                 self.iol_p,
+                                                                 core.thetapts,
+                                                                 v_beam,
+                                                                 zeta_beam,
+                                                                 self.coslist)
         # currently applying R_loss to fast alphas as well as thermal, although I'm skeptical of this. -MH
         self.forb_d_nbi = inp.R_loss * forb_d_nbi
         self.morb_d_nbi = inp.R_loss * morb_d_nbi
@@ -238,7 +238,7 @@ class IOL:
         fig1.set_xlabel(r'$\rho$', fontsize=20)
         fig1.set_ylabel(r'$\frac{\partial F}{\partial r}$', fontsize=25)
         fig1.set_title('GT3.IOL differential ion number loss fraction')
-        fig1.scatter(self.rho, self.forb_d_therm_1D, marker='o', color='blue')
+        fig1.scatter(self.rho[:, 0], self.forb_d_therm_1D, marker='o', color='blue')
 
     def plot_M_i(self):
         """
@@ -250,7 +250,7 @@ class IOL:
         fig1.set_xlabel(r'$\rho$', fontsize=20)
         fig1.set_ylabel(r'$\frac{\partial M}{\partial r}$', fontsize=25)
         fig1.set_title('GT3.IOL differential ion momentum loss fraction')
-        fig1.scatter(self.rho, self.morb_d_therm_1D, marker='o', color='green')
+        fig1.scatter(self.rho[:, 0], self.morb_d_therm_1D, marker='o', color='green')
 
     def plot_E_i(self):
         """
@@ -262,28 +262,28 @@ class IOL:
         fig1.set_xlabel(r'$\rho$', fontsize=20)
         fig1.set_ylabel(r'$\frac{\partial E}{\partial r}$', fontsize=25)
         fig1.set_title('GT3.IOL differential ion energy loss fraction')
-        fig1.scatter(self.rho, self.eorb_d_therm_1D, marker='o', color='red')
+        fig1.scatter(self.rho[:, 0], self.eorb_d_therm_1D, marker='o', color='red')
 
     def plot_all_i(self):
 
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
+        fig1 = plot.add_subplot(131)
         fig1.set_xlabel(r'$\rho$', fontsize=20)
         fig1.set_ylabel(r'$\frac{\partial F}{\partial r}$', fontsize=25)
         fig1.set_title('Ion number loss fraction')
-        fig1.scatter(self.rho, self.forb_d_therm_1D, marker='o', color='blue')
+        fig1.scatter(self.rho[:, 0], self.forb_d_therm_1D, marker='o', color='blue')
 
-        fig2 = plot.add_subplot(121)
+        fig2 = plot.add_subplot(132)
         fig2.set_xlabel(r'$\rho$', fontsize=20)
         fig2.set_ylabel(r'$\frac{\partial E}{\partial r}$', fontsize=25)
         fig2.set_title('Ion energy loss fraction')
-        fig2.scatter(self.rho, self.eorb_d_therm_1D, marker='o', color='red')
+        fig2.scatter(self.rho[:, 0], self.eorb_d_therm_1D, marker='o', color='red')
 
-        fig3 = plot.add_subplot(131)
+        fig3 = plot.add_subplot(133)
         fig3.set_xlabel(r'$\rho$', fontsize=20)
         fig3.set_ylabel(r'$\frac{\partial M}{\partial r}$', fontsize=25)
         fig3.set_title('Ion momentum loss fraction')
-        fig3.scatter(self.rho, self.morb_d_therm_1D, marker='o', color='green')
+        fig3.scatter(self.rho[:, 0], self.morb_d_therm_1D, marker='o', color='green')
 
     def plot_F_C(self):
         """
@@ -295,7 +295,7 @@ class IOL:
         fig1.set_xlabel(r'$\rho$', fontsize=20)
         fig1.set_ylabel(r'$\frac{\partial F}{\partial r}$', fontsize=25)
         fig1.set_title('GT3.IOL differential carbon number loss fraction')
-        fig1.scatter(self.rho, self.forb_c_therm_1D, marker='o', color='blue')
+        fig1.scatter(self.rho[:, 0], self.forb_c_therm_1D, marker='o', color='blue')
 
     def plot_M_C(self):
         """
@@ -307,7 +307,7 @@ class IOL:
         fig1.set_xlabel(r'$\rho$', fontsize=20)
         fig1.set_ylabel(r'$\frac{\partial M}{\partial r}$', fontsize=25)
         fig1.set_title('GT3.IOL differential carbon momentum loss fraction')
-        fig1.scatter(self.rho, self.morb_c_therm_1D, marker='o', color='green')
+        fig1.scatter(self.rho[:, 0], self.morb_c_therm_1D, marker='o', color='green')
 
     def plot_E_C(self):
         """
@@ -319,7 +319,7 @@ class IOL:
         fig1.set_xlabel(r'$\rho$', fontsize=20)
         fig1.set_ylabel(r'$\frac{\partial E}{\partial r}$', fontsize=25)
         fig1.set_title('GT3.IOL differential carbon energy loss fraction')
-        fig1.scatter(self.rho, self.eorb_c_therm_1D, marker='o', color='red')
+        fig1.scatter(self.rho[:, 0], self.eorb_c_therm_1D, marker='o', color='red')
 
     def plot_all_C(self):
 
@@ -328,19 +328,19 @@ class IOL:
         fig1.set_xlabel(r'$\rho$', fontsize=20)
         fig1.set_ylabel(r'$\frac{\partial F}{\partial r}$', fontsize=25)
         fig1.set_title('Carbon number loss fraction')
-        fig1.scatter(self.rho, self.forb_c_therm_1D, marker='o', color='blue')
+        fig1.scatter(self.rho[:, 0], self.forb_c_therm_1D, marker='o', color='blue')
 
         fig2 = plot.add_subplot(121)
         fig2.set_xlabel(r'$\rho$', fontsize=20)
         fig2.set_ylabel(r'$\frac{\partial E}{\partial r}$', fontsize=25)
         fig2.set_title('Carbon energy loss fraction')
-        fig2.scatter(self.rho, self.eorb_c_therm_1D, marker='o', color='red')
+        fig2.scatter(self.rho[:, 0], self.eorb_c_therm_1D, marker='o', color='red')
 
         fig3 = plot.add_subplot(131)
         fig3.set_xlabel(r'$\rho$', fontsize=20)
         fig3.set_ylabel(r'$\frac{\partial M}{\partial r}$', fontsize=25)
         fig3.set_title('Carbon momentum loss fraction')
-        fig3.scatter(self.rho, self.morb_c_therm_1D, marker='o', color='green')
+        fig3.scatter(self.rho[:, 0], self.morb_c_therm_1D, marker='o', color='green')
 
     def plot_F_i_fast(self):
         """
@@ -352,7 +352,7 @@ class IOL:
         fig1.set_xlabel(r'$\rho$', fontsize=20)
         fig1.set_ylabel(r'$\frac{\partial F}{\partial r}$', fontsize=25)
         fig1.set_title('GT3.IOL differential fast ion number loss fraction')
-        fig1.scatter(self.rho, self.forb_d_nbi_1D, marker='o', color='blue')
+        fig1.scatter(self.rho[:, 0], self.forb_d_nbi_1D, marker='o', color='blue')
 
     def plot_M_i_fast(self):
         """
@@ -364,7 +364,7 @@ class IOL:
         fig1.set_xlabel(r'$\rho$', fontsize=20)
         fig1.set_ylabel(r'$\frac{\partial M}{\partial r}$', fontsize=25)
         fig1.set_title('GT3.IOL differential fast ion momentum loss fraction')
-        fig1.scatter(self.rho, self.morb_d_nbi_1D, marker='o', color='green')
+        fig1.scatter(self.rho[:, 0], self.morb_d_nbi_1D, marker='o', color='green')
 
     def plot_E_i_fast(self):
         """
@@ -376,7 +376,7 @@ class IOL:
         fig1.set_xlabel(r'$\rho$', fontsize=20)
         fig1.set_ylabel(r'$\frac{\partial E}{\partial r}$', fontsize=25)
         fig1.set_title('GT3.IOL differential fast ion energy loss fraction')
-        fig1.scatter(self.rho, self.eorb_d_nbi_1D, marker='o', color='red')
+        fig1.scatter(self.rho[:, 0], self.eorb_d_nbi_1D, marker='o', color='red')
 
     def plot_all_i_fast(self):
 
@@ -385,19 +385,19 @@ class IOL:
         fig1.set_xlabel(r'$\rho$', fontsize=20)
         fig1.set_ylabel(r'$\frac{\partial F}{\partial r}$', fontsize=25)
         fig1.set_title('Fast ion number loss fraction')
-        fig1.scatter(self.rho, self.forb_d_nbi_1D, marker='o', color='blue')
+        fig1.scatter(self.rho[:, 0], self.forb_d_nbi_1D, marker='o', color='blue')
 
         fig2 = plot.add_subplot(121)
         fig2.set_xlabel(r'$\rho$', fontsize=20)
         fig2.set_ylabel(r'$\frac{\partial E}{\partial r}$', fontsize=25)
         fig2.set_title('Fast ion energy loss fraction')
-        fig2.scatter(self.rho, self.eorb_d_nbi_1D, marker='o', color='red')
+        fig2.scatter(self.rho[:, 0], self.eorb_d_nbi_1D, marker='o', color='red')
 
         fig3 = plot.add_subplot(131)
         fig3.set_xlabel(r'$\rho$', fontsize=20)
         fig3.set_ylabel(r'$\frac{\partial M}{\partial r}$', fontsize=25)
         fig3.set_title('Fast ion momentum loss fraction')
-        fig3.scatter(self.rho, self.morb_d_nbi_1D, marker='o', color='green')
+        fig3.scatter(self.rho[:, 0], self.morb_d_nbi_1D, marker='o', color='green')
 
 
 # iolplot=1

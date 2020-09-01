@@ -21,7 +21,7 @@ class Chi:
     """
     Chi class claculates various chis and provides source terms as necessary
     """
-    def __init__(self, data, core, n, T, L, nustar, reInterp=False):
+    def __init__(self, data, core, n, T, L, reInterp=False):
 
         self.Qi = data.Qi_diff
         self.Qe = data.Qe_diff
@@ -69,5 +69,5 @@ class Chi:
         # a = vtor    b = fp   c = eta0
         # d = vrad    f = vthet g = eta 4
 
-        return [a * (b * c * d - .5 * g * (4.0 * a + f)) - .5 * f * (c * d + g * (a + .5 * f)) for a,b,c,d,f,g in zip(data.vtor_D_total, fp, eta0, vrad, data.vpol_D, eta4)]
+        return [a * (b * c * d - .5 * g * (4.0 * a + f)) - .5 * f * (c * d + g * (a + .5 * f)) for a, b,c,d,f,g in zip(data.vtor_D_total, fp, eta0, vrad, data.vpol_D, eta4)]
 

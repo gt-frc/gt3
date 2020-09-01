@@ -656,259 +656,201 @@ class Core:
         # TODO: Verify this fus_rate calculation. I think it's wrong.
         self.fus_rate = 1 / 4 * self.n.D * self.n.D * self.sv.fus.dd + 1 / 4 * self.n.D * self.n.T * self.sv.fus.dt
 
-    def plot_te(self):
+    def plot_te(self, edge=False):
         """
         Plots the GT3.Core electron temperature
         """
+        fig = self._plot_base(self.T_fsa.e.kev,yLabel=r'$T_e [keV]$', title="GT3.Core Electron Temperature", edge=edge)
+        return fig
+
+    def _plot_base(self, val, xLabel=r'$\rho$', yLabel="Value", title="Title", color='red', edge=False):
+
         plot = plt.figure()
         fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$T_e [keV]$', fontsize=20)
-        fig.set_title('GT3.Core Electron Temperature')
-        fig.scatter(self.rho[:, 0], self.T_fsa.e.kev, marker='o', color='red')
+        fig.set_xlabel(xLabel, fontsize=20)
+        fig.set_ylabel(yLabel, fontsize=20)
+        fig.set_title(title)
+        if edge:
+            fig.set_xlim(0.85, 1.0)
+        fig.scatter(self.rho[:, 0], val, color=color, s=4)
         plt.show()
         return fig
 
-    def plot_ti(self):
+    def plot_ti(self, edge=False):
         """
-        Plots the 1D GT3.Core ion temperature
+        Plots the GT3.Core ion temperature
         """
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$T_i [keV]$', fontsize=20)
-        fig.set_title('GT3.Core Ion Temperature')
-        fig.scatter(self.rho[:, 0], self.T_fsa.i.kev, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.T_fsa.e.kev, yLabel=r'$T_e [keV]$', title="GT3.Core Ion Temperature", edge=edge)
         return fig
 
-    def plot_ni(self):
+    def plot_t(self, edge=False):
+        """
+        Plots the 1D GT3.Core ion and electron temperatures
+        """
+        fig = self._plot_base(self.T_fsa.e.kev, yLabel=r'$T [keV]$', title="GT3.Core ion/electron temperatures", edge=edge)
+        fig.scatter(self.rho[:, 0], self.T_fsa.i.kev, color="blue")
+        fig.legend([r'$T_e$', r'$T_i$'])
+        return fig
+
+    def plot_ni(self, edge=False):
         """
         Plots the 1D GT3.Core ion density
         """
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$n_i [\#/m^3]$', fontsize=20)
-        fig.set_title('GT3.Core Ion Density')
-        fig.scatter(self.rho[:, 0], self.n_fsa.i, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.n_fsa.i, yLabel=r'$n_i [#/m^3]$', title="GT3.Core Ion density", edge=edge)
         return fig
 
-    def plot_ne(self):
+    def plot_ne(self, edge=False):
         """
-        Plots the 1D GT3.Core ion density
+        Plots the 1D GT3.Core electron density
         """
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$n_e [\#/m^3]$', fontsize=20)
-        fig.set_title('GT3.Core Electron Density')
-        fig.scatter(self.rho[:, 0], self.n_fsa.e, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.n_fsa.e, yLabel=r'$n_e [#/m^3]$', title="GT3.Core electron density", edge=edge)
         return fig
 
-    def plot_ntrl_s(self):
+    def plot_n(self, edge=False):
+        """
+        Plots the 1D GT3.Core ion and electron densities
+        """
+        fig = self._plot_base(self.n_fsa.e, yLabel=r'$n [#/m^3]$', title="GT3.Core ion/electron densities", edge=edge)
+        fig.scatter(self.rho[:, 0], self.n_fsa.i, color="blue")
+        fig.legend([r'$n_e$', r'$n_i$'])
+        return fig
+
+    def plot_ntrl_s(self, edge=False):
         """
         Plots the 1D GT3.Core slow neutral density
         """
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$n_0_s$', fontsize=20)
-        fig.set_title('GT3.Core Slow Neutral Density')
-        fig.scatter(self.rho[:, 0], self.n_fsa.n.s, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.n_fsa.n.s, yLabel=r'$n_{o,s} [#/m^3]$', title="GT3.Core Slow Neutral Density", edge=edge)
         return fig
 
-    def plot_ntrl_t(self):
+    def plot_ntrl_s(self, edge=False):
         """
         Plots the 1D GT3.Core thermal neutral density
         """
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$n_0_t$', fontsize=20)
-        fig.set_title('GT3.Core Thermal Neutral Density')
-        fig.scatter(self.rho[:, 0], self.n_fsa.n.t, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.n_fsa.n.t, yLabel=r'$n_{o,t} [#/m^3]$', title="GT3.Core Thermal Neutral Density", edge=edge)
         return fig
 
-    def plot_ntrl_tot(self):
+    def plot_ntrl_total(self, edge=False):
         """
         Plots the 1D GT3.Core total neutral density
         """
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel('rho', fontsize=20)
-        fig.set_ylabel('n_tot', fontsize=20)
-        fig.set_title('GT3.Core Total Neutral Density')
-        fig.scatter(self.rho[:, 0], self.n_fsa.n.tot, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.n_fsa.n.tot, yLabel=r'$n_{o,tot} [#/m^3]$', title="GT3.Core Total Neutral Density", edge=edge)
         return fig
 
-    def plot_er(self):
+    def plot_er(self, edge=False):
         """
-        Plots the 1D GT3.Core ion density
+        Plots the 1D GT3.Core electric field
         """
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$E_r [V/m]$', fontsize=20)
-        fig.set_title('GT3.Core Radial Electric Field')
-        fig.scatter(self.rho[:, 0], self.E_r_fsa, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.E_r_fsa, yLabel=r'$E_r [V/m]$', title="GT3.Core Radial Electric Field",
+                              edge=edge)
         return fig
 
-    def plot_vpol_C(self):
+    def plot_vpol_C(self, edge=False):
         """
         Plots the 1D GT3.Core carbon poloidal velocity
         """
 
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$V_{c,\theta} [km/s]$', fontsize=20)
-        fig.set_title('GT3.Core Carbon poloidal velocity')
-        fig.scatter(self.rho[:, 0], self.v_1D.pol.C, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.v_1D.pol.C, yLabel=r'$V_{C,\theta} [km/s]$',
+                              title="GT3.Core Carbon Poloidal Rotation Velocity",
+                              edge=edge)
         return fig
 
-    def plot_vpol_D(self):
+    def plot_vpol_D(self, edge=False):
         """
         Plots the 1D GT3.Core deuterium poloidal velocity
         """
 
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$V_{d,\theta} [km/s]$', fontsize=20)
-        fig.set_title('GT3.Core deuterium poloidal velocity')
-        fig.scatter(self.rho[:, 0], self.v_1D.pol.D, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.v_1D.pol.D, yLabel=r'$V_{C,\theta} [km/s]$',
+                              title="GT3.Core Deuterium Poloidal Rotation Velocity",
+                              edge=edge)
         return fig
 
-    def plot_vtor_C(self):
+    def plot_vtor_C(self, edge=False):
         """
         Plots the 1D GT3.Core carbon toroidal velocity
         """
-
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$V_{c,\phi} [km/s]$', fontsize=20)
-        fig.set_title('GT3.Core Carbon toroidal velocity')
-        fig.scatter(self.rho[:, 0], self.v_1D.tor.C, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.v_1D.tor.C, yLabel=r'$V_{c,\phi} [km/s]$',
+                              title="GT3.Core Carbon toroidal velocity",
+                              edge=edge)
         return fig
 
-    def plot_vtor_D(self):
+    def plot_vtor_D(self, edge=False):
         """
         Plots the 1D GT3.Core deuterium toroidal velocity
         """
 
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$V_{d,\phi} [km/s]$', fontsize=20)
-        fig.set_title('GT3.Core deuterium toroidal velocity')
-        fig.scatter(self.rho[:, 0], self.v_1D.tor.C, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.v_1D.tor.D, yLabel=r'$V_{c,\phi} [km/s]$',
+                              title="GT3.Core deuterium toroidal velocity",
+                              edge=edge)
         return fig
 
-    def plot_pressure_C(self):
+    def plot_pressure_C(self, edge=False):
         """
         Plots the 1D GT3.Core carbon pressure
         """
 
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$P_{c} [??]$', fontsize=20)
-        fig.set_title('GT3.Core carbon pressure')
-        fig.scatter(self.rho[:, 0], self.p_fsa.C, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.p_fsa.C, yLabel=r'$P_C [??]$',
+                              title="GT3.Core carbon pressure",
+                              edge=edge)
         return fig
 
-    def plot_pressure_D(self):
+    def plot_pressure_D(self, edge=False):
+        """
+        Plots the 1D GT3.Core deuterium pressure
+        """
 
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$P_{d} [??]$', fontsize=20)
-        fig.set_title('GT3.Core deuterium pressure')
-        fig.scatter(self.rho[:, 0], self.p_fsa.i, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.p_fsa.i, yLabel=r'$P_i [??]$',
+                              title="GT3.Core deuterium pressure",
+                              edge=edge)
         return fig
 
-    def plot_pressure_e(self):
+    def plot_pressure_e(self, edge=False):
         """
         Plots the 1D GT3.Core electron pressure
         """
 
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$P_{e} [??]$', fontsize=20)
-        fig.set_title('GT3.Core electron pressure')
-        fig.scatter(self.rho[:, 0], self.p_fsa.e, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.p_fsa.e, yLabel=r'$P_e [??]$',
+                              title="GT3.Core electron pressure",
+                              edge=edge)
         return fig
 
-    def plot_izn_rate_s(self):
+    def plot_izn_rate_s(self, edge=False):
         """
         Plots the 1D GT3.Core slow neutral ionization rate
         """
 
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$<\sigma v>_{slow} [??]$', fontsize=20)
-        fig.set_title('GT3.Core slow neutral ionization rate')
-        fig.scatter(self.rho[:, 0], self.izn_rate_fsa_s, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.izn_rate_fsa_s, yLabel=r'$<\sigma v>_{slow} [??]$',
+                              title="GT3.Core slow neutral ionization rate",
+                              edge=edge)
         return fig
 
-    def plot_izn_rate_t(self):
+    def plot_izn_rate_t(self, edge=False):
         """
         Plots the 1D GT3.Core thermal neutral ionization rate
         """
 
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$<\sigma v>_{thermal} [??]$', fontsize=20)
-        fig.set_title('GT3.Core thermal neutral ionization rate')
-        fig.scatter(self.rho[:, 0], self.izn_rate_fsa_t, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.izn_rate_fsa_t, yLabel=r'$<\sigma v>_{thermal} [??]$',
+                              title="GT3.Core thermal neutral ionization rate",
+                              edge=edge)
         return fig
 
-    def plot_izn_rate_tot(self):
+    def plot_izn_rate_total(self, edge=False):
         """
         Plots the 1D GT3.Core total neutral ionization rate
         """
 
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$<\sigma v>_{tot} [??]$', fontsize=20)
-        fig.set_title('GT3.Core total neutral ionization rate')
-        fig.scatter(self.rho[:, 0], self.izn_rate_fsa, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.izn_rate_fsa, yLabel=r'$<\sigma v>_{tot} [??]$',
+                              title="GT3.Core total neutral ionization rate",
+                              edge=edge)
         return fig
 
-    def plot_q(self):
+    def plot_q(self, edge=False):
         """
         Plots the 1D GT3.Core safety factor
         """
 
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(r'$\rho$', fontsize=20)
-        fig.set_ylabel(r'$q [??]$', fontsize=20)
-        fig.set_title('GT3.Core safety factor')
-        fig.scatter(self.rho[:, 0], self.q_1D, marker='o', color='red')
-        plt.show()
+        fig = self._plot_base(self.q_1D, yLabel=r'$q$',
+                              title="GT3.Core safety factor",
+                              edge=edge)
         return fig
 
     def update_ntrl_data(self, data):
@@ -967,6 +909,19 @@ class Core:
             izn_rate_t,  # thermal
             izn_rate_s + izn_rate_t  # total
         )
+
+        self.izn_rate_fsa_s = calc_fsa(self.izn_rate.s, self.R, self.Z)
+        self.izn_rate_fsa_t = calc_fsa(self.izn_rate.t, self.R, self.Z)
+        self.izn_rate_fsa = calc_fsa(self.izn_rate.s + self.izn_rate.t, self.R, self.Z)
+
+        self.cool_rate_fsa = calc_fsa(self.n.e * self.n.C * np.nan_to_num(self.Lz_C.s) + \
+                                      + self.n.e * self.n.C * np.nan_to_num(self.Lz_C.t),
+                                      self.R, self.Z)
+        self.dn_dr_fsa = calc_fsa(self.dn_dr, self.R, self.Z)
+
+        # self.izn_rate_fsa = np.array(map(lambda x: self.izn_rate_fsa[-1] * x ** 10, self.r[:, 0] / self.a))
+        # self.cool_rate_fsa = np.array(map(lambda x: self.cool_rate_fsa[-1] * x ** 10, self.r[:, 0] / self.a))
+        # self.dn_dr_fsa = np.array(map(lambda x: self.dn_dr_fsa[-1] * x ** 10, self.r[:, 0] / self.a))
 
     def update_Lz_data(self, z, Lz, dLzdT):
 
@@ -1045,3 +1000,7 @@ class Core:
                     dLzdT_thermal
                 )
             )
+
+        self.cool_rate_fsa = calc_fsa(self.n.e * self.n.C * np.nan_to_num(self.Lz_C.s) + \
+                                      + self.n.e * self.n.C * np.nan_to_num(self.Lz_C.t),
+                                      self.R, self.Z)  # TODO: Figure out how to not run this for all Z in a normal shot

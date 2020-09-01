@@ -129,7 +129,7 @@ class Beam:
         self.Tc = config.Ti
         self.R0 = config.R0
         self.ne = config.ne
-        self.beamE = config.beamE
+        self.beamE = config.beamE * 1000
         self.beamA = config.beamA
         self.beamP = config.beamP
         self.Zeff = config.Z_eff
@@ -261,10 +261,10 @@ class Beam:
         """
         # TODO: Introduce accurate launch angles
         if iol:
-            D1_iol = iol.calc_iol_beams(1, m_d, iol.iol_p, 33,  sqrt(2 * self.beamE * 1.E3 * 1.6021E-19 / m_d), -.96, iol.coslist)
-            D2_iol = iol.calc_iol_beams(1, m_d, iol.iol_p, 33, sqrt(2 * self.beamE * 1.E3 * 1.6021E-19 / (m_d * 2.)), -.96,
+            D1_iol = iol.calc_iol_beams(1, m_d, iol.iol_p, 33,  sqrt(2 * self.beamE * 1.6021E-19 / m_d), -.96, iol.coslist)
+            D2_iol = iol.calc_iol_beams(1, m_d, iol.iol_p, 33, sqrt(2 * self.beamE * 1.6021E-19 / (m_d * 2.)), -.96,
                                         iol.coslist)
-            D3_iol = iol.calc_iol_beams(1, m_d, iol.iol_p, 33, sqrt(2 * self.beamE * 1.E3 * 1.6021E-19 / (3. * m_d)), -.96,
+            D3_iol = iol.calc_iol_beams(1, m_d, iol.iol_p, 33, sqrt(2 * self.beamE * 1.6021E-19 / (3. * m_d)), -.96,
                                         iol.coslist)
             # Since we don't know if the beam meshing will be the same as the iol rho meshing, we map by index
 
@@ -580,7 +580,7 @@ class Beam:
                        interp_3,
                        interp_4)
 
-    def calc_power_frac(self, beamE):
+    def calc_power_frac(self, beamEeV):
         """
         Calculate the D3D power fraction
 
@@ -590,7 +590,7 @@ class Beam:
         :type beamE: float
         :return:
         """
-
+        beamE = beamEeV / 1E3
         pwr_frac = np.zeros(3)
         pwr_frac[0] = (68 + 0.11 * beamE) / 100
         pwr_frac[1] = (-159 + 6.53 * beamE - 0.082 * (beamE ** 2) + 0.00034 * (beamE ** 3)) / 100

@@ -76,7 +76,7 @@ def S1(ne, E, Te, beamA, rho):
 
     :param ne: Electron density (in m^-3)
     :type ne: np.ndarray
-    :param E: Beam ion temperature  (in keV)
+    :param E: Beam ion temperature  (in eV)
     :type E: np.ndarray
     :param Te: Plasma electron temperature  (in keV)
     :type Te: np.ndarray
@@ -111,7 +111,7 @@ def S1(ne, E, Te, beamA, rho):
         for i in [0,1]:
             for j in [0, 1, 2]:
                 for k in [0, 1]:
-                    result[n] += A1[i, j, k] * (ln(E/beamA)**(i)) * ( ( ln((ne[n] / 1E6) / 1E13) ) )**(j) * (ln(Te[n]))**(k)
+                    result[n] += A1[i, j, k] * (ln(E * 1.E-3/beamA)**(i)) * ( ( ln((ne[n] / 1E6) / 1E13) ) )**(j) * (ln(Te[n]))**(k)
     return result
 
 def SC(ne, E, Te, beamA):
@@ -120,7 +120,7 @@ def SC(ne, E, Te, beamA):
 
     :param ne: Electron density (in m^-3)
     :type ne: np.ndarray
-    :param E: Beam ion temperature  (in keV)
+    :param E: Beam ion temperature  (in eV)
     :type E: np.ndarray
     :param Te: Electron temperature  (in keV)
     :type Te: np.ndarray
@@ -152,6 +152,6 @@ def SC(ne, E, Te, beamA):
         for i in [0, 1, 2]:
             for j in [0, 1]:
                 for k in [0, 1]:
-                    result[rho] += BC[i, j, k] * (ln(E/beamA)**(i)) * (ln((ne[rho] / 1E6) / 1E13))**(j)\
+                    result[rho] += BC[i, j, k] * (ln(E * 1.E-3/beamA)**(i)) * (ln((ne[rho] / 1E6) / 1E13))**(j)\
                                    * (ln(Te[rho]))**(k)
     return result

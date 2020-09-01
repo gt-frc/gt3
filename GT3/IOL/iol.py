@@ -237,7 +237,7 @@ class IOL:
         plot = plt.figure()
         fig1 = plot.add_subplot(111)
         fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$\frac{\partial F}{\partial r}$', fontsize=25)
+        fig1.set_ylabel(r'$F(\rho)$', fontsize=25)
         fig1.set_title('GT3.IOL differential ion number loss fraction')
         fig1.scatter(self.rho, self.forb_d_therm_1D, marker='o', color='blue')
 
@@ -249,7 +249,7 @@ class IOL:
         plot = plt.figure()
         fig1 = plot.add_subplot(111)
         fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$\frac{\partial M}{\partial r}$', fontsize=25)
+        fig1.set_ylabel(r'$\M(\rho)$', fontsize=25)
         fig1.set_title('GT3.IOL differential ion momentum loss fraction')
         fig1.scatter(self.rho, self.morb_d_therm_1D, marker='o', color='green')
 

@@ -15,7 +15,7 @@ def create_surf_area_interp(rho2psinorm, psinorm2rho, psi_data, sep_pts, R0_a, a
 
     surf_area = np.zeros(rho_vals.shape)
     # skip the first value. First value is zero.
-    for i,psi_val in enumerate(psi_vals[1:]):
+    for i, psi_val in enumerate(psi_vals[1:]):
         if psi_val < 1:
             try:
                 # try to get the actual length of the fs trace
