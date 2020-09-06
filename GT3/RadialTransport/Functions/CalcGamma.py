@@ -58,6 +58,7 @@ def calc_gamma_diff_method(r, a, part_src_nbi_tot, part_src_nbi_lost, izn_rate, 
         fig3.set_xlim(0.85 * a, a)
         plt.show()
 
+        return fig1, fig2, fig3
 
     return gamma(r)
 

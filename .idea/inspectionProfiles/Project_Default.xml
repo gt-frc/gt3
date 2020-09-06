@@ -1,6 +1,75 @@
 <component name="InspectionProjectProfileManager">
   <profile version="1.0">
     <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <value>
+          <list size="61">
+            <item index="0" class="java.lang.String" itemvalue="traitlets" />
+            <item index="1" class="java.lang.String" itemvalue="protobuf" />
+            <item index="2" class="java.lang.String" itemvalue="tzlocal" />
+            <item index="3" class="java.lang.String" itemvalue="html5lib" />
+            <item index="4" class="java.lang.String" itemvalue="simplediff" />
+            <item index="5" class="java.lang.String" itemvalue="arrow" />
+            <item index="6" class="java.lang.String" itemvalue="Babel" />
+            <item index="7" class="java.lang.String" itemvalue="nltk" />
+            <item index="8" class="java.lang.String" itemvalue="pickleshare" />
+            <item index="9" class="java.lang.String" itemvalue="Click" />
+            <item index="10" class="java.lang.String" itemvalue="pycairo" />
+            <item index="11" class="java.lang.String" itemvalue="MarkupSafe" />
+            <item index="12" class="java.lang.String" itemvalue="PyGObject" />
+            <item index="13" class="java.lang.String" itemvalue="fart" />
+            <item index="14" class="java.lang.String" itemvalue="Pygments" />
+            <item index="15" class="java.lang.String" itemvalue="scandir" />
+            <item index="16" class="java.lang.String" itemvalue="anyjson" />
+            <item index="17" class="java.lang.String" itemvalue="lxml" />
+            <item index="18" class="java.lang.String" itemvalue="multiprocess" />
+            <item index="19" class="java.lang.String" itemvalue="soupsieve" />
+            <item index="20" class="java.lang.String" itemvalue="piecash" />
+            <item index="21" class="java.lang.String" itemvalue="xattr" />
+            <item index="22" class="java.lang.String" itemvalue="argcomplete" />
+            <item index="23" class="java.lang.String" itemvalue="pexpect" />
+            <item index="24" class="java.lang.String" itemvalue="mechanize" />
+            <item index="25" class="java.lang.String" itemvalue="ruamel.ordereddict" />
+            <item index="26" class="java.lang.String" itemvalue="PyMySQL" />
+            <item index="27" class="java.lang.String" itemvalue="idna" />
+            <item index="28" class="java.lang.String" itemvalue="geopy" />
+            <item index="29" class="java.lang.String" itemvalue="decorator" />
+            <item index="30" class="java.lang.String" itemvalue="jupyter-core" />
+            <item index="31" class="java.lang.String" itemvalue="diff-match-patch" />
+            <item index="32" class="java.lang.String" itemvalue="SQLAlchemy" />
+            <item index="33" class="java.lang.String" itemvalue="wcwidth" />
+            <item index="34" class="java.lang.String" itemvalue="pycosat" />
+            <item index="35" class="java.lang.String" itemvalue="numpy" />
+            <item index="36" class="java.lang.String" itemvalue="requests" />
+            <item index="37" class="java.lang.String" itemvalue="Jinja2" />
+            <item index="38" class="java.lang.String" itemvalue="simplegeneric" />
+            <item index="39" class="java.lang.String" itemvalue="mysql-connector-python" />
+            <item index="40" class="java.lang.String" itemvalue="conda" />
+            <item index="41" class="java.lang.String" itemvalue="pox" />
+            <item index="42" class="java.lang.String" itemvalue="geographiclib" />
+            <item index="43" class="java.lang.String" itemvalue="prompt-toolkit" />
+            <item index="44" class="java.lang.String" itemvalue="pygpgme" />
+            <item index="45" class="java.lang.String" itemvalue="SQLAlchemy-Utils" />
+            <item index="46" class="java.lang.String" itemvalue="urllib3" />
+            <item index="47" class="java.lang.String" itemvalue="pathos" />
+            <item index="48" class="java.lang.String" itemvalue="IMAPClient" />
+            <item index="49" class="java.lang.String" itemvalue="imaplib2" />
+            <item index="50" class="java.lang.String" itemvalue="voidpp-tools" />
+            <item index="51" class="java.lang.String" itemvalue="nbformat" />
+            <item index="52" class="java.lang.String" itemvalue="ruamel.yaml" />
+            <item index="53" class="java.lang.String" itemvalue="ipython" />
+            <item index="54" class="java.lang.String" itemvalue="dill" />
+            <item index="55" class="java.lang.String" itemvalue="pathlib2" />
+            <item index="56" class="java.lang.String" itemvalue="mysql-utilities" />
+            <item index="57" class="java.lang.String" itemvalue="asd" />
+            <item index="58" class="java.lang.String" itemvalue="ppft" />
+            <item index="59" class="java.lang.String" itemvalue="webencodings" />
+            <item index="60" class="java.lang.String" itemvalue="scour" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
     <inspection_tool class="PyPep8Inspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
       <option name="ignoredErrors">
         <list>
@@ -13,6 +82,8 @@
         <list>
           <option value="N801" />
           <option value="N806" />
+          <option value="N802" />
+          <option value="N803" />
         </list>
       </option>
     </inspection_tool>
