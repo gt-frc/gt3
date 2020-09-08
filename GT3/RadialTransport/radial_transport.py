@@ -17,7 +17,7 @@ from math import sqrt
 from scipy.interpolate import UnivariateSpline, interp1d
 from GT3.RadialTransport.Functions.CorePatch import corePatch
 from GT3.RadialTransport.Functions.CalcReturnCur import calc_return_cur
-from GT3.RadialTransport.Functions.CalcNu import calc_nu_j_k, calc_nu_drag
+from GT3.RadialTransport.Functions.CalcNu import calc_nu_j_k, calc_nu_drag, calc_nustar
 from GT3.RadialTransport.Functions.CalcMbalRHS import calc_mbal_rhs
 from GT3.RadialTransport.Functions.CalcT90 import calc_t90
 from GT3.RadialTransport.Functions.CalcQ import calc_Qe_diff_method, calc_qie, calc_Qe_int_method, calc_Qi_int_method, \
@@ -44,19 +44,40 @@ ch_c = e * z_c  # charge of carbon
 E_phi = 0.04  # toroidal electrostatic potential
 
 
-def viscCalc(self, data, core, n, T):
-    f1 = 1  # Must determine later, appears to be geometeric factor in Eq(4) in POP052504(2010)
+def viscCalc(data, core):
+    """
+
+    :type core: Core
+    :type data: RadialTransport
+    """
     fp = core.B_p_fsa / core.B_t_fsa
-    vth = [sqrt(2. * a * ch_d / m_d) for a in T.i.ev]
-    eta0 = [a * m_d * b * c * core.R0_a * f1 for a, b, c in zip(n.i, vth, core.q[:, 0])]
-    eta4 = [a * m_d * c * ch_d / (ch_d * abs(b)) for a, b, c in zip(n.i, core.B_t_fsa, T.i.ev)]
-    vrad = data.gamma_diff_D / n.i
+    ni = core.n_fsa.i
+    Ti = core.T_fsa.i.J
+    q = core.q[:, 0]
+    R0 = core.R0_a
+    vth = data.vpol_D[0]
+    vtor = data.vtor_D_total
+    vpol = data.vpol_D
+    eps = core.a / core.R0_a
+    nustar = data.nustar[0]
+    geom = (eps ** (-3./2.) * nustar) / ((1 + eps ** (-3. / 2.) * nustar) * (1 + nustar))
+    vtorS = 0.1
+    vpolS = 0.1
+    #eta0 = [a * m_d * b * c * core.R0_a * f1 for a, b, c in zip(n.i, vth, core.q[:, 0])]
+    eta0 = ni * m_d * vth * q * R0 * geom
+    #eta4 = [a * m_d * c * ch_d / (ch_d * abs(b)) for a, b, c in zip(n.i, core.B_t_fsa, T.i.ev)]
+    eta4 = ni * m_d * Ti / (ch_d * abs(core.B_t_fsa))
+    vrad = data.gamma_diff_D / ni
 
     # a = vtor    b = fp   c = eta0
     # d = vrad    f = vthet g = eta 4
 
-    return [a * (b * c * d - .5 * g * (4.0 * a + f)) - .5 * f * (c * d + g * (a + .5 * f)) for a, b, c, d, f, g in
-            zip(data.vtor_D_total, fp, eta0, vrad, data.vpol_D, eta4)]
+    #return [a * (b * c * d - .5 * g * (4.0 * a + f)) - .5 * f * (c * d + g * (a + .5 * f)) for a, b, c, d, f, g in
+    #        zip(data.vtor_D_total, fp, eta0, vrad, data.vpol_D, eta4)]
+
+    res = vtor * vtorS * (eta0 * fp * vrad - eta4 * (2. * vtor + .5 * vpol))
+    res = res - 0.5 * vpol * vpolS * (eta0 * vrad + eta4 * (vtor + .5 * vpol))
+    return res / R0
 
 def calc_chi_e(Qe, gamma_diff_D, gamma_C, n, L, T):
     gameltemp = 1.0 * gamma_diff_D + 6.0 * gamma_C   #OHHHH gamma electron!!! HA HA HA HA WE DON'T KNOW WHAT THE FUCK GAMMA_C IS
@@ -185,7 +206,7 @@ class RadialTransport:
         # momentum balance
         ##############################################################
 
-        self.mom_src_nbi = np.array([UnivariateSpline(nbi.beams_space, a.part_src.total)(self.rhor) for a in nbi.beam_result])
+        self.mom_src_nbi = np.array([UnivariateSpline(nbi.beams_space, a.mom_src.total)(self.rhor) for a in nbi.beam_result])
 
         # calculate momentum source from anomalous torque
         self.mom_src_anom = np.zeros(r.shape)  # TODO: Anomolous torque
@@ -254,11 +275,13 @@ class RadialTransport:
         nu_c_CD = 1 / calc_t90(m_c, m_d, z_c, z_d, n.i, T.i.J)
 
         # Piper changes: added alternate collision frequency calculation for comparison.
-        nu_c_j_k = calc_nu_j_k(m_d, m_c, z_d, z_c, T.i.ev, n.C)
-        nu_c_k_j = calc_nu_j_k(m_c, m_d, z_c, z_d, T.C.ev, n.i)
+        self.nu_c_j_k = calc_nu_j_k(m_d, m_c, z_d, z_c, T.i.ev, n.C)
+        self.nu_c_k_j = calc_nu_j_k(m_c, m_d, z_c, z_d, T.C.ev, n.i)
+        self.nu_c_j_j = calc_nu_j_k(m_d, m_d, z_d, z_d, T.i.ev, n.i)
 
         self.nu_drag_D = calc_nu_drag(n.i, m_d, self.vtor_D_total, self.vtor_C_total, mbal_rhs_D, nu_c_DC)
         self.nu_drag_C = calc_nu_drag(n.i, m_d, self.vtor_D_total, self.vtor_C_total, mbal_rhs_C, nu_c_CD)
+        self.nustar = calc_nustar(self.nu_c_j_j, core.q[:, 0], core.R0_a, self.vpol_D)
 
         ##############################################################
         # Pinch Velocity
@@ -300,7 +323,7 @@ class RadialTransport:
 
         self.en_src_nbi_e = self.en_src_nbi_i_kept
         self.cxcool = calc_cxcool(core, n, T)
-        self.qie =  calc_qie(n, T, ion_species='D')
+        self.qie = calc_qie(n, T, ion_species='D')
 
         # calculate radial heat flux. Piper changes: Separated heat flux equations into differential and integral cylindrical methods.
         self.Qi_diff = calc_Qi_diff_method(r, core.a, self.cxcool, self.qie, self.en_src_nbi_i_tot,
@@ -316,7 +339,7 @@ class RadialTransport:
         self.conv15 = UnivariateSpline(core.r[:, 0], 3. * .5 * ch_d * self.gamma_diff_D * T.i.ev, k=3, s=0)(core.r[:, 0])
         self.conv25 = UnivariateSpline(core.r[:, 0], 5. * .5 * ch_d * self.gamma_diff_D * T.i.ev, k=3, s=0)(core.r[:, 0])
 
-        self.heatvisc = np.zeros(self.conv25.shape)
+        self.heatvisc = viscCalc(self, core)
 
         self.heatin = UnivariateSpline(core.r[:, 0],
                                        .5 * self.gamma_diff_D * m_d * (self.vtor_D_total ** 2 + self.vpol_D ** 2), k=3,
@@ -327,17 +350,19 @@ class RadialTransport:
                 (self.Qi_diff) * L.T.i / (n.i * T.i.ev * ch_d),
                 (self.Qi_diff - self.conv25) * L.T.i / (n.i * T.i.ev * ch_d),
                 (self.Qi_diff - self.conv25 - self.heatin) * L.T.i / (n.i * T.i.ev * ch_d),
-                (self.Qi_diff - self.conv25 - self.heatin * self.heatvisc) * L.T.i / (n.i * T.i.ev * ch_d)
+                (self.Qi_diff - self.conv25 - self.heatin - self.heatvisc) * L.T.i / (n.i * T.i.ev * ch_d)
             ), calc_chi_e(self.Qe_diff, self.gamma_diff_D, self.gamma_C, n, L, T)
         )
+
+        self.D_i = m_d * core.T_fsa.i.J * (self.nu_c_j_k * (1. - ch_d / ch_c) + self.nu_drag_D) / ((ch_d * core.B_p_fsa)**2)
 
     def plot_chi_terms(self, edge=True):
         fig = self._plot_base(self.conv25, title="", yLabel="q[W/m^2]", edge=edge)
         fig.scatter(self.rhor, self.heatin, color="blue", s=6)
-        #fig.scatter(self.rhor, self.heatvisc, color="black", s=6)
+        fig.scatter(self.rhor, self.heatvisc, color="purple", s=6)
         fig.scatter(self.rhor, self.Qi_diff, color="black", s=6)
-        fig.legend([r"$q^{conv}$", r"$q^{heatin}$", r"$q^{tot}$"])
-        #fig.legend([r"$q^{conv}$", r"$q^{heatin}$", r"$q^{visc}$", r"$q^{tot}$"])
+        #fig.legend([r"$q^{conv}$", r"$q^{heatin}$", r"$q^{tot}$"])
+        fig.legend([r"$q^{conv}$", r"$q^{heatin}$", r"$q^{visc}$", r"$q^{tot}$"])
         return fig
 
     def plot_gamma(self, edge=True):
@@ -460,9 +485,13 @@ class RadialTransport:
         fig = self._plot_base(self.chi.i.chi1, yLabel=r'$\chi_{r,i}$', title="", edge=edge)
         fig.scatter(self.rhor, self.chi.i.chi2, color="blue", s=8)
         fig.scatter(self.rhor, self.chi.i.chi3, color="green", s=8)
-        #fig.scatter(self.rhor, self.chi.i.chi4, color="black", s=4)
+        fig.scatter(self.rhor, self.chi.i.chi4, color="purple", s=4)
         fig.legend([r"$q^{cond} = q^{tot}$",
                     r"$q^{cond} = q^{tot}-q^{conv}$",
-                    r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}$"], prop={'size': 20})
-                    #r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}-q^{visc}$"])
+                    r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}$",
+                    r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}-q^{visc}$"],  prop={'size': 20})
+        return fig
+
+    def plot_D(self, edge=True):
+        fig = self._plot_base(self.D_i, yLabel=r'$D_{r, i} [m^2/s]$', title='', edge=edge)
         return fig

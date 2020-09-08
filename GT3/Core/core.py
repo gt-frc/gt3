@@ -676,11 +676,40 @@ class Core:
         plt.show()
         return fig
 
+
+    def plot_L_t_i(self, edge=False):
+        """
+        Plots the GT3.Core ion temperature scale length
+        """
+        fig = self._plot_base(self.L.T.i[:,0], yLabel=r'$L_{T,i} [m]$', title="GT3.Core Ion Temperature Scale Length", edge=edge)
+        return fig
+
+    def plot_L_t_e(self, edge=False):
+        """
+        Plots the GT3.Core electron temperature scale length
+        """
+        fig = self._plot_base(self.L.T.e[:,0], yLabel=r'$L_{T,e} [m]$', title="GT3.Core Electron Temperature Scale Length", edge=edge)
+        return fig
+
+    def plot_L_n_i(self, edge=False):
+        """
+        Plots the GT3.Core ion density scale length
+        """
+        fig = self._plot_base(self.L.n.i[:,0], yLabel=r'$L_{n,i} [m]$', title="GT3.Core Ion Density Scale Length", edge=edge)
+        return fig
+
+    def plot_L_n_e(self, edge=False):
+        """
+        Plots the GT3.Core electron density scale length
+        """
+        fig = self._plot_base(self.L.n.e[:,0], yLabel=r'$L_{n,e} [m]$', title="GT3.Core Electron Density Scale Length", edge=edge)
+        return fig
+
     def plot_ti(self, edge=False):
         """
         Plots the GT3.Core ion temperature
         """
-        fig = self._plot_base(self.T_fsa.e.kev, yLabel=r'$T_e [keV]$', title="GT3.Core Ion Temperature", edge=edge)
+        fig = self._plot_base(self.T_fsa.e.kev, yLabel=r'$T_i [keV]$', title="GT3.Core Ion Temperature", edge=edge)
         return fig
 
     def plot_t(self, edge=False):

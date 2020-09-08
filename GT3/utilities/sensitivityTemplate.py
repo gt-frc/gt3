@@ -416,7 +416,6 @@ def chieCompneuts(shot, shotnoneuts):
     #                      size=(16, 12))
 
 
-
 def fluxComp(shot, shotnoIOL, shotnoneuts):
     prettyID = [r'$\Gamma_{r,j}$ w/ neutrals',
                 r'$\Gamma_{r,j}$ w/out neutrals']

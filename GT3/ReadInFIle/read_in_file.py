@@ -8,6 +8,7 @@ Created on Sat Aug  5 16:10:25 2017
 import os
 import sys
 import re
+import matplotlib.pyplot as plt
 import numpy as np
 from math import pi
 
@@ -283,3 +284,60 @@ class ReadInfile:
                 0] != 'value':
                 print ('{} = {}'.format(key[0], key[1]))
         print '**END OF PARAMETERS**'
+
+    def _plot_base(self, xLabel=r'$\rho$', yLabel="Value", title="Title", edge=False):
+
+        plot = plt.figure()
+        fig = plot.add_subplot(111)
+        fig.set_xlabel(xLabel, fontsize=20)
+        fig.set_ylabel(yLabel, fontsize=20)
+        fig.set_title(title)
+        if edge:
+            fig.set_xlim(0.85, 1.0)
+        plt.show()
+        return fig
+
+    def plot_raw_Ti(self, edge=False):
+        fig = self._plot_base(edge=edge)
+        fig.scatter(self.Ti_data.T[0], self.Ti_data.T[1], color="black", s=8)
+        return fig
+
+    def plot_raw_Te(self, edge=False):
+        fig = self._plot_base(edge=edge)
+        fig.scatter(self.Te_data.T[0], self.Te_data.T[1], color="black", s=8)
+        return fig
+
+    def plot_raw_Er(self, edge=False):
+        fig = self._plot_base(edge=edge)
+        fig.scatter(self.er_data.T[0], self.er_data.T[1], color="black", s=8)
+        return fig
+
+    def plot_raw_ni(self, edge=False):
+        fig = self._plot_base(edge=edge)
+        fig.scatter(self.nD_data.T[0], self.nD_data.T[1], color="black", s=8)
+        return fig
+
+    def plot_raw_ne(self, edge=False):
+        fig = self._plot_base(edge=edge)
+        fig.scatter(self.ne_data.T[0], self.ne_data.T[1], color="black", s=8)
+        return fig
+
+    def plot_raw_vpol_C(self, edge=False):
+        fig = self._plot_base(edge=edge)
+        fig.scatter(self.vpolC_data.T[0], self.vpolC_data.T[1], color="black", s=8)
+        return fig
+
+    def plot_raw_vpol_D(self, edge=False):
+        fig = self._plot_base(edge=edge)
+        fig.scatter(self.vpolD_data.T[0], self.vpolD_data.T[1], color="black", s=8)
+        return fig
+
+    def plot_raw_vtor_C(self, edge=False):
+        fig = self._plot_base(edge=edge)
+        fig.scatter(self.vtorC_data.T[0], self.vtorC_data.T[1], color="black", s=8)
+        return fig
+
+    def plot_raw_vtor_D(self, edge=False):
+        fig = self._plot_base(edge=edge)
+        fig.scatter(self.vtorD_data.T[0], self.vtorD_data.T[1], color="black", s=8)
+        return fig
