@@ -4,7 +4,7 @@ import setuptools
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
-deps = ['matplotlib', 'multiprocess', 'scipy', 'numpy', 'matplotlib', 'pandas', 'pathos', 'PyYAML', 'Shapely']
+deps = ['matplotlib', 'multiprocess', 'scipy', 'numpy', 'pandas', 'pathos', 'Shapely', 'contours', 'enum34', 'PyYAML']
 
 setuptools.setup(
     name="GT3",
@@ -15,7 +15,7 @@ setuptools.setup(
     description="GT3 - The Georgia Tech Tokamak Transport codebase",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/gt-frc/neutpy/",
+    url="https://github.com/gt-frc/gt3/",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 2.7",

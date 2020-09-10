@@ -173,7 +173,6 @@ class Beam:
                     print "Power fraction overwritten: " + str(self.pwrfrac)
                 else:
                     self.pwrfrac = self.calc_power_frac(self.beamE)
-                    print "Power fraction calculated: " + str(self.pwrfrac)
                 self.dPdV = self.calc_dPdV(self.PowerProfiles)
                 self.energies = self.EnergySplit(eVConvert(self.beamE), eVConvert(self.beamE / 2.),
                                             eVConvert(self.beamE / 3.))
@@ -188,6 +187,7 @@ class Beam:
 
 
     def is_new(self, config):
+        start = time()
         h_res_1 = None
         """The unnormalized H(rho) interpolator for Energy Group 1 on [0., 1.]"""
         h_res_2 = None
@@ -228,7 +228,6 @@ class Beam:
             print "Power fraction overwritten: " + str(self.pwrfrac)
         else:
             self.pwrfrac = self.calc_power_frac(self.beamE)
-            print "Power fraction calculated: " + str(self.pwrfrac)
         self.dPdV = self.calc_dPdV(self.PowerProfiles)
         self.energies = self.EnergySplit(eVConvert(self.beamE), eVConvert(self.beamE / 2.), eVConvert(self.beamE / 3.))
         self.calc_iol(self.iol)

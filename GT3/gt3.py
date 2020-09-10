@@ -3,7 +3,6 @@
 
 from __future__ import division
 import sys
-from GT3.Neutrals import Neutrals
 from GT3.IOL import IOL
 from GT3.SOL import Sol
 from GT3.ReadInFIle import ReadInfile
@@ -14,6 +13,10 @@ from GT3.DensityLimit import DensityLimit
 from GT3.Marfe import Marfe
 from RadialTransport.radial_transport import RadialTransport
 
+try:
+    from GT3.Neutrals import Neutrals
+except ImportError:
+    pass
 
 class gt3:
 
@@ -44,6 +47,12 @@ class gt3:
         self.verbose = verbose
         self.beamPowerFracOverride = None
 
+        try:
+            import neutpy
+            self.neutpyLoaded = True
+        except ImportError:
+            self.neutpyLoaded = False
+
         if mode == 'coreonly':
             pass
 
@@ -58,11 +67,11 @@ class gt3:
         elif mode == 'imp':
             self.imp = ImpRad(core=self.core)
         elif mode == 'ntrls':
-            self.ntrl = Neutrals(self.inp, self.core)
+            self._run_neutpy()
         elif mode == 'ntrlsandiol':
             self.iol = IOL(self.inp, self.core)
             self.nbi = BeamDeposition(self.inp, self.core, self.iol, pwrFracOverride=self.beamPowerFracOverride)
-            self.ntrl = Neutrals(self.inp, self.core)
+            self._run_neutpy()
         elif mode == 'nbi':
             if self.iolFlag:
                 self.iol = IOL(self.inp, self.core)
@@ -75,7 +84,7 @@ class gt3:
                 self.nbi = BeamDeposition(self.inp, self.core, self.iol, pwrFracOverride=self.beamPowerFracOverride)
             else:
                 self.nbi = BeamDeposition(self.inp, self.core, pwrFracOverride=self.beamPowerFracOverride)
-            self.ntrl = Neutrals(self.inp, self.core)
+            self._run_neutpy()
             self.imp = ImpRad(core=self.core)
             self.dl = DensityLimit(self.core, self.nbi)
             self.mar = Marfe(core=self.core)
@@ -85,7 +94,7 @@ class gt3:
                 self.nbi = BeamDeposition(self.inp, self.core, self.iol, pwrFracOverride=self.beamPowerFracOverride)
             else:
                 self.nbi = BeamDeposition(self.inp, self.core,  pwrFracOverride=self.beamPowerFracOverride)
-            self.ntrl = Neutrals(self.inp, self.core)
+            self._run_neutpy()
             self.imp = ImpRad(core=self.core)
             self.mar = Marfe(core=self.core)
         elif mode == 'allthethings':
@@ -94,7 +103,7 @@ class gt3:
                 self.nbi = BeamDeposition(self.inp, self.core, self.iol,  pwrFracOverride=self.beamPowerFracOverride)
             else:
                 self.nbi = BeamDeposition(self.inp, self.core,  pwrFracOverride=self.beamPowerFracOverride)
-            self.ntrl = Neutrals(self.inp, self.core)
+            self._run_neutpy()
             self.imp = ImpRad(core=self.core)
             self.dl = DensityLimit(self.core, self.nbi)
             self.mar = Marfe(self.inp, self.core, self.imp)
@@ -105,9 +114,15 @@ class gt3:
             else:
                 self.nbi = BeamDeposition(self.inp, self.core,  pwrFracOverride=self.beamPowerFracOverride)
             self.sol = Sol(self.inp, self.core)
-            self.ntrl = Neutrals(self.inp, self.core)
+            self._run_neutpy()
             self.imp = ImpRad(z=None, core=self.core)
             self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag)
+
+    def _run_neutpy(self):
+        if self.neutpyLoaded:
+            self.ntrl = Neutrals(self.inp, self.core)
+        else:
+            print "NeutPy is not loaded. Cannot run Neutrals calculation"
 
     def override_NBI_Pwrfrac(self, frac):
         if isinstance(frac, list):
@@ -141,7 +156,7 @@ class gt3:
         return self
 
     def run_neutrals(self):
-        self.ntrl = Neutrals(self.inp, self.core)
+        self._run_neutpy()
         return self
 
     def run_density_limit(self):

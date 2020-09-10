@@ -126,7 +126,10 @@ class RadialTransport:
         # prepare beams object
         corePatch(core, neutFlag)  # Patch to update values not brought in via ffiles (ni, zeff)
         #neutPatch(core)
-        dn_dr = core.dn_dr_fsa
+        try:
+            dn_dr = core.dn_dr_fsa
+        except:
+            dn_dr = None
 
         # prepare core and iol quantities
         r = core.r.T[0]  # TODO: Should this be a flux surface average?
