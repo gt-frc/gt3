@@ -13,22 +13,6 @@ IP = 1.07
 q95 = 3.79
 BT0 = 2.004
 
-#NEUTRALS PARAMETERS
-neut_outfile = inputs/164436_3740/gt3_164436_3740_neut.dat
-core_thetapts_ntrl = 50
-ib_thetapts_ntrl = 10
-ob_thetapts_ntrl = 10
-#rhopts_ntrl = 100
-edge_rho_ntrl = 0.8
-rhopts_edge_ntrl = 5
-rhopts_core_ntrl = 10
-wall_ni_min = 1.0E15
-wall_ne_min = 1.0E15
-wall_Ti_min = 0.005
-wall_Te_min = 0.005
-tri_min_angle = 20
-tri_min_area  = 0.01
-
 #SOL PARAMETERS
 sollines_psi_max = 1.07
 num_sollines = 3
@@ -45,36 +29,26 @@ pfr_Ti_val = 0.002
 pfr_Te_val = 0.002
 
 #1D PROFILE INPUT FILES
-ne_file         = 164436_3720/gt3_164436_3720_ne.dat
-nD_file         = 164436_3720/gt3_164436_3720_ni.dat
-nC_file         = 164436_3720/gt3_164436_3720_nc.dat
-Te_file         = 164436_3720/gt3_164436_3720_Te.dat
-Ti_file         = 164436_3720/gt3_164436_3720_Ti.dat
-TC_file         = 164436_3720/gt3_164436_3720_Tc.dat
-er_file         = 164436_3720/gt3_164436_3720_er.dat
-vpolC_file      = 164436_3720/gt3_164436_3720_vpolC.dat
-vtorC_file      = 164436_3720/gt3_164436_3720_vtorC.dat
-vpolD_file      = 164436_3720/gt3_164436_3720_vpolD.dat
-vtorD_file      = 164436_3720/gt3_164436_3720_vtorD.dat
+ne_file         = inputs/164436_3720/gt3_164436_3720_ne.dat
+nD_file         = inputs/164436_3720/gt3_164436_3720_ni.dat
+nC_file         = inputs/164436_3720/gt3_164436_3720_nc.dat
+Te_file         = inputs/164436_3720/gt3_164436_3720_Te.dat
+Ti_file         = inputs/164436_3720/gt3_164436_3720_Ti.dat
+TC_file         = inputs/164436_3720/gt3_164436_3720_Tc.dat
+er_file         = inputs/164436_3720/gt3_164436_3720_er.dat
+vpolC_file      = inputs/164436_3720/gt3_164436_3720_vpolC.dat
+vtorC_file      = inputs/164436_3720/gt3_164436_3720_vtorC.dat
+vpolD_file      = inputs/164436_3720/gt3_164436_3720_vpolD.dat
+vtorD_file      = inputs/164436_3720/gt3_164436_3720_vtorD.dat
+beams_json      = inputs/164436_3720/gt3_164436_3720_beams.json
+beams_out_json  = inputs/164436_3720/gt3_164436_3720_beamOut.json
+neutfile_loc    = inputs/164436_3720/gt3_164436_3720_neutsOut.json
 
 2D QUANTITIES INPUT FILES
-psirz_file      = 164436_3720/gt3_164436_3720_psirz.txt
+psirz_file      = inputs/164436_3720/gt3_164436_3720_psirz.txt
 
 2D LINE INPUT FILES
-wall_file        = machine/gt3_diiid_wall.dat
-
-#NEUTRAL BEAM DEPOSITION
-nbeams_loc = /home/jonathan/Dropbox/GTEDGE/MyPrograms/GTEDGE/lib/beams/NBeamsMDS/NBeams/bin/Release/nbeams
-ebeam = 64.72
-abeam = 2
-alphain = 0.6475
-pbeam = 0.918
-rtang = 1.146
-
+wall_file        = inputs/machine/gt3_diiid_wall.dat
 #ION ORBIT LOSS CALCULATION
 numcos = 20
 R_loss = 0.5
-
-#TRIANGLE EXECUTABLE LOCATION
-#triangle_loc = /triangle/triangle.exe
-
