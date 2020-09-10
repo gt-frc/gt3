@@ -105,4 +105,4 @@ ENV/
 logs/
 
 # Input files
-/inputs
+/inputs/

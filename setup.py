@@ -8,7 +8,7 @@ deps = ['matplotlib', 'multiprocess', 'scipy', 'numpy', 'matplotlib', 'pandas', 
 
 setuptools.setup(
     name="GT3",
-    version="1.0.4",
+    version="0.0.1",
     author="Maxwell D. Hill, Jonathan J. Roveto, Nicholas Piper",
     install_requires=deps,
     author_email="max.hill@pm.me, veto1024@gmail.com, doom@gatech.edu",

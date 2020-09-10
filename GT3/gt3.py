@@ -42,9 +42,11 @@ class gt3:
         self.iolFlag = iolFlag
         self.neutFlag = neutFlag
         self.verbose = verbose
+        self.beamPowerFracOverride = None
 
         if mode == 'coreonly':
             pass
+
 
         if mode == 'coreandsol':
             self.sol = Sol(self.inp, self.core)
@@ -52,27 +54,27 @@ class gt3:
             self.iol = IOL(self.inp, self.core)
         elif mode == 'fulliol':
             self.iol = IOL(self.inp, self.core)
-            self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+            self.nbi = BeamDeposition(self.inp, self.core, self.iol, pwrFracOverride=self.beamPowerFracOverride)
         elif mode == 'imp':
             self.imp = ImpRad(core=self.core)
         elif mode == 'ntrls':
             self.ntrl = Neutrals(self.inp, self.core)
         elif mode == 'ntrlsandiol':
             self.iol = IOL(self.inp, self.core)
-            self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+            self.nbi = BeamDeposition(self.inp, self.core, self.iol, pwrFracOverride=self.beamPowerFracOverride)
             self.ntrl = Neutrals(self.inp, self.core)
         elif mode == 'nbi':
             if self.iolFlag:
                 self.iol = IOL(self.inp, self.core)
-                self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+                self.nbi = BeamDeposition(self.inp, self.core, self.iol, pwrFracOverride=self.beamPowerFracOverride)
             else:
-                self.nbi = BeamDeposition(self.inp, self.core)
+                self.nbi = BeamDeposition(self.inp, self.core, pwrFracOverride=self.beamPowerFracOverride)
         elif mode == 'marfe_denlim':
             if self.iolFlag:
                 self.iol = IOL(self.inp, self.core)
-                self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+                self.nbi = BeamDeposition(self.inp, self.core, self.iol, pwrFracOverride=self.beamPowerFracOverride)
             else:
-                self.nbi = BeamDeposition(self.inp, self.core)
+                self.nbi = BeamDeposition(self.inp, self.core, pwrFracOverride=self.beamPowerFracOverride)
             self.ntrl = Neutrals(self.inp, self.core)
             self.imp = ImpRad(core=self.core)
             self.dl = DensityLimit(self.core, self.nbi)
@@ -80,18 +82,18 @@ class gt3:
         elif mode == 'marfe':
             if self.iolFlag:
                 self.iol = IOL(self.inp, self.core)
-                self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+                self.nbi = BeamDeposition(self.inp, self.core, self.iol, pwrFracOverride=self.beamPowerFracOverride)
             else:
-                self.nbi = BeamDeposition(self.inp, self.core)
+                self.nbi = BeamDeposition(self.inp, self.core,  pwrFracOverride=self.beamPowerFracOverride)
             self.ntrl = Neutrals(self.inp, self.core)
             self.imp = ImpRad(core=self.core)
             self.mar = Marfe(core=self.core)
         elif mode == 'allthethings':
             if self.iolFlag:
                 self.iol = IOL(self.inp, self.core)
-                self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+                self.nbi = BeamDeposition(self.inp, self.core, self.iol,  pwrFracOverride=self.beamPowerFracOverride)
             else:
-                self.nbi = BeamDeposition(self.inp, self.core)
+                self.nbi = BeamDeposition(self.inp, self.core,  pwrFracOverride=self.beamPowerFracOverride)
             self.ntrl = Neutrals(self.inp, self.core)
             self.imp = ImpRad(core=self.core)
             self.dl = DensityLimit(self.core, self.nbi)
@@ -99,15 +101,19 @@ class gt3:
         elif mode == 'radialtrans':
             if self.iolFlag:
                 self.iol = IOL(self.inp, self.core)
-                self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+                self.nbi = BeamDeposition(self.inp, self.core, self.iol,  pwrFracOverride=self.beamPowerFracOverride)
             else:
-                self.nbi = BeamDeposition(self.inp, self.core)
+                self.nbi = BeamDeposition(self.inp, self.core,  pwrFracOverride=self.beamPowerFracOverride)
             self.sol = Sol(self.inp, self.core)
             self.ntrl = Neutrals(self.inp, self.core)
             self.imp = ImpRad(z=None, core=self.core)
-            self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag,
-                                          debugFlag=self.verbose)
+            self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag)
 
+    def override_NBI_Pwrfrac(self, frac):
+        if isinstance(frac, list):
+            self.beamPowerFracOverride = frac
+        else:
+            print "Please provide the NBI power fraction override as a list"
 
     def run_SOL(self):
         self.sol = Sol(self.inp, self.core)
@@ -124,9 +130,10 @@ class gt3:
             print ("IOL module not run. Running now...")
             self.run_IOL()
         if self.iolFlag:
-            self.nbi = BeamDeposition(self.inp, self.core, self.iol, reRun=reRun)
+            self.nbi = BeamDeposition(self.inp, self.core, self.iol, reRun=reRun,
+                                      pwrFracOverride=self.beamPowerFracOverride)
         else:
-            self.nbi = BeamDeposition(self.inp, self.core)
+            self.nbi = BeamDeposition(self.inp, self.core,  pwrFracOverride=self.beamPowerFracOverride)
         return self
 
     def run_impurities(self):
@@ -139,9 +146,9 @@ class gt3:
 
     def run_density_limit(self):
         if self.iolFlag:
-            self.nbi = BeamDeposition(self.inp, self.core, self.iol)
+            self.nbi = BeamDeposition(self.inp, self.core, self.iol,  pwrFracOverride=self.beamPowerFracOverride)
         else:
-            self.nbi = BeamDeposition(self.inp, self.core)
+            self.nbi = BeamDeposition(self.inp, self.core,  pwrFracOverride=self.beamPowerFracOverride)
         self.dl = DensityLimit(self.core, self.nbi)
         return self
 

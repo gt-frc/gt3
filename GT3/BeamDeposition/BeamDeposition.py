@@ -28,11 +28,11 @@ class BeamDeposition:
     BeamConfiguration = namedtuple('BeamConfiguration', 'name rho r2vol dVdr dVdrho shaf_shift kappa_vals a R0'
                                                         ' Te Ti ne Z_eff rtang beamWidth gaussR beamE beamA '
                                                         'beamP iol coCurr verbose timing iolFlag '
-                                                        'beamResult')
+                                                        'beamResult pwrFracOverride')
 
     BeamSources = namedtuple('BeamSources', 'Snbi Qnbi Mnbi')
 
-    def __init__(self, inp, core, iol=None, reRun=False):
+    def __init__(self, inp, core, iol=None, reRun=False, pwrFracOverride=None):
         sys.dont_write_bytecode = True
         # If deposition profile is provided as an input, use that.
         # Note, this is designed to read in the dP/dr(r) quantity, not dP/dV(r).
@@ -41,6 +41,9 @@ class BeamDeposition:
 
         self.beams_space = np.linspace(0., 1.0, 50)
         """The rho space used by the Beams module on [0., 1.]"""
+
+        self.pwrFracOverride = pwrFracOverride
+        """Allows us to override the beam power fraction for sensitivity studies"""
 
         if not reRun:
             # nbi_vals = calc_nbi_vals(inp, core)
@@ -122,7 +125,7 @@ class BeamDeposition:
                                                                         timing=False,
                                                                         iolFlag=True,
                                                                         beamResult=beam,
-                                                                        )))
+                                                                        pwrFracOverride=self.pwrFracOverride)))
 
         except IOError as e:
             print "Beams output file IO error: %s" % str(e)
@@ -179,7 +182,8 @@ class BeamDeposition:
                                                              verbose=False,
                                                              timing=False,
                                                              iolFlag=True,
-                                                             beamResult=None
+                                                             beamResult=None,
+                                                             pwrFracOverride=self.pwrFracOverride,
                                                              )
                         beam_config_list.append(beam_config)
                     except Exception as e:

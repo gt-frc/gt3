@@ -62,8 +62,6 @@ class Beam:
         This model assumes a circular beam with gaussian current density J. Beam shinethrough is not currently calculated
         correctly.
 
-        TODO: Verify that r vs. rho is being used correctly in this code.
-
         Parameters
         ----------
 
@@ -146,6 +144,7 @@ class Beam:
         self.kappa = UnivariateSpline(self.rho, self.kappa_vals)
         self.kappa_prime = self.kappa.derivative()
         self.vol = self.r2vol(self.a)
+        self.pwrFracOverride = config.pwrFracOverride
 
         self.prof_root['count'] = 0
         self.prof_root['time'] = []
@@ -169,7 +168,12 @@ class Beam:
                 self.shine = old_result[13]
                 self.Hofr = self.calc_Hofr(self.Hofrho, self.DepositionProfiles)
                 """The normalized H(r) function on [0., a]"""
-                self.pwrfrac = self.calc_power_frac(self.beamE)
+                if self.pwrFracOverride:
+                    self.pwrfrac = self.pwrFracOverride
+                    print "Power fraction overwritten: " + str(self.pwrfrac)
+                else:
+                    self.pwrfrac = self.calc_power_frac(self.beamE)
+                    print "Power fraction calculated: " + str(self.pwrfrac)
                 self.dPdV = self.calc_dPdV(self.PowerProfiles)
                 self.energies = self.EnergySplit(eVConvert(self.beamE), eVConvert(self.beamE / 2.),
                                             eVConvert(self.beamE / 3.))
@@ -219,7 +223,12 @@ class Beam:
         self.Hofrho = self.normalize_Hofrho(self.DepositionProfiles)
         self.Hofr = self.calc_Hofr(self.Hofrho, self.DepositionProfiles)
         """The normalized H(r) function on [0., a]"""
-        self.pwrfrac = self.calc_power_frac(self.beamE)
+        if self.pwrFracOverride:
+            self.pwrfrac = self.pwrFracOverride
+            print "Power fraction overwritten: " + str(self.pwrfrac)
+        else:
+            self.pwrfrac = self.calc_power_frac(self.beamE)
+            print "Power fraction calculated: " + str(self.pwrfrac)
         self.dPdV = self.calc_dPdV(self.PowerProfiles)
         self.energies = self.EnergySplit(eVConvert(self.beamE), eVConvert(self.beamE / 2.), eVConvert(self.beamE / 3.))
         self.calc_iol(self.iol)
@@ -588,7 +597,8 @@ class Beam:
 
         :param beamE: The beam power
         :type beamE: float
-        :return:
+        :return: A list of the D1/D2/D3 power fracs
+        :rtype: list
         """
         beamE = beamEeV / 1E3
         pwr_frac = np.zeros(3)

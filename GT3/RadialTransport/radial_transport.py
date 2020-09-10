@@ -205,8 +205,10 @@ class RadialTransport:
         ##############################################################
         # momentum balance
         ##############################################################
-
-        self.mom_src_nbi = np.array([UnivariateSpline(nbi.beams_space, a.mom_src.total)(self.rhor) for a in nbi.beam_result])
+        self.mom_src_nbi = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_total.Mnbi)(self.rhor))
+        self.mom_src_nbi_tot = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_total.Mnbi)(self.rhor))
+        self.mom_src_nbi_lost = np.array(interp1d(nbi.beams_space, nbi.combined_beam_src_dens_lost.Mnbi, kind="linear")(self.rhor))
+        self.mom_src_nbi_kept = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_kept.Mnbi)(self.rhor))
 
         # calculate momentum source from anomalous torque
         self.mom_src_anom = np.zeros(r.shape)  # TODO: Anomolous torque
