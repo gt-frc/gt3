@@ -83,8 +83,7 @@ class BeamDeposition:
                                           np.array([a.en_src_dens.kept for a in self.beam_result]).sum(axis=0),
                                           np.array([a.mom_src_dens.kept for a in self.beam_result]).sum(axis=0))
         except Exception as e:
-            print "NBI module failed to create main beam profiles with error: %s" % str(e)
-            raise
+            raise Exception("NBI module failed to create main beam profiles with error: %s" % str(e))
 
     def load_beams(self, inp, core, iol):
         try:
@@ -128,11 +127,9 @@ class BeamDeposition:
                                                                         pwrFracOverride=self.pwrFracOverride)))
 
         except IOError as e:
-            print "Beams output file IO error: %s" % str(e)
-            raise
+            raise Exception("Beams output file IO error: %s" % str(e))
         except Exception as e:
-            print "Failed to load beams output file: %s" % str(e)
-            raise
+            raise Exception("Failed to load beams output file: %s" % str(e))
 
     def call_beams(self, inp, core, iol):
         # Call signature: def calcHofRho(rho, r2vol, dVdr, rtang, shaf_shift, kappa_vals, beamHeight, beamWidth, gaussR, Te, TC, R0, ne, beamE, Zeff, a)
@@ -141,8 +138,7 @@ class BeamDeposition:
             try:
                 f = open(os.path.join(os.getcwd(), inp.beams_json), "r")
             except IOError as error:
-                print "Could not open Beams JSON. Error: %s" % str(error)
-                raise
+                raise IOError("Could not open Beams JSON. Error: %s" % str(error))
             newdata = yaml.safe_load(f)
             f.close()
             if type(newdata) is not dict:

@@ -27,7 +27,6 @@ def getVals(s, t, f):
     #       'eq2' : 9.6E-19,
     #       'xmas1' : 3.35E-27,
     #       'xmas2' : 2.01E-26,
-    #       'ephia' : .04,
     #       'xk' : 1.6E-19,
     #       'delma' : 0.005,
     #       'aminor' : 0.598,
@@ -40,11 +39,6 @@ def getVals(s, t, f):
     #       'thetapts' : 30,
     #       'rhopts_edge' : 100,
     #       'rhopts_core' : 10,
-    #       'xptR' : 1.48,
-    #       'xptZ' : -1.24,
-    #       'jknot' : 2850000,
-    #       'plasmaCur' : 1.38,
-    #       'q95' : 3.57,
     #       'ebeam' : 77.48,
     #       'pbeam' : 4.6,
     #       'rtang' : 1.09,
@@ -57,7 +51,6 @@ def getVals(s, t, f):
     #       'shftknot' : 0.033
     #       }
 
-    data['ephia'] = getNum("Enter the toroidal electric field: ", "f")
     data['xk'] = 1.6E-19
     data['delma'] = .005
     data['aminor'] = getNum("Enter the plasma radius (a minor): " ,"f")
@@ -74,7 +67,6 @@ def getVals(s, t, f):
     data['xptZ'] = getNum("Enter the X-point Z coordinate: ", 'f')
     data['jknot'] = getNum("Enter the r=0 plasma current density (in A/m^3): ", 'f')
     data['plasmaCur'] = getNum("Enter the plasma current (in MA): ", 'f')
-    data['q95'] = getNum("Enter q95: ", 'f')
     data['ebeam'] = getNum("Enter beam ion energy in eV: ", 'f')
     data['pbeam'] = getNum("Enter beam power in MWYup: ", 'f')
     data['rtang'] = getNum("Enter radius of tangency in cm: ", 'f')

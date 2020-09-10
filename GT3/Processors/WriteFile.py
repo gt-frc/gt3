@@ -16,7 +16,6 @@ def writeFile(s, t, fpath, data, reNeut=False):
     """
     with open(fpath, "w") as f:
         f.write("d3d_iter = 1 \n")
-        f.write("exp_inp = 1 \n")
         f.write("\n")
         f.write("#1D PROFILE INPUT FILES \n")
         f.write("ne_file         = %s_%s/gt3_%s_%s_ne.dat \n" % (str(s), str(t), str(s), str(t)))
@@ -42,12 +41,10 @@ def writeFile(s, t, fpath, data, reNeut=False):
         f.write("psirz_file      = %s_%s/gt3_%s_%s_psirz.dat \n" % (str(s), str(t), str(s), str(t)))
         f.write("\n")
         f.write("2D LINE INPUT FILES \n")
-        f.write("sep_file        = %s_%s/gt3_%s_%s_sep.dat \n" % (str(s), str(t), str(s), str(t)))
         f.write("wall_file       = %s_%s/gt3_diiid_wall.dat \n" % (str(s), str(t)))
         f.write("\n")
 
         f.write("# CONSTANTS \n")
-        f.write("ephia = %s \n" % str(data.ephia))
         f.write("xk = %s \n" % str(data.xk))
         f.write("delma = %s \n" % str(data.delma))
         f.write("xnuioni = 0.0 \n")
@@ -69,19 +66,6 @@ def writeFile(s, t, fpath, data, reNeut=False):
         f.write("epsknot = %s \n" % str(data.epsknot))
         f.write("eps_sep = %s \n" % str(data.epssep))
         f.write("shftknot = %s \n" % str(data.shftknot))
-        f.write("\n")
-
-        f.write("#IMPURITY CALCULATION \n")
-        f.write("adpak_loc = /home/jonathan/Dropbox/GTEDGE/MyPrograms/GTEDGE/MaxPlasma/adpak/ \n")
-        f.write("# ADPAK PARAMETERS \n")
-        f.write("z_imp = 6 \n")
-        f.write("laden = 1 \n")
-        f.write("ladtip = 1 \n")
-        f.write("leci = 1 \n")
-        f.write("ldrmlt = 2 \n")
-        f.write("ncxopt = 1 \n")
-        f.write("anneut = 1.0E9 \n")
-        f.write("vneut = 0.001 \n")
         f.write("\n")
 
         f.write("#GENERAL GEOMETRY \n")
@@ -118,11 +102,6 @@ def writeFile(s, t, fpath, data, reNeut=False):
         f.write("ntrl_thetapts = 33 \n")
         f.write("\n")
 
-        f.write("#XMILLER PARAMETERS \n")
-        f.write("xpt_R = %s \n" % str(data.xptR))
-        f.write("xpt_Z = %s \n" % str(data.xptZ))
-        f.write("\n")
-
         f.write("#BACKGROUND DENSITIES AND TEMPERATURES (IF NOT READING FROM INPUT FILE) \n")
         f.write("#ni0 = 3.629E19 \n")
         f.write("#ni9 = 1.523E19\n")
@@ -147,17 +126,7 @@ def writeFile(s, t, fpath, data, reNeut=False):
         f.write("\n")
 
         f.write("#CURRENT-RELATED PARAMETERS \n")
-        f.write("j0 = %s \n" % str(data.jknot))
-        f.write("j_sep = 0 \n")
-        f.write("nu_j = 1. \n")
         f.write("IP = %s \n" % str(data.plasmaCur))
-        f.write("q95 = %s \n" % str(data.q95))
-        f.write("\n")
-        f.write("rmeshnum_p = 5 \n")
-        f.write("xtheta1 = 3.6 \n")
-        f.write("xtheta2 = 2.7 \n")
-        f.write("xtheta3 = 0.1 \n")
-        f.write("xtheta4 = -1.0 \n")
         f.write("\n")
         f.write("#ION ORBIT LOSS CALCULATION \n")
         f.write("numcos = 8 \n")
@@ -174,20 +143,12 @@ def writeFile(s, t, fpath, data, reNeut=False):
         f.write("############################################################################### \n")
         f.write("verbose = 1 \n")
 
-        f.write("corelines_begin = 0.75 \n")
-        f.write("num_corelines = 10 \n")
-
         f.write("sollines_psi_max = 1.07 \n")
         f.write("num_sollines = 6 \n")
-
-        f.write("xi_sep_pts = 50 \n")
-        f.write("ib_trim_off = 0.1 \n")
-        f.write("ob_trim_off = 0.1 \n")
 
         f.write("xi_ib_pts = 10 \n")
         f.write("xi_ob_pts = 10 \n")
 
-        f.write("core_pol_pts = 30 \n")
         f.write("core_thetapts_ntrl = 50 \n")
 
         f.write("#rhopts_ntrl = 100 \n")

@@ -61,7 +61,7 @@ class Sol:
             if num_wall_ints > 2:
                 print 'It looks like your sollines_psi_max value might be intersecting the wall.' \
                       'Try reducing it. Stopping.'
-                sys.exit()
+                raise Exception("It looks like your sollines_psi_max value might be intersecting the wall. Try reducing it.")
         else:
             for i, line in enumerate(sollines_psi_max_contours):
                 max_x = np.amax(line[:, 0])
@@ -75,7 +75,7 @@ class Sol:
                     if num_wall_ints > 2:
                         print 'It looks like your sollines_psi_max value might be intersecting the wall.' \
                               'Try reducing it. Stopping.'
-                        sys.exit()
+                        raise Exception("It looks like your sollines_psi_max value might be intersecting the wall. Try reducing it.")
                     else:
                         break
 

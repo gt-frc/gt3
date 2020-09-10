@@ -30,8 +30,7 @@ class Pfr:
 
         if len(contours) == 1:
             # then we're definitely dealing with a surface inside the seperatrix
-            print 'Did not find PFR flux surface. Stopping.'
-            sys.exit()
+            raise ValueError("Did not find PFR flux surface. Stopping.")
         else:
             # we need to find the surface that is contained within the private flux region
             for j, contour in enumerate(contours):

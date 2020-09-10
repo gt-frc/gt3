@@ -209,13 +209,13 @@ class Core:
         # deuterium density
         try:
             nD = UnivariateSpline(inp.nD_data[:, 0], inp.nD_data[:, 1], k=3, s=0)(self.rho)
-        except AttributeError:
+        except (AttributeError, TypeError):
             nD = np.zeros(self.rho.shape)
 
         # tritium density
         try:
             nT = UnivariateSpline(inp.nT_data[:, 0], inp.nT_data[:, 1], k=3, s=0)(self.rho)
-        except AttributeError:
+        except (AttributeError, TypeError):
             nT = np.zeros(self.rho.shape)
 
         ni = nD + nT
@@ -223,77 +223,77 @@ class Core:
         # electron density
         try:
             ne = UnivariateSpline(inp.ne_data[:, 0], inp.ne_data[:, 1], k=3, s=0)(self.rho)
-        except AttributeError:
+        except (AttributeError, TypeError):
             ne = np.zeros(self.rho.shape)
 
         # carbon density
         try:
             nC = UnivariateSpline(inp.nC_data[:, 0], inp.nC_data[:, 1], k=3, s=0)(self.rho)
-        except AttributeError:
+        except (AttributeError, TypeError):
             try:
                 frac_C = UnivariateSpline(inp.frac_C_data[:, 0], inp.frac_C_data[:, 1], k=3, s=0)(self.rho)
                 nC = ne * frac_C
-            except AttributeError:
+            except (AttributeError, TypeError):
                 nC = np.zeros(self.rho.shape)
 
         # tungsten density
         try:
             nW = UnivariateSpline(inp.nW_data[:, 0], inp.nW_data[:, 1], k=3, s=0)(self.rho)
-        except AttributeError:
+        except (AttributeError, TypeError):
             try:
                 frac_W = UnivariateSpline(inp.frac_W_data[:, 0], inp.frac_W_data[:, 1], k=3, s=0)(self.rho)
                 nW = ne * frac_W
-            except AttributeError:
+            except (AttributeError, TypeError):
                 nW = np.zeros(self.rho.shape)
 
         # beryllium density
         try:
             nBe = UnivariateSpline(inp.nBe_data[:, 0], inp.nBe_data[:, 1], k=3, s=0)(self.rho)
-        except AttributeError:
+        except (AttributeError, TypeError):
             try:
                 frac_Be = UnivariateSpline(inp.frac_Be_data[:, 0], inp.frac_Be_data[:, 1], k=3, s=0)(self.rho)
                 nBe = ne * frac_Be
-            except AttributeError:
+            except (AttributeError, TypeError):
                 nBe = np.zeros(self.rho.shape)
 
         # neon density
         try:
             nNe = UnivariateSpline(inp.nNe_data[:, 0], inp.nNe_data[:, 1], k=3, s=0)(self.rho)
-        except AttributeError:
+        except (AttributeError, TypeError):
             try:
                 frac_Ne = UnivariateSpline(inp.frac_Ne_data[:, 0], inp.frac_Ne_data[:, 1], k=3, s=0)(self.rho)
                 nNe = ne * frac_Ne
-            except AttributeError:
+            except (AttributeError, TypeError):
                 nNe = np.zeros(self.rho.shape)
 
         # krypton density
         try:
             nKr = UnivariateSpline(inp.nKr_data[:, 0], inp.nKr_data[:, 1], k=3, s=0)(self.rho)
-        except AttributeError:
+        except (AttributeError, TypeError):
             try:
                 frac_Kr = UnivariateSpline(inp.frac_Kr_data[:, 0], inp.frac_Kr_data[:, 1], k=3, s=0)(self.rho)
                 nKr = ne * frac_Kr
-            except AttributeError:
+            except (AttributeError, TypeError):
                 nKr = np.zeros(self.rho.shape)
 
         # argon density
         try:
             nAr = UnivariateSpline(inp.nAr_data[:, 0], inp.nAr_data[:, 1], k=3, s=0)(self.rho)
-        except AttributeError:
+        except (AttributeError, TypeError):
             try:
                 frac_Ar = UnivariateSpline(inp.frac_Ar_data[:, 0], inp.frac_Ar_data[:, 1], k=3, s=0)(self.rho)
                 nAr = ne * frac_Ar
-            except AttributeError:
+            except (AttributeError, TypeError):
                 nAr = np.zeros(self.rho.shape)
 
         # alpha density
         try:
             na = UnivariateSpline(inp.na_data[:, 0], inp.na_data[:, 1], k=3, s=0)(self.rho)
-        except AttributeError:
+        except (AttributeError, TypeError):
             try:
                 frac_a = UnivariateSpline(inp.frac_a_data[:, 0], inp.frac_a_data[:, 1], k=3, s=0)(self.rho)
                 na = ne * frac_a
-            except AttributeError:
+            except (AttributeError, TypeError):
                 na = np.zeros(self.rho.shape)
 
         nn = namedtuple('nn', 's t tot')(
@@ -392,7 +392,7 @@ class Core:
         try:
             try:
                 E_r_fit = UnivariateSpline(inp.er_data[:, 0], inp.er_data[:, 1] * inp.Er_scale, k=3, s=0)
-            except AttributeError:
+            except (AttributeError, TypeError):
                 E_r_fit = UnivariateSpline(inp.er_data[:, 0], inp.er_data[:, 1], k=3, s=0)
             self.E_r = E_r_fit(self.rho)
             self.E_pot = np.zeros(self.rho.shape)
@@ -410,19 +410,19 @@ class Core:
         # initialize rotation velocities from data
         try:
             vpolD = UnivariateSpline(inp.vpolD_data[:, 0], inp.vpolD_data[:, 1], k=3, s=0)(self.rho)
-        except AttributeError:
+        except (AttributeError, TypeError):
             vpolD = np.zeros(self.rho.shape)
         try:
             vpolC = UnivariateSpline(inp.vpolC_data[:, 0], inp.vpolC_data[:, 1], k=3, s=0)(self.rho)
-        except AttributeError:
+        except (AttributeError, TypeError):
             vpolC = np.zeros(self.rho.shape)
         try:
             vtorD = UnivariateSpline(inp.vtorD_data[:, 0], inp.vtorD_data[:, 1], k=3, s=0)(self.rho)
-        except AttributeError:
+        except (AttributeError, TypeError):
             vtorD = np.zeros(self.rho.shape)
         try:
             vtorC = UnivariateSpline(inp.vtorC_data[:, 0], inp.vtorC_data[:, 1], k=3, s=0)(self.rho)
-        except AttributeError:
+        except (AttributeError, TypeError):
             vtorC = np.zeros(self.rho.shape)
 
         self.v = namedtuple('v_comp', 'pol tor')(

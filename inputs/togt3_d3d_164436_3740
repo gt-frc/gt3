@@ -1,35 +1,26 @@
-#MAIN MESH PARAMETERS
-thetapts_approx = 50
-#rhopts = 200
-edge_rho = 0.7
-rhopts_edge = 100
-rhopts_core = 10
+# Shot 164436.3740
+###################################################################################
+#
+#  GT3 config file for Shot 164436.3740. GT3 uses the ConfigParser module to parse
+#  these data, with headers given in [Brackets].
+#
+###################################################################################
 
-#CURRENT- AND MAGNETIC FIELD-RELATED PARAMETERS
-j0 = 2.53E6
-j_sep = 7.95E4
-nu_j = 3.0
-IP = 1.07
-q95 = 4.16
-BT0 = 2.004
+###################################################################################
+#
+#  1D Profiles
+#
+#  These profiles are given as 2-column rho, val data
+#
+#  Temperature data are given in keV.
+#  Density data are given in their full value (e.g., 3.2E+19)
+#  Rotational velocities are in m/s
+#  Radial electric field is in kV
+#
+###################################################################################
 
+[1DProfiles]
 
-#SOL PARAMETERS
-sollines_psi_max = 1.07
-num_sollines = 3
-xi_sep_pts = 30
-xi_ib_pts = 10
-xi_ob_pts = 10
-ib_trim_off = 0.1
-ob_trim_off = 0.1
-
-#PFR PARAMETERS:
-pfr_ni_val = 1.0E14
-pfr_ne_val = 1.0E14
-pfr_Ti_val = 0.002
-pfr_Te_val = 0.002
-
-#1D PROFILE INPUT FILES
 ne_file         = inputs/164436_3740/gt3_164436_3740_ne.dat
 nD_file         = inputs/164436_3740/gt3_164436_3740_ni.dat
 nC_file         = inputs/164436_3740/gt3_164436_3740_nc.dat
@@ -45,12 +36,86 @@ beams_json      = inputs/164436_3740/gt3_164436_3740_beams.json
 beams_out_json  = inputs/164436_3740/gt3_164436_3740_beamOut.json
 neutfile_loc    = inputs/164436_3740/gt3_164436_3740_neutsOut.json
 
-2D QUANTITIES INPUT FILES
+
+###################################################################################
+#
+#  2D Profiles
+#
+#  These profiles are given as 3-column R, Z, val data.
+#
+###################################################################################
+
+[2DProfiles]
+
 psirz_file      = inputs/164436_3740/gt3_164436_3740_psirz.txt
 
-2D LINE INPUT FILES
+###################################################################################
+#
+#  Wall
+#
+#  Wall data is given as (R,Z) points that are ultimately fed into a
+#  Shapely.LineString
+###################################################################################
+
+[Wall]
+
 wall_file        = inputs/machine/gt3_diiid_wall.dat
 
-#ION ORBIT LOSS CALCULATION
-numcos = 20
+###################################################################################
+#
+#  Plasma
+#
+#  These 0-D data are related to the actual plasma characteristics.
+#
+#  The toroidal magnetic field is in Tesla
+#  R_loss is the approximate number of particles leaving the LCFS via IOL but that
+#      ultimately return to the plasma.
+#  The PFR values are limits on how low of temperatures and densities we'll allow
+#      in the PFR.
+#
+###################################################################################
+
+[Plasma]
+
+BT0 = 2.004
 R_loss = 0.5
+pfr_ni_val = 1.0E14
+pfr_ne_val = 1.0E14
+pfr_Ti_val = 0.002
+pfr_Te_val = 0.002
+
+###################################################################################
+#
+#  Meshing parameters
+#
+#  These parameters define the meshing used by various GT3 modules. You can leave
+#  these alone if you don't know what you're doing.
+#
+###################################################################################
+
+[Mesh]
+
+thetapts_approx = 30
+rhopts = 201
+edge_rho = 0.8
+rhopts_edge = 100
+rhopts_core = 10
+sollines_psi_max = 1.07
+num_sollines = 6
+xi_ib_pts = 10
+xi_ob_pts = 10
+core_pol_pts = 30
+numcos = 8
+
+###################################################################################
+#
+#  Misc
+#
+#  Miscellaneous switches.
+#
+#
+###################################################################################
+
+[Misc]
+verbose = 1
+d3d_iter = 1

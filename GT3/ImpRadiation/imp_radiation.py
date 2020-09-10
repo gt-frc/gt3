@@ -66,8 +66,7 @@ class ImpRad:
                 print 'Pickled interpolater not found for {}. Running adpak.'.format(imp_names[z])
                 self.Lz, self.dLzdT = self.run_adpak(z, imp_names)
         else:
-            print 'Neither core nor z were specified. I can\'t read minds. Stopping.'
-            sys.exit()
+            raise Exception("Neither core nor z were specified. I can\'t read minds. Stopping.")
 
         # TODO: Convert adpak routines to python binary using f2py so we can eliminate the main.f driver program
 
@@ -193,8 +192,7 @@ class ImpRad:
                     try:
                         call(['adpak', os.getcwd() + '/toadpak'])
                     except:
-                        print 'Unable to locate adpak. Stopping.'
-                        sys.exit()
+                        raise RuntimeError("Unable to locate adpak.")
 
                 # read adpak output
                 with open(os.getcwd() + '/outblk.dat', 'r') as f:

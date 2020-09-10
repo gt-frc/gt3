@@ -11,6 +11,7 @@ import re
 import matplotlib.pyplot as plt
 import numpy as np
 from math import pi
+import ConfigParser
 
 from shapely.geometry import LineString
 
@@ -21,11 +22,9 @@ class ReadInfile:
     Methods:
         read_vars
         read_exp
-        wall_prep
         showparams
 
     Attributes:
-        exp_inp          (bool)
         a                (float)    tokamak minor radius (m)
         BT0          (float)    toroidal field strength at mag. axis (T)
         R0_a             (float)    tokamak major radius (m)
@@ -54,12 +53,6 @@ class ReadInfile:
         Te_sep           (float)
         nu_Te            (float)
         j0               (float)
-        j_sep            (float)
-        nu_j             (float)
-        xtheta1          (float)
-        xtheta2          (float)
-        xtheta3          (float)
-        xtheta4          (float)
         wallfile         (str)
     """
 
@@ -71,9 +64,29 @@ class ReadInfile:
         """
         sys.dont_write_bytecode = True
         self.read_vars(infile)
-        self.read_exp()
-        # if hasattr(self, 'wall_file'):
-        #    self.wall_prep()
+
+    def _profile_loader(self, parser, section, name):
+        """ A helper function for loading profiles.
+
+        :param parser: The ConfigParser
+        :type parser: ConfigParser.RawConfigParser
+        :param section: The section name
+        :type section: str
+        :param name: The variable name
+        :type name: str
+        :return:
+        """
+
+        try:
+            filename = parser.get(section, name)
+            filepath = os.path.join(os.getcwd(), filename)
+            return np.genfromtxt(filepath, comments='#')
+        except ConfigParser.NoOptionError:
+            print "%s not found" % name
+            return
+        except IOError:
+            print "%s not found" % name
+            return
 
     def read_vars(self, infile):
         """
@@ -81,202 +94,75 @@ class ReadInfile:
         :param infile:
         :type infile: str
         """
-        # some regex commands we'll use when reading stuff in from the input file
-        r0di = "r'%s *= *([ , \d]*) *'%(v)"
-        r0df = "r'%s *= *([+\-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+)?) *'%(v)"
-        # r0ds = "r'%s *= *((?:/?\.?\w+\.?)+/?) *'%(v)"
-        r0ds = "r'%s *= *((?:\/?\w+)+(?:\.\w+)?) *'%(v)"
-        r1di = "r'%s\( *(\d*) *\) *= *(\d*) *'%(v)"
-        r1df = "r'%s\( *(\d*)\) *= *([+\-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+)?) *'%(v)"
-        r2df = "r'%s\( *(\d*)\) *= *((?:[+\-]?\d*\.?\d*(?:[eE]?[+\-]?\d+)?, ?)*) *'%(v)"
 
-        self.invars = {}
+        config = ConfigParser.RawConfigParser()
+        config.read(infile)
 
-        # GENERAL PARAMETERS
+        # Grid construction parameters
 
-        # GRID CONSTRUCTION PARAMETERS
-        self.invars['rhopts'] = ['int', r0di]
-        self.invars['edge_rho'] = ['float', r0df]
-        self.invars['rhopts_edge'] = ['int', r0di]
-        self.invars['rhopts_core'] = ['int', r0di]
-        self.invars['thetapts_approx'] = ['int', r0di]
-
-        self.invars['BT0'] = ['float', r0df]
-        self.invars['Er_scale'] = ['float', r0df]
-        self.invars['psi_scale'] = ['float', r0df]
-
-        # SOL PARAMETERS
-        self.invars['sollines_psi_max'] = ['float', r0df]
-        self.invars['num_sollines'] = ['int', r0di]
-        self.invars['xi_sep_pts'] = ['int', r0di]
-        self.invars['ib_trim_off'] = ['float', r0df]
-        self.invars['ob_trim_off'] = ['float', r0df]
-        self.invars['xi_ib_pts'] = ['int', r0di]
-        self.invars['xi_ob_pts'] = ['int', r0di]
+        self.rhopts = config.getint('Mesh', 'rhopts')
+        self.edge_rho = config.getfloat('Mesh', 'edge_rho')
+        self.rhopts_edge = config.getint('Mesh', 'rhopts_edge')
+        self.rhopts_core = config.getint('Mesh', 'rhopts_core')
+        self.thetapts_approx = config.getint('Mesh', 'thetapts_approx')
+        try:
+            self.Er_scale = config.getfloat('Mesh', 'Er_scale')
+        except ConfigParser.NoOptionError:
+            self.Er_scale = 1.
+        try:
+            self.psi_scale = config.getfloat('Mesh', 'psi_scale')
+        except ConfigParser.NoOptionError:
+            self.psi_scale = 1.
+        self.sollines_psi_max = config.getfloat('Mesh', 'sollines_psi_max')
+        self.num_sollines = config.getint('Mesh', 'num_sollines')
+        self.xi_ib_pts = config.getint('Mesh', 'xi_ib_pts')
+        self.xi_ob_pts = config.getint('Mesh', 'xi_ob_pts')
+        self.numcos = config.getint('Mesh', 'numcos')
 
 
-        # PFR PARAMETERS
-        self.invars['pfr_ni_val'] = ['float', r0df]
-        self.invars['pfr_ne_val'] = ['float', r0df]
-        self.invars['pfr_Ti_val'] = ['float', r0df]
-        self.invars['pfr_Te_val'] = ['float', r0df]
+        # Plasma
+        self.BT0 = config.getfloat('Plasma', 'Bt0')
+        self.pfr_ni_val = config.getfloat('Plasma', 'pfr_ni_val')
+        self.pfr_ne_val = config.getfloat('Plasma', 'pfr_ne_val')
+        self.pfr_Ti_val = config.getfloat('Plasma', 'pfr_Ti_val')
+        self.pfr_Te_val = config.getfloat('Plasma', 'pfr_Te_val')
+        self.R_loss = config.getfloat('Plasma', 'R_loss')
 
-        # IOL PARAMETERS
-        self.invars['numcos'] = ['int', r0di]
-        self.invars['R_loss'] = ['float', r0df]
 
-        # RAD TRANS RELATED QUANTITIES - NEEDS WORK
-        self.invars['ephia'] = ['float', r0df]
-        self.invars['q95'] = ['float', r0df]
-
-        # NEUTRALS CALCULATION
-        self.invars['neut_outfile'] = ['str', r0ds]
+        # Neutrals Output File
+        self.neutfile_loc = config.get('1DProfiles', 'neutfile_loc')
 
         # NBeams multi-beam location
-        self.invars['beams_json'] = ['str', r0ds]
-        self.invars['beams_out_json'] = ['str', r0ds]
+        self.beams_json = config.get('1DProfiles', 'beams_json')
+        self.beams_out_json = config.get('1DProfiles', 'beams_out_json')
 
-        # EXECUTABLE LOCATIONS
-        self.invars['nbeams_loc'] = ['str', r0ds]
-        self.invars['adpak_loc'] = ['str', r0ds]
-        self.invars['triangle_loc'] = ['str', r0ds]
+        self.er_data = self._profile_loader(config, '1DProfiles', 'er_file')
+        self.jr_data = self._profile_loader(config, '1DProfiles', 'jr_file')
+        self.ne_data = self._profile_loader(config, '1DProfiles', 'ne_file')
+        self.nD_data = self._profile_loader(config, '1DProfiles', 'nD_file')
+        self.nT_data = self._profile_loader(config, '1DProfiles', 'nT_file')
+        self.nW_data = self._profile_loader(config, '1DProfiles', 'nW_file')
+        self.nBe_data = self._profile_loader(config, '1DProfiles', 'nBe_file')
+        self.na_data = self._profile_loader(config, '1DProfiles', 'na_file')
+        self.nC_data = self._profile_loader(config, '1DProfiles', 'nC_file')
+        self.Te_data = self._profile_loader(config, '1DProfiles', 'Te_file')
+        self.Ti_data = self._profile_loader(config, '1DProfiles', 'Ti_file')
+        self.TC_data = self._profile_loader(config, '1DProfiles', 'TC_file')
+        self.frac_C_data = self._profile_loader(config, '1DProfiles', 'frac_C_file')
+        self.vpolC_data = self._profile_loader(config, '1DProfiles', 'vpolC_file')
+        self.vtorC_data = self._profile_loader(config, '1DProfiles', 'vtorC_file')
+        self.vpolD_data = self._profile_loader(config, '1DProfiles', 'vpolD_file')
+        self.vtorD_data = self._profile_loader(config, '1DProfiles', 'vtorD_file')
 
-        self.in_prof = {}
-        self.in_prof['er_file'] = ['str', r0ds, 'er_data']
-        self.in_prof['jr_file'] = ['str', r0ds, 'jr_data']
-        self.in_prof['ne_file'] = ['str', r0ds, 'ne_data']
-        self.in_prof['nD_file'] = ['str', r0ds, 'nD_data']
-        self.in_prof['nT_file'] = ['str', r0ds, 'nT_data']
-        self.in_prof['nW_file'] = ['str', r0ds, 'nW_data']
-        self.in_prof['nBe_file'] = ['str', r0ds, 'nBe_data']
-        self.in_prof['na_file'] = ['str', r0ds, 'na_data']
-        self.in_prof['nC_file'] = ['str', r0ds, 'nC_data']
-        self.in_prof['Te_file'] = ['str', r0ds, 'Te_data']
-        self.in_prof['Ti_file'] = ['str', r0ds, 'Ti_data']
-        self.in_prof['TC_file'] = ['str', r0ds, 'TC_data']
-        self.in_prof['frac_C_file'] = ['str', r0ds, 'frac_C_data']
-        self.in_prof['vpolC_file'] = ['str', r0ds, 'vpolC_data']
-        self.in_prof['vtorC_file'] = ['str', r0ds, 'vtorC_data']
-        self.in_prof['vpolD_file'] = ['str', r0ds, 'vpolD_data']
-        self.in_prof['vtorD_file'] = ['str', r0ds, 'vtorD_data']
-        self.in_prof['nbi_dep_file'] = ['str', r0ds, 'dPdr_norm1_data']
-        self.in_prof['neutfile_loc'] = ['str', r0ds, 'neutfile_loc']
-
-        self.in_map2d = {}
-        self.in_map2d['psirz_file'] = ['str', r0ds, 'psirz_exp']
-
-        self.in_line2d = {}
-        self.in_line2d['wall_file'] = ['str', r0ds, 'wall_exp']
-
-        # Read input variables
-        with open(os.path.join(os.getcwd(), infile), 'r') as f:
-            for count, line in enumerate(f):
-                if not line.startswith('#'):
-                    # read in 0d variables
-                    for v in self.invars:
-                        exec ("result = re.match(%s, line)" % (self.invars[v][1]))
-                        if result:
-                            exec ("self.%s = %s(result.group(1))" % (v, self.invars[v][0]))
-
-                    # read in the names of radial profile input files
-                    for v in self.in_prof:
-                        exec ("result = re.match(%s, line)" % (self.in_prof[v][1]))
-                        if result:
-                            exec ("self.%s = %s(result.group(1))" % (v, self.in_prof[v][0]))
-
-                    # read in the names of input files that map a quantity on the R-Z plane
-                    for v in self.in_map2d:
-                        exec ("result = re.match(%s, line)" % (self.in_map2d[v][1]))
-                        if result:
-                            exec ("self.%s = %s(result.group(1))" % (v, self.in_map2d[v][0]))
-
-                    # read in the names of input files that define a line in the R-Z plane
-                    for v in self.in_line2d:
-                        exec ("result = re.match(%s, line)" % (self.in_line2d[v][1]))
-                        if result:
-                            exec ("self.%s = %s(result.group(1))" % (v, self.in_line2d[v][0]))
-
-        # adjust thetapts so there are lines at theta = 0, pi/2, pi, and 3pi/2
-        # this is critical for x-miller mode, but could be nice for the experimental input mode as well
-
-        # self.thetapts =  int(4 * ceil(float(self.thetapts_approx)/4))+1
-        try:
-            self.xpt = np.array([self.xpt_R, self.xpt_Z])
-        except:
-            pass
-
-    def read_exp(self):
-        """
-        Reads in additional input files from to_gt3 file list
-        """
-        # read in additional input files
-        for infile in self.in_prof:
-            try:
-                exec ("filename = self.%s" % (infile))
-                filepath = os.path.join(os.getcwd(), filename)
-                try:
-                    exec ("self.%s = np.genfromtxt('%s',comments='#')" % (self.in_prof[infile][2], filepath))
-                except Exception as e:
-                    print 'Something may have gone wrong in  %s' % filename, e
-            except:
-                pass
-
-        for infile in self.in_map2d:
-            try:
-
-                exec ("filename = self.%s" % (infile))
-                filepath = os.path.join(os.getcwd(), filename)
-                try:
-                    exec ("self.%s = np.genfromtxt('%s',comments='#')" % (self.in_map2d[infile][2], filepath))
-                except Exception as e:
-                    print 'Something may have gone wrong in %s' % filename, e
-            except:
-                pass
-
-        for infile in self.in_line2d:
-            try:
-                exec ("filename = self.%s" % (infile))
-                filepath = os.path.join(os.getcwd(), filename)
-                try:
-                    exec ("self.%s = np.genfromtxt('%s',comments='#')" % (self.in_line2d[infile][2], filepath))
-                except Exception as e:
-                    print 'Something may have gone wrong in %s' % filename, e
-            except:
-                pass
+        self.psirz_exp = self._profile_loader(config, '2DProfiles', 'psirz_file')
+        self.wall_exp = self._profile_loader(config, 'Wall', 'wall_file')
 
         self.wall_line = LineString(self.wall_exp)
 
-    def wall_prep(self):
-        """
-        Prepares the wall mesh
-        """
-        adotb = (self.wall_exp[:, 0] - np.roll(self.wall_exp[:, 0], 1)) * (
-                    self.wall_exp[:, 0] - np.roll(self.wall_exp[:, 0], -1)) + \
-                (self.wall_exp[:, 1] - np.roll(self.wall_exp[:, 1], 1)) * (
-                            self.wall_exp[:, 1] - np.roll(self.wall_exp[:, 1], -1))
-        mag_a = np.sqrt((self.wall_exp[:, 0] - np.roll(self.wall_exp[:, 0], 1)) ** 2 + (
-                    self.wall_exp[:, 1] - np.roll(self.wall_exp[:, 1], 1)) ** 2)
-        mag_b = np.sqrt((self.wall_exp[:, 0] - np.roll(self.wall_exp[:, 0], -1)) ** 2 + (
-                    self.wall_exp[:, 1] - np.roll(self.wall_exp[:, 1], -1)) ** 2)
-
-        wall_angles = np.arccos(adotb / (mag_a * mag_b)) / pi
-        self.wall_vertex = np.zeros((self.wall_exp.shape[0], 2))
-
-        for i in range(0, self.wall_exp.shape[0]):
-            if wall_angles[i] <= 0.99:
-                self.wall_vertex[i, :] = self.wall_exp[i, :]
-            else:
-                self.wall_vertex[i, :] = 0
-        self.wall_vertex = self.wall_vertex[np.all(self.wall_vertex != 0, axis=1)]  # removing zeros from array
-        # need to add in an additional criteria to also remove points that are extremely close to other points, even if they create a sufficiently large angle
-        self.wall_vertex_closed = np.vstack((self.wall_vertex, self.wall_vertex[0]))
-        self.wall_line = LineString(self.wall_vertex_closed)
-        # self.wall_ring = LinearRing(wall_pts)
-        # self.wall_line = LineString(self.wall_vertex)
 
     def showparams(self):
         """
-        Show the parameters of this show
+        Show the parameters of this shot
         """
         print '**PARAMETERS FOR SHOT \'{}\'.'.format(self.shotlabel)
         for key in vars(self).iteritems():

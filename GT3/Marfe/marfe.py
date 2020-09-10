@@ -323,9 +323,7 @@ class Marfe:
             chi_r = inputs.chi_r
             self.n_marfe, self.MI = calc_n_marfe(n, sv, T, L, Lz, chi_r)
         else:
-            print 'you haven\'t provided any inputs'
-            print 'stopping'
-            sys.exit()
+            raise Exception("No inputs provided")
 
         print
         print '######################################'

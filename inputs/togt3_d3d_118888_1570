@@ -1,7 +1,26 @@
-d3d_iter = 1 
-exp_inp = 1 
+# Shot 118888.1570
+###################################################################################
+#
+#  GT3 config file for Shot 118888.1570. GT3 uses the ConfigParser module to parse
+#  these data, with headers given in [Brackets].
+#
+###################################################################################
 
-#1D PROFILE INPUT FILES 
+###################################################################################
+#
+#  1D Profiles
+#
+#  These profiles are given as 2-column rho, val data
+#
+#  Temperature data are given in keV.
+#  Density data are given in their full value (e.g., 3.2E+19)
+#  Rotational velocities are in m/s
+#  Radial electric field is in kV
+#
+###################################################################################
+
+[1DProfiles]
+
 ne_file         = inputs/118888_1570/gt3_118888_1570_ne.dat
 nD_file         = inputs/118888_1570/gt3_118888_1570_nD.dat
 Te_file         = inputs/118888_1570/gt3_118888_1570_Te.dat
@@ -22,129 +41,82 @@ beams_json      = inputs/118888_1570/gt3_118888_1570_beams.json
 beams_out_json  = inputs/118888_1570/gt3_118888_1570_beamOut.json
 neutfile_loc    = inputs/118888_1570/gt3_118888_1570_neutsOut.json
 
-2D QUANTITIES INPUT FILES 
-bpol_file       = inputs/118888_1570/gt3_118888_1570_bpol.dat
-btor_file       = inputs/118888_1570/gt3_118888_1570_btor.dat
+###################################################################################
+#
+#  2D Profiles
+#
+#  These profiles are given as 3-column R, Z, val data.
+#
+###################################################################################
+
+[2DProfiles]
 psirz_file      = inputs/118888_1570/gt3_118888_1570_psirz.dat
 
-2D LINE INPUT FILES 
-sep_file        = inputs/118888_1570/gt3_118888_1570_sep.dat
+###################################################################################
+#
+#  Wall
+#
+#  Wall data is given as (R,Z) points that are ultimately fed into a
+#  Shapely.LineString
+###################################################################################
+
+[Wall]
 wall_file       = inputs/118888_1570/gt3_diiid_wall.dat
 
-ephia = 0.04
+###################################################################################
+#
+#  Plasma
+#
+#  These 0-D data are related to the actual plasma characteristics.
+#
+#  The toroidal magnetic field is in Tesla
+#  R_loss is the approximate number of particles leaving the LCFS via IOL but that
+#      ultimately return to the plasma.
+#  The PFR values are limits on how low of temperatures and densities we'll allow
+#      in the PFR.
+#
+###################################################################################
 
-#IMPURITY CALCULATION 
-adpak_loc = /home/jonathan/Dropbox/GTEDGE/MyPrograms/GTEDGE/MaxPlasma/adpak/ 
-# ADPAK PARAMETERS 
-z_imp = 6 
-laden = 1 
-ladtip = 1 
-leci = 1 
-ldrmlt = 2 
-ncxopt = 1 
-anneut = 1.0E9 
-vneut = 0.001 
+[Plasma]
+BT0 = 2.04
+R_loss = 0.5
+pfr_ni_val = 1.0E14
+pfr_ne_val = 1.0E14
+pfr_Ti_val = 0.002
+pfr_Te_val = 0.002
 
-#GENERAL GEOMETRY 
-a = 0.598 
-BT0 = 2.04 
-R0_a = 1.7 
-Z0 = 0.0 
-kappa_up = 1.82 
-kappa_lo = 1.82 
-s_k_up = 0.0 
-s_k_lo = 0.0 
-tri_up = 0.237 
-tri_lo = 0.0 
-thetapts_approx = 30 
-rhopts = 201 
-edge_rho = 0.8 
-rhopts_edge = 100 
-rhopts_core = 10 
-thetapts_approx = 30 
+###################################################################################
+#
+#  Meshing parameters
+#
+#  These parameters define the meshing used by various GT3 modules. You can leave
+#  these alone if you don't know what you're doing.
+#
+###################################################################################
 
-#NEUTRALS CALCULATION 
-ntrl_switch = 1 
-edge_rho_ntrl = 0.8 
-neut_outfile =  inputs/118888_1570/gt3_118888_1570_neut.dat 
-rhopts_edge_ntrl = 10 
-ntrl_thetapts = 33 
+[Mesh]
 
-#XMILLER PARAMETERS 
-xmil = 1 
-xpt_R = 1.48 
-xpt_Z = -1.24 
+thetapts_approx = 30
+rhopts = 201
+edge_rho = 0.8
+rhopts_edge = 100
+rhopts_core = 10
+sollines_psi_max = 1.07
+num_sollines = 6
+xi_ib_pts = 10
+xi_ob_pts = 10
+core_pol_pts = 30
+numcos = 8
 
-#BACKGROUND DENSITIES AND TEMPERATURES (IF NOT READING FROM INPUT FILE) 
-#ni0 = 3.629E19 
-#ni9 = 1.523E19
-#ni_sep = 0.3E19
-#ni_dp = 1E17
-#nu_ni = 3.0
-#ne0 = 3.629E19
-#ne9 = 1.523E19
-#ne_sep = 0.3E19
-#ne_dp = 1E17
-#nu_ne = 2.5
-#Ti0 = 35
-#Ti9 = 6
-#Ti_sep = 0.6
-#Ti_dp = 0.03
-#nu_Ti = 3.5
-#Te0 = 36
-#Te9 = 6
-#Te_sep = 0.6
-#Te_dp = 0.01
-#nu_Te = 3.5 
+###################################################################################
+#
+#  Misc
+#
+#  Miscellaneous switches.
+#
+#
+###################################################################################
 
-#CURRENT-RELATED PARAMETERS 
-j0 = 2850000 
-j_sep = 0 
-nu_j = 1. 
-IP = 1.38 
-q95 = 3.57 
-
-rmeshnum_p = 5 
-xtheta1 = 3.6 
-xtheta2 = 2.7 
-xtheta3 = 0.1 
-xtheta4 = -1.0 
-
-#ION ORBIT LOSS CALCULATION 
-numcos = 8 
-R_loss = 0.5 
-
-pfr_ni_val = 1.0E14 
-pfr_ne_val = 1.0E14 
-pfr_Ti_val = 0.002  
-pfr_Te_val = 0.002  
-############################################################################### 
-# CONFIG - YOU CAN PROBABLY LEAVE THESE ALONE IF YOU DON'T KNOW WHAT THEY ARE 
-############################################################################### 
-verbose = 1 
-corelines_begin = 0.75 
-num_corelines = 10 
-sollines_psi_max = 1.07 
-num_sollines = 6 
-xi_sep_pts = 50 
-ib_trim_off = 0.1 
-ob_trim_off = 0.1 
-xi_ib_pts = 10 
-xi_ob_pts = 10 
-core_pol_pts = 30 
-core_thetapts_ntrl = 50 
-#rhopts_ntrl = 100 
-edge_rho_ntrl = 0.8 
-rhopts_edge_ntrl = 5 
-rhopts_core_ntrl = 10 
-ib_div_pol_pts = 7 
-ob_div_pol_pts = 7 
-wall_ni_min = 1.0E15 
-wall_ne_min = 1.0E15 
-wall_Ti_min = 3.2042e-18 
-wall_Te_min = 3.2042e-18 
-core_thetapts_ntrl = 30 
-ib_thetapts_ntrl = 10 
-ob_thetapts_ntrl = 10 
-tri_min_angle = 20 
-tri_min_area = 0.01 
+[Misc]
+verbose = 1
+d3d_iter = 1

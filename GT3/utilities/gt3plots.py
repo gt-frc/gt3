@@ -169,7 +169,6 @@ class gt3plots():
     #CS = ax1.pcolor(myshot.brnd.R, myshot.brnd.Z, B_p_in, vmin=0, vmax=0.6)
     #CS = ax1.contourf(myshot.brnd.R, myshot.brnd.Z, B_p_in, 500, vmin=0, vmax=0.6) #plot something calculated by miller
     plt.colorbar(CS)
-    print 'IP = ', myshot.brnd.IP*1E-6, 'MA'
     
     
     

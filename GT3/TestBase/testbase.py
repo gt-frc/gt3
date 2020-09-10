@@ -12,8 +12,7 @@ def getGT3Test(iolFlag=True, verbose=False, neutFlag=True, mode="coreonly"):
     try:
         from GT3 import gt3
     except ImportError:
-        print "Unable to load GT3 module"
-        sys.exit()
+        ImportError("Unable to load GT3 module")
     return gt3(preparedInput=TestClass(), iolFlag=iolFlag, verbose=verbose, neutFlag=neutFlag, mode=mode)
 
 class TestClass:
@@ -29,11 +28,6 @@ class TestClass:
         Generate various 0D parameters for the plasma from shot 164436.3740
         """
         self.iolFlag = True
-        self.j0 = 2.53E6
-        self.j_sep = 7.95E4
-        self.nu_j = 3.0
-        self.IP = 1.07
-        self.q95 = 4.16
         self.BT0 = 2.004
         self.wall_ni_min = 1.0E15
         self.wall_ne_min = 1.0E15
@@ -64,11 +58,8 @@ class TestClass:
         self.rhopts_core_ntrl = 10
         self.sollines_psi_max = 1.07
         self.num_sollines = 3
-        self.xi_sep_pts = 30
         self.xi_ib_pts = 10
         self.xi_ob_pts = 10
-        self.ib_trim_off = 0.1
-        self.ob_trim_off = 0.1
         self.numcos = 20
 
         """
@@ -101,11 +92,6 @@ class TestClass:
         table1.add_rows([["Variable name", "Description", "Value", "Units"],
                         ["shotid", "DIII-D Shot ID", self.shotid, "n/a"],
                         ["timeid", "DIII-D Time ID", self.timeid, "n/a"],
-                        ["j0", "Current density at rho=0", self.j0, "A/m^2"],
-                        ["j_sep", "Current density at the separatrix", self.j_sep, "A/m^2"],
-                        ["nu_j", "??", self.nu_j, "??"],
-                        ["IP", "Plasma current (Ip)", self.IP, "MA"],
-                        ["q95", "Safety factor at rho=.95", self.q95, "1"],
                         ["BT0", "Toroidal magnetic field at rho=0", self.BT0, "T"],
                         ["wall_ni_min", "Minimum wall ion density", self.wall_ni_min, "#/m^3"],
                         ["wall_ne_min", "Minimum wall electron density", self.wall_ne_min, "#/m^3"],

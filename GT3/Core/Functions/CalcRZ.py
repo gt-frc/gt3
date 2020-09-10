@@ -32,11 +32,10 @@ def calc_RZ(rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
                 # the vicinity of the magnetic axis. Ideas for the fixing this in the future:
                 #   1) resample the raw psi data (maybe an Rbf interpolation) onto a finer mesh. May or may not work.
                 #   2) some kind of interpolation based on the flux surfaces it can draw.  # TODO
-                print '\nGT3 had trouble drawing a contour line when getting the R and Z points. This ' \
+                raise RuntimeError("""GT3 had trouble drawing a contour line when getting the R and Z points. This ' \
                       'is most likely due to an overly fine radial mesh in the vicnity of the magnetic ' \
                       'axis. Try reducing your number of radial meshes in the core and try again. This ' \
-                      'will hopefully be fixed in a future update. Stopping.'
-                sys.exit()
+                      'will hopefully be fixed in a future update. Stopping.""")
 
             for j, thetaval in enumerate(theta[0]):
                 if psi_norm_val < 1.0:
