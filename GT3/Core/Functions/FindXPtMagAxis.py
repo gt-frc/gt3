@@ -2,69 +2,91 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from contours.quad import QuadContourGenerator
-from scipy.interpolate import griddata
+import matplotlib.pyplot as plt
 from shapely.geometry import Point, MultiPoint, LineString
 
+def find_xpt_mag_axis(core, R, Z, psi):
+    # type: (GT3.core, np.array, np.array, np.array) -> (np.array, np.array, np.array)
+    """
 
-def find_xpt_mag_axis(R, Z, psi):
-
-    # calculate gradients of psi in R and Z directions
+    :type core: .core
+    """
+    xpt_u = None
+    xpt_l = None
+    m_axis = None
+    # find x-point location
     dpsidR = np.gradient(psi, R[0, :], axis=1)
     dpsidZ = np.gradient(psi, Z[:, 0], axis=0)
+    d2psidR2 = np.gradient(dpsidR, R[0, :], axis=1)
+    d2psidZ2 = np.gradient(dpsidZ, Z[:, 0], axis=0)
 
     # find line(s) where dpsidR=0
-    c_dpsidR = QuadContourGenerator.from_rectilinear(R[0], Z[:, 0], dpsidR)
-    c_dpsidZ = QuadContourGenerator.from_rectilinear(R[0], Z[:, 0], dpsidZ)
-    dpsidR_0 = c_dpsidR.contour(0.0)
-    dpsidZ_0 = c_dpsidZ.contour(0.0)
+    csR = plt.contour(R, Z, dpsidR, [0])
+    csZ = plt.contour(R, Z, dpsidZ, [0])
 
-    # populate list all intersection points (as Shapely points)
-    int_pts = []
+    dpsidR_0 = csR.collections[0].get_paths()
+    # dpsidR_0 = cntr.contour(R, Z, dpsidR).trace(0.0)
+
+    # find line(s) where dpsidZ=0
+    # dpsidZ_0 = cntr.contour(R, Z, dpsidZ).trace(0.0)
+    dpsidZ_0 = csZ.collections[0].get_paths()
     for i, path1 in enumerate(dpsidR_0):
         for j, path2 in enumerate(dpsidZ_0):
             try:
                 # find intersection points between curves for dpsidR=0 and dpsidZ=0
-                # these correspond to local minima, local maxima, or saddle-points in psi
-                ints = LineString(path1).intersection(LineString(path2))
-                if ints.type == 'Point':
-                    int_pts.append(ints)
-                elif ints.type == 'MultiPoint':
-                    for pt in ints:
-                        int_pts.append(pt)
+                ints = LineString(path1.vertices).intersection(LineString(path2.vertices))
+                # if there is only one intersection ('Point'), then we're probably not
+                # dealing with irrelevant noise in psi
+                if isinstance(ints, Point):
+                    # check if local maximum or minimum
+                    # If the point is within the walls and less than 0.5m from the vessel centroid, this is
+                    # very likely the magnetic axis
+                    if core.wall_line.convex_hull.contains(ints) and core.wall_line.centroid.distance(ints) < 0.5:
+                        # we've found the magnetic axis
+                        m_axis = np.array([ints.x, ints.y])
+                    # If the point is not inside the walls, it's a magnet
+                    elif not core.wall_line.convex_hull.contains(ints):
+                        # we've found a magnet. Do nothing.
+                        pass
+                    elif core.wall_line.convex_hull.contains(ints) and ints.y < 0:
+                        # The point is within the walls and not near the magnetic axis. This is likely the
+                        # lower x-point.
+                        # TODO: Provides lower x-point here, but upper x-point can be built out
+                        xpt = np.array([ints.x, ints.y])
+                        xpt_l = xpt
+                    elif core.wall_line.convex_hull.contains(ints) and ints.y > 0:
+                        # This is an upper x-point. This functionality needs to be built in but is here for
+                        # later
+                        xpt_u = np.array([ints.x, ints.y])
+
+                    # uncomment this line when debugging
+                    # print list(ints.coords), d2psidR2(ints.x, ints.y), d2psidZ2(ints.x, ints.y)
+
+                # If multiple points are found, the flux surfaces may have come back around onto each other.
+                if isinstance(ints, MultiPoint):
+                    for point in ints:
+                        # check if local maximum or minimum
+                        # If the point is within the walls and less than 0.5m from the vessel centroid, this is
+                        # very likely the magnetic axis
+                        if core.wall_line.convex_hull.contains(point) and core.wall_line.centroid.distance(
+                                point) < 0.5:
+                            # we've found the magnetic axis
+                            m_axis = np.array([point.x, point.y])
+                        # If the point is not inside the walls, it's a magnet
+                        elif not core.wall_line.convex_hull.contains(point):
+                            # we've found a magnet. Do nothing.
+                            pass
+                        elif core.wall_line.convex_hull.contains(point) and point.y < 0:
+                            # The point is within the walls and not near the magnetic axis. This is likely the
+                            # lower x-point.
+                            # TODO: Provides lower x-point here, but upper x-point can be built out
+                            xpt = np.array([point.x, point.y])
+                            xpt_l = xpt
+                        elif core.wall_line.convex_hull.contains(point) and point.y > 0:
+                            # This is an upper x-point. This functionality needs to be built in but is here for
+                            # later
+                            xpt_u = np.array([point.x, point.y])
+
             except:
                 pass
-
-    # magnetic axis is the intersection point with the minimum value of psi
-    psi_int_pts = griddata(np.column_stack((R.flatten(), Z.flatten())),
-                           psi.flatten(),
-                           np.asarray(MultiPoint(int_pts)),
-                           method='cubic')
-    mag_axis = np.asarray(MultiPoint(int_pts))[np.argmin(psi_int_pts)]
-
-    # find the dpsidR_0 = 0 contour that contains the magnetic axis.
-    # Of the other intersection points along the same dpsidR_0 = 0 contour, the x-point
-    # will be the highest (in Z) of those points that are below the magnetic axis.
-
-    # create list of potential x-points (i.e. points that also fall on the same dpsidR_0 = 0 contour
-    # as the magnetic axis and whose y-values are lower than that of the magnetic axis.
-    pot_xpts = []
-    for i, path in enumerate(dpsidR_0):
-        line = LineString(path)
-        if line.distance(Point(mag_axis)) < 1E-8:
-            # then we've found the contour that includes the magnetic axis
-            for pt in int_pts:
-                if line.distance(pt) < 1E-8 and pt.y < Point(mag_axis).y:
-                    pot_xpts.append(pt)
-
-    # of the potential x-points, take the one with the largest y value (there might be only one potential x-point)
-    pts_xpts_array = np.asarray(MultiPoint(pot_xpts))
-    xpt = pts_xpts_array[pts_xpts_array[:, 1].argsort()][-1]
-
-    # plt.contourf(R, Z, psi)
-    # for pt in pts_xpts_array:
-    #     plt.scatter(pt[0], pt[1], color='yellow')
-    # plt.scatter(xpt[0], xpt[1],marker='+',color='black')
-    # plt.show()
-    # sys.exit()
-    return xpt, mag_axis
+    return xpt_l, xpt_u, m_axis

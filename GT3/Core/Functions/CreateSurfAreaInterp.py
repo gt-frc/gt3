@@ -8,8 +8,8 @@ from shapely.geometry import LineString
 from math import pi, sqrt
 
 
-def create_surf_area_interp(rho2psinorm, psinorm2rho, psi_data, sep_pts, R0_a, a):
-    rho_vals = np.linspace(0, 1, 50, endpoint=True)
+def create_surf_area_interp(rho2psinorm, psinorm2rho, psi_data, sep_pts, R0_a, a, sep_val):
+    rho_vals = np.linspace(0, sep_val, 50, endpoint=True)
     r_vals = rho_vals * a
     psi_vals = rho2psinorm(rho_vals)
 

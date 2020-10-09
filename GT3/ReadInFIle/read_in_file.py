@@ -127,6 +127,10 @@ class ReadInfile:
         self.pfr_Ti_val = config.getfloat('Plasma', 'pfr_Ti_val')
         self.pfr_Te_val = config.getfloat('Plasma', 'pfr_Te_val')
         self.R_loss = config.getfloat('Plasma', 'R_loss')
+        try:
+            self.sep_val = config.getfloat('Plasma', 'sep_val')
+        except ConfigParser.NoOptionError:
+            self.sep_val = 1.0
 
 
         # Neutrals Output File

@@ -6,8 +6,8 @@ from scipy.interpolate import griddata,  interp1d
 from shapely.geometry import Point, LineString
 
 
-def calc_rho2psi_interp(pts, psi_data):
-    rho_vals = np.linspace(0, 1, 100)
+def calc_rho2psi_interp(pts, psi_data, sep_val):
+    rho_vals = np.linspace(0, sep_val, 100)
 
     ptsRZ = np.zeros((len(rho_vals), 2))
 
@@ -26,7 +26,7 @@ def calc_rho2psi_interp(pts, psi_data):
                             method='cubic')
 
     psinorm_vals[0] = 0
-    psinorm_vals[-1] = 1
+    psinorm_vals[-1] = sep_val
 
     # For some reason, psi_vals will sometimes not be monotonically increasing, especially near the magnetic axis.
     # This prevents UnivariateSpline from working. To prevent this, we're just going to delete any points that are

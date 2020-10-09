@@ -7,12 +7,12 @@ from GT3.Core.Functions.DrawCoreLine import draw_core_line
 from scipy.interpolate import  UnivariateSpline
 from shapely.geometry import LineString, Polygon
 
-def create_vol_interp(rho2psinorm, psinorm2rho, psi_data, sep_pts, R0_a, a):
+def create_vol_interp(rho2psinorm, psinorm2rho, psi_data, sep_pts, R0_a, a, sep_val):
     """
 
     :rtype:
     """
-    rho_vals = np.linspace(0, 1, 50, endpoint=True)
+    rho_vals = np.linspace(0, sep_val, 50, endpoint=True)
     r_vals = rho_vals * a
     psi_vals = rho2psinorm(rho_vals)
 

@@ -39,8 +39,8 @@ class BeamDeposition:
         # When integrated over r, this should equal P_beam, or at least the amount
         # that is deposited in the plasma.
 
-        self.beams_space = np.linspace(0., 1.0, 50)
-        """The rho space used by the Beams module on [0., 1.]"""
+        self.beams_space = np.linspace(0., core.sep_val, 50)
+        """The rho space used by the Beams module on [0., 1.] or [0., sep_val]"""
 
         self.pwrFracOverride = pwrFracOverride
         """Allows us to override the beam power fraction for sensitivity studies"""
@@ -158,7 +158,7 @@ class BeamDeposition:
                                                              core.shaf_shift,
                                                              core.kappa_vals,
                                                              core.a,
-                                                             core.R0_a,
+                                                             core.R0_g,
                                                              UnivariateSpline(core.rho[:, 0], core.T_fsa.e.kev)(
                                                                  self.beams_space),
                                                              UnivariateSpline(core.rho[:, 0], core.T_fsa.i.kev)(
@@ -185,8 +185,20 @@ class BeamDeposition:
                     except Exception as e:
                         print "BeamConfiguration failed for beam %s with error: %s " % (n, str(e))
                 pool = Pool(cpu_count() - 1)
-                self.beam_result = pool.map(Beam, beam_config_list)
-                """A list of the raw results returned by the multi-processing Pools module"""
+
+                try:
+                    try:
+                        #Beam1 = Beam(beam_config_list[0])
+                        #Beam2 = Beam(beam_config_list[1])
+                        self.beam_result = pool.map(Beam, beam_config_list)
+                    except:
+                        raise Exception("Pathos failed to run beam")
+
+                    """A list of the raw results returned by the multi-processing Pools module"""
+                    if self.beam_result is None or len(self.beam_result) == 0:
+                        raise Exception("Beams module failed to run beam")
+                except Exception:
+                    raise Exception("Beams module failed to run beam")
 
                 # Write the beams output file
                 if len(self.beam_result) > 0:

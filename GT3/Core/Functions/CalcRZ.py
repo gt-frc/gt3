@@ -7,7 +7,8 @@ from math import cos, sin
 from shapely.geometry import Point, LineString
 from GT3.Core.Functions.DrawCoreLine import draw_core_line
 
-def calc_RZ(rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
+
+def calc_RZ(core, rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
     # get parameters that depend on both rho and theta
 
     sep_pts = np.asarray(lines.sep_closed.coords)
@@ -16,6 +17,16 @@ def calc_RZ(rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
     Z = np.zeros(rho.shape)
 
     line_length = 5.0
+
+    if pts.xpt[1] is None or pts.xpt[0] is None:
+        # Grab the actual x-point
+        if pts.xpt[0] is not None:
+            xpt_temp = pts.xpt[0]
+        else:
+            xpt_temp = pts.xpt[1]
+    else:
+        # THere are 2 xpoints. Use the bottom one.
+        xpt_temp = pts.xpt[0]
 
     for i, psi_norm_val in enumerate(psi_norm[:, 0]):
         if i == 0:
@@ -35,7 +46,7 @@ def calc_RZ(rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
                 raise RuntimeError("""GT3 had trouble drawing a contour line when getting the R and Z points. This ' \
                       'is most likely due to an overly fine radial mesh in the vicnity of the magnetic ' \
                       'axis. Try reducing your number of radial meshes in the core and try again. This ' \
-                      'will hopefully be fixed in a future update. Stopping.""")
+                      'will hopefully be fixed in a future update.""")
 
             for j, thetaval in enumerate(theta[0]):
                 if psi_norm_val < 1.0:
@@ -45,13 +56,16 @@ def calc_RZ(rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
                     int_pt = fs_line.intersection(thetaline)
                 else:
                     if thetaval == theta_xpt:
-                        int_pt = Point(pts.xpt)
+                        int_pt = Point(xpt_temp)
 
                     else:
                         thetaline = LineString([Point(pts.axis.geo),
                                                 Point([line_length * cos(thetaval) + pts.axis.geo[0],
                                                        line_length * sin(thetaval) + pts.axis.geo[1]])])
                         int_pt = LineString(sep_pts).intersection(thetaline)
-                R[i, j] = int_pt.x
-                Z[i, j] = int_pt.y
+                if isinstance(int_pt, Point):
+                    R[i, j] = int_pt.x
+                    Z[i, j] = int_pt.y
+                else:
+                    raise
     return R, Z

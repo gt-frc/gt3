@@ -72,6 +72,7 @@ wall_file        = inputs/machine/gt3_diiid_wall.dat
 [Plasma]
 
 BT0 = 2.006
+sep_val = .9
 R_loss = 0.5
 pfr_ni_val = 1.0E14
 pfr_ne_val = 1.0E14

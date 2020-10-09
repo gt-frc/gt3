@@ -13,7 +13,8 @@ from scipy.interpolate import griddata, UnivariateSpline
 from math import pi
 from collections import namedtuple
 from scipy import constants
-
+from shapely.geometry import LineString, Point, MultiPoint
+from matplotlib.path import Path
 from Functions.FindXPtMagAxis import find_xpt_mag_axis
 from Functions.CalcPsiNorm import calc_psi_norm
 from Functions.CalcRho2PsiInterp import calc_rho2psi_interp
@@ -28,6 +29,8 @@ from Functions.CalcRZ import calc_RZ
 from Functions.CalcKappaElong import calc_kappa_elong
 from Functions.CreateVolInterp import create_vol_interp
 from Functions.CalcChiJet import calc_chi_jet
+from scipy.interpolate import interp1d
+import GT3
 
 e = constants.elementary_charge
 u_0 = constants.mu_0
@@ -47,6 +50,10 @@ m_a = 6.643e-27
 # noinspection SpellCheckingInspection
 class Core:
 
+    sep_val_overridden = False  # type: bool
+    """Has the separatrix value been overridden?"""
+    sep_val = 1.0  # type: float
+    """The value of the separatrix. If this is set in the input file as <1.0, the X-point calculations are omitted"""
     r2vol = None  # type: UnivariateSpline
     """The V(r) interpolator"""
     rho2vol = None  # type: UnivariateSpline
@@ -55,17 +62,15 @@ class Core:
     """The V(psi) interpolator on [0., 1.]"""
 
     def __init__(self, inp):
-        """
-        The class for the plasma core
+        # type: (GT3.ReadInfile) -> GT3.Core
+        # Hold the input as a class attribute for use in functions
 
-
-        Attributes:
-            psi_data   The
-
-
-        :param inp: The input object class
-        :type inp: object
-        """
+        self.inp = inp
+        self.wall_line = inp.wall_line
+        self.sep_val = inp.sep_val
+        if abs(1.0 - float(self.sep_val)) > 0.0001:
+            self.sep_val_overridden = True
+            print "The separatrix value is being overwritten. GT3.SOL will be omitted."
         # this assumes that psi is given as a square array
         psi_shape = int(np.sqrt(inp.psirz_exp[:, 0].shape[0]))  # type: int
 
@@ -76,8 +81,8 @@ class Core:
         except AttributeError:
             raw_psi = inp.psirz_exp[:, 2].reshape(-1, psi_shape)  # type: np.ndarray
 
-        xpt, mag_axis = find_xpt_mag_axis(raw_psi_R, raw_psi_Z, raw_psi)
-
+        xpt_l, xpt_u, mag_axis = find_xpt_mag_axis(self, raw_psi_R, raw_psi_Z, raw_psi)
+        xpt = [xpt_l, xpt_u]
         raw_psi_norm = calc_psi_norm(raw_psi_R, raw_psi_Z, raw_psi, xpt, mag_axis)
 
         raw_dpsidR = np.abs(np.gradient(raw_psi_norm, raw_psi_R[0, :], axis=1))
@@ -103,40 +108,29 @@ class Core:
         )
 
         # calculate some important points and lines
-        self.pts, self.lines = calc_pts_lines(self.psi_data, xpt, inp.wall_line, mag_axis)
+        self.pts, self.lines = calc_pts_lines(self.psi_data, xpt, self.wall_line, mag_axis, self.sep_val, core=self)
 
         # create interpolation functions to convert rho to psi and vice versa
-        interp_fns = calc_rho2psi_interp(self.pts, self.psi_data)
+        interp_fns = calc_rho2psi_interp(self.pts, self.psi_data, self.sep_val)
 
-        self.rho2psi = interp_fns[0]
-        self.rho2psinorm = interp_fns[1]
-        self.psi2rho = interp_fns[2]
-        self.psi2psinorm = interp_fns[3]
-        self.psinorm2rho = interp_fns[4]
-        self.psinorm2psi = interp_fns[5]
+        self.rho2psi = interp_fns[0]  # type: interp1d
+        self.rho2psinorm = interp_fns[1]  # type: interp1d
+        self.psi2rho = interp_fns[2]  # type: interp1d
+        self.psi2psinorm = interp_fns[3]  # type: interp1d
+        self.psinorm2rho = interp_fns[4]  # type: interp1d
+        self.psinorm2psi = interp_fns[5]  # type: interp1d
 
-        # plt.plot(np.asarray(self.lines.sep.coords)[:,0], np.asarray(self.lines.sep.coords)[:,1], color='red')
-        # plt.plot(np.asarray(self.lines.div.ib.coords)[:,0], np.asarray(self.lines.div.ib.coords)[:,1], color='green')
-        # plt.plot(np.asarray(self.lines.div.ob)[:,0], np.asarray(self.lines.div.ob)[:,1], color='blue')
-        # plt.show()
+        self.R0_a = self.pts.axis.mag[0]
+        self.R0_g = self.pts.axis.geo[0]
 
-        self.R0_a = self.pts.axis.geo[0]
-
-        # TODO: Figure out which of these is the definition of 'a'
-        # self.a = self.pts.obmp[0] - self.pts.axis.geo
-        self.a = self.pts.obmp[0] - self.pts.axis.mag[0]
-
-        self.shaf_shift = (self.pts.axis.mag[0] - self.pts.axis.geo[0]) / self.a
-
-        # calculate rho and theta values and number of thetapts
 
         # specify rho values
         try:
             rho1d = np.concatenate((np.linspace(0, inp.edge_rho, inp.rhopts_core, endpoint=False),
-                                    np.linspace(inp.edge_rho, 1, inp.rhopts_edge)), axis=0)
+                                    np.linspace(inp.edge_rho, self.sep_val, inp.rhopts_edge)), axis=0)
         except AttributeError:
             try:
-                rho1d = np.linspace(0, 1, inp.rhopts)
+                rho1d = np.linspace(0, self.sep_val, inp.rhopts)
             except AttributeError:
                 raise AttributeError("You haven't specified the number of radial points.")
         self.rhopts = len(rho1d)
@@ -147,20 +141,35 @@ class Core:
 
         # create rho and theta arrays (initializing the main computational grid)
         self.theta, self.rho = np.meshgrid(theta1d, rho1d)
-        self.r = self.rho * self.a
+
 
         self.psi = self.rho2psi(self.rho)
         self.psi_norm = self.rho2psinorm(self.rho)
 
-        self.R, self.Z = calc_RZ(self.rho, self.theta, theta_xpt, self.pts, self.psi_data, self.psi_norm, self.lines)
+        # estimate elongation and triangularity
+        self.kappa_vals, self.tri_vals = calc_kappa_elong(self.psi_data, np.asarray(self.lines.sep_closed.coords))
+
+        # Calculate plasma radius considering potential for wall limiter
+        # Inboard limiter
+        if self.pts.ibmp[0] < self.inp.wall_line.bounds[0]:
+            self.a = np.average((self.pts.obmp[0] - self.pts.axis.mag[0], self.pts.axis.mag[0] - self.inp.wall_line.bounds[0]))
+        # Outboard limiter
+        elif self.pts.obmp[0] >= self.inp.wall_line.bounds[2]:
+            self.a = np.average((self.inp.wall_line.bounds[2] - self.pts.axis.mag[0], self.pts.axis.mag[0] - self.pts.ibmp[0]))
+        else:
+            self.a = np.average((self.pts.obmp[0] - self.pts.axis.mag[0], self.pts.axis.mag[0] - self.pts.ibmp[0]))
+
+        self.shaf_shift = (self.pts.axis.mag[0] - self.pts.axis.geo[0]) / self.a
+        self.r = self.rho * self.a
+
+        self.R, self.Z = calc_RZ(self, self.rho, self.theta, theta_xpt, self.pts, self.psi_data, self.psi_norm, self.lines)
 
         self.xpt_loc = np.where(self.Z == np.amin(self.Z))
         self.obmp_loc = np.where(self.R == np.amax(self.R))
         self.ibmp_loc = np.where(self.R == np.amin(self.R))
         self.top_loc = np.where(self.Z == np.amax(self.Z))
 
-        # estimate elongation and triangularity
-        self.kappa_vals, self.tri_vals = calc_kappa_elong(self.psi_data, np.asarray(self.lines.sep_closed.coords))
+
 
         # create interpolation functions to obtain the flux surface surface area for any value of r, rho, or psi_norm
         self.r2sa, self.rho2sa, self.psinorm2sa = create_surf_area_interp(self.rho2psinorm,
@@ -168,7 +177,8 @@ class Core:
                                                                           self.psi_data,
                                                                           np.asarray(self.lines.sep_closed.coords),
                                                                           self.R0_a,
-                                                                          self.a)
+                                                                          self.a,
+                                                                          self.sep_val)
 
         # create interpolation functions to obtain the plasma volume for any value of r, rho, or psi_norm
         self.r2vol, self.rho2vol, self.psinorm2vol = create_vol_interp(self.rho2psinorm,
@@ -176,22 +186,24 @@ class Core:
                                                                        self.psi_data,
                                                                        np.asarray(self.lines.sep_closed.coords),
                                                                        self.R0_a,
-                                                                       self.a)
+                                                                       self.a,
+                                                                       self.sep_val)
 
-        np.savetxt('psi2rho.txt', np.column_stack((np.linspace(0, 1, 100), self.psi2rho(np.linspace(0, 1, 100)))))
+        np.savetxt('psi2rho.txt', np.column_stack((np.linspace(0, self.sep_val, 100),
+                                                   self.psi2rho(np.linspace(0, self.sep_val, 100)))))
 
         # initialize volume as a function of rho
         self.vol_rho = self.rho2vol(self.rho)
         """The volume as a function of rho V(rho)"""
 
-        self.dVdrho = UnivariateSpline(np.linspace(0, 1, 100), self.rho2vol(np.linspace(0, 1, 100)), k=3,
+        self.dVdrho = UnivariateSpline(np.linspace(0, self.sep_val, 100), self.rho2vol(np.linspace(0, self.sep_val, 100)), k=3,
                                        s=0).derivative()
         """The dV/drho(rho) interpolator interpolated on [0.,1.]"""
 
-        self.dVdr = UnivariateSpline(np.linspace(0, 1, 100), self.dVdrho(np.linspace(0, 1, 100)) / self.a, k=3, s=0)
+        self.dVdr = UnivariateSpline(np.linspace(0, self.sep_val, 100), self.dVdrho(np.linspace(0, self.sep_val, 100)) / self.a, k=3, s=0)
         """The dV/r(rho) interpolator interpolated on [0.,1.]"""
 
-        self.vol = self.rho2vol(1.0)
+        self.vol = self.rho2vol(self.sep_val)
         """THe total volume of the plasma"""
 
         # initialize ionization rate arrays with zero
@@ -398,7 +410,7 @@ class Core:
             self.E_pot = np.zeros(self.rho.shape)
             try:
                 for i, rhoval in enumerate(rho1d):
-                    self.E_pot[i] = E_r_fit.integral(rhoval, 1.0)
+                    self.E_pot[i] = E_r_fit.integral(rhoval, self.sep_val)
             except:
                 print "Error in E_pot integration"
         except:
@@ -671,11 +683,114 @@ class Core:
         fig.set_ylabel(yLabel, fontsize=20)
         fig.set_title(title)
         if edge:
-            fig.set_xlim(0.85, 1.0)
+            fig.set_xlim(0.85, self.sep_val)
         fig.scatter(self.rho[:, 0], val, color=color, s=4)
         plt.show()
         return fig
 
+    def _plot_with_wall(self):
+        """
+        Generates a Matplotlib plot with the wall pre-plotted.
+
+        :return: An Axis object with the wall line plotted
+        """
+        fig_width = 6.0
+        # Check to see if self.Z/R have been defind yet to generate a figure height, as they aren't immediately
+        # calculated
+        try:
+            fig_height = (np.amax(self.Z) - np.amin(self.Z)) / (np.amax(self.R) - np.amin(self.R)) * fig_width
+        except:
+            fig_height = 9.0
+
+        fig = plt.figure(figsize=(0.975*fig_width, fig_height))
+        ax1 = fig.add_subplot(1, 1, 1)
+        ax1.axis('equal')
+        ax1.plot(np.asarray(self.wall_line.xy)[0], np.asarray(self.wall_line.xy)[1], color='black', lw=1.5)
+        return ax1
+
+    def _shapely_obj_plot_hanlder(self, obj, ax):
+        if isinstance(obj, Point):
+            ax.scatter(obj.x, obj.y, color='red', marker='o')
+            return ax
+        if isinstance(obj, MultiPoint):
+            for p in obj:
+                ax.scatter(p.x, p.y, color='red', marker='o')
+            return ax
+        if isinstance(obj, Path):
+            ls = LineString(obj.vertices)
+            ax.plot(*ls.xy, color='red', marker='o')
+            return ax
+        if isinstance(obj, LineString):
+            ax.plot(obj.xy, color='red', marker='o')
+            return ax
+
+    def _unknown_data_plot_helper(self, obj, ax):
+        # Is it a shapely or similar object?
+        if isinstance(obj, (Point, MultiPoint, Path, LineString)):
+            return self._shapely_obj_plot_hanlder(obj, ax)
+
+        # Does it have the vertices property to convert to a LineString?
+        try:
+            ls = LineString(obj.vertices)
+            return self._shapely_obj_plot_hanlder(ls, ax)
+        except:
+            pass
+
+        # Does it have an xy property?
+
+        try:
+            ax.plot(*obj.xy)
+            return ax
+        except:
+            pass
+
+        # Can I turn it into a point?
+        try:
+            p = Point(obj)
+            return self._shapely_obj_plot_hanlder(p, ax)
+        except:
+            pass
+
+        # Can I turn it into a LineString directly?
+        try:
+            ls = LineString(obj)
+            return self._shapely_obj_plot_hanlder(ls, ax)
+        except:
+            pass
+
+        # No dice. Raising error.
+        raise
+
+    def plot_with_wall(self, obj=None):
+        ax = self._plot_with_wall()
+
+        try:
+            return self._unknown_data_plot_helper(obj, ax)
+        except:
+            pass
+
+        # Is it an iterable?
+        try:
+            obj.__iter__
+            for p in obj:
+                try:
+                    ax = self._unknown_data_plot_helper(p, ax)
+                except:
+                    raise
+            return ax
+        except:
+            pass
+
+        print "Could not plot given data"
+
+    def plot_exp_psi(self, res=50):
+        ax = self._plot_with_wall()
+        try:
+            ax.contour(self.R, self.Z, self.psi, res)
+            return ax
+        except NameError:
+            print "Psi not defined"
+            pass
 
     def plot_L_t_i(self, edge=False):
         """

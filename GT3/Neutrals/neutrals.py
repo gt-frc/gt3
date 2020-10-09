@@ -16,6 +16,10 @@ from GT3.Core.Processors import NumpyEncoder
 class Neutrals:
 
     def __init__(self, inp, core):
+
+        if abs(1.0 - core.sep_val) > .0001:
+            print "The separatrix value has been overwritten. Cannot run Neutrals calculation"
+            return
         # Try to read in specified neutrals data file. If it's not there, then prepare inputs for and run neutpy
         self.NeutralDataNT = namedtuple('NeutralsData', 'R Z n_n_slow n_n_thermal izn_rate_slow izn_rate_thermal')
         self.inp = inp

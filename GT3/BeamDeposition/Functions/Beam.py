@@ -145,6 +145,7 @@ class Beam:
         self.kappa_prime = self.kappa.derivative()
         self.vol = self.r2vol(self.a)
         self.pwrFracOverride = config.pwrFracOverride
+        self.sep_val = self.rho[-1]
 
         self.prof_root['count'] = 0
         self.prof_root['time'] = []
@@ -231,9 +232,9 @@ class Beam:
         self.dPdV = self.calc_dPdV(self.PowerProfiles)
         self.energies = self.EnergySplit(eVConvert(self.beamE), eVConvert(self.beamE / 2.), eVConvert(self.beamE / 3.))
         self.calc_iol(self.iol)
-        self.part_sources = self.calc_part_sources(self.IOLSplit)
-        self.heat_sources = self.calc_heat_sources(self.IOLSplit)
-        self.mom_sources = self.calc_mom_sources(self.IOLSplit)
+        self.calc_part_sources(self.IOLSplit)
+        self.calc_heat_sources(self.IOLSplit)
+        self.calc_mom_sources(self.IOLSplit)
 
 
         end=time()
@@ -696,7 +697,7 @@ class Beam:
         for n, val in enumerate(self.rho):
         #for n, val in enumerate([.5]):
             if self.verbose: print val
-            if float(val)==1.00:
+            if float(val)== self.sep_val:
                 Hresult[n] = 0.
                 angle_result[n] = 0.
                 continue
@@ -794,7 +795,10 @@ class Beam:
             elif a == yres-1:
                 results[a] = results[a-1]
             else:
-                results[a] = fixed_quad(flambda, xllimit(mesh[a]), xulimit(mesh[a]), n=4)[0] * (yulimit - yllimit)/ yres
+                try:
+                    results[a] = fixed_quad(flambda, xllimit(mesh[a]), xulimit(mesh[a]), n=4)[0] * (yulimit - yllimit) / yres
+                except:
+                    print "Something went wrong"
                 if self.verbose: print "Integration result for a = %s: %s" % (a, results[a])
         return np.sum(results)
 
@@ -900,16 +904,20 @@ class Beam:
 
 
         # TODO: This next lien is as in the manual, but NBEAMS was a subtraction
-        Rin = self.R0 + sqrt(self.a**2 - Zb**2 / self.kappa(self.a)**2)
+        Rin = self.R0 + self.shift(self.rho[-1]) + sqrt(self.a**2 - Zb**2 / self.kappa(self.a)**2)
+        """ The R that the beam entered the plasma at (the plasma edge basically)"""
 
         lambda_mfp = mfp  # type: UnivariateSpline
         gamma = 1
         r = rho_val * self.a
 
         if p:
+            # This probably should be updated for negative triangularity
             if (r)**2 - Zb**2/(self.kappa(rho_val)**2) >= 0:
                 Rplus = self.get_Rpm(Zb, rho_val, True)
+                """The largest R of this flux surface"""
                 if Rplus:
+                    # Is the beam R greater than the minimum R from the tangency radius on the inboard side
                     if Rplus > (self.rtang - sqrt((self.beamWidth / 2.) ** 2 - Zb**2)):
                         D0plus = self.D(Rplus, Rin, Zb, mfp)
                         if Rb >= Rin:
@@ -918,8 +926,10 @@ class Beam:
                             D1plus = 0.
                             gamma = 0.
                         # Updated to use r2vol instead of full plasma volume since that seems to make more sense.
+                        # Doing self.rho[-2] beacuse when the separatrix is manually defined, the interpolator seems
+                        # to mess up that very last value, so we push inward slightly.
                         #part1plus = ((2 * r * self.r2vol(self.a)) / self.dVdr(r)) * (1 / lambda_mfp(rho_val)) * (Rplus / (sqrt(Rplus ** 2 - self.rtang ** 2)))
-                        part1plus = ((2 * r * self.r2vol(self.a)) / self.dVdr(r)) * (1 / lambda_mfp(rho_val)) * (Rplus / (sqrt(Rplus ** 2 - Rb ** 2)))
+                        part1plus = ((2 * r * self.r2vol(self.a * self.rho[-2])) / self.dVdr(r)) * (1 / lambda_mfp(rho_val)) * (Rplus / (sqrt(Rplus ** 2 - Rb ** 2)))
                         if smallFlag:
                             part2plus = 1.
                         else:
@@ -1035,14 +1045,20 @@ class Beam:
         elif self.quad == 'fixed_quad':
             self.prof_D['count'] += 1
             now = time()
-            result = fixed_quad(DfunLambda, R1, R2, n=2)[0]
+            try:
+                result = fixed_quad(DfunLambda, R1, R2, n=2)[0]
+            except:
+                print "Something went wrong"
             if result < 0.:
                 raise ValueError("Attenuation D is negative")
             self.prof_D['time'].append(time() - now)
             return result
 
         elif self.quad == 'trap':
-            return cumtrapz([DfunLambda(a) for a in np.linspace(R1, R2, 10)], np.linspace(R1, R2, 10))[-1]
+            try:
+                return cumtrapz([DfunLambda(a) for a in np.linspace(R1, R2, 10)], np.linspace(R1, R2, 10))[-1]
+            except:
+                print "Something went wrong"
 
     def Dfun(self, x, Zb, mfp):
         """
@@ -1077,7 +1093,11 @@ class Beam:
         """
         now = time()
         fluxrho_l = lambda x: self.fluxrho(x, R, Zb)
-        result = root_scalar(fluxrho_l, bracket=[0., 1.]).root
+        try:
+            result = root_scalar(fluxrho_l, bracket=[0., self.sep_val]).root
+        except Exception as e:
+            print "Problem with root calculation: %s" % str(e)
+            result = .9
 
         self.prof_root['count'] += 1
         self.prof_root['time'].append(time() - now)
