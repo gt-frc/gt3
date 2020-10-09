@@ -4,7 +4,7 @@
     <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="ignoredPackages">
         <value>
-          <list size="61">
+          <list size="78">
             <item index="0" class="java.lang.String" itemvalue="traitlets" />
             <item index="1" class="java.lang.String" itemvalue="protobuf" />
             <item index="2" class="java.lang.String" itemvalue="tzlocal" />
@@ -66,6 +66,23 @@
             <item index="58" class="java.lang.String" itemvalue="ppft" />
             <item index="59" class="java.lang.String" itemvalue="webencodings" />
             <item index="60" class="java.lang.String" itemvalue="scour" />
+            <item index="61" class="java.lang.String" itemvalue="functools32" />
+            <item index="62" class="java.lang.String" itemvalue="subprocess32" />
+            <item index="63" class="java.lang.String" itemvalue="six" />
+            <item index="64" class="java.lang.String" itemvalue="Shapely" />
+            <item index="65" class="java.lang.String" itemvalue="python-dateutil" />
+            <item index="66" class="java.lang.String" itemvalue="kiwisolver" />
+            <item index="67" class="java.lang.String" itemvalue="plotly" />
+            <item index="68" class="java.lang.String" itemvalue="attrs" />
+            <item index="69" class="java.lang.String" itemvalue="pyrsistent" />
+            <item index="70" class="java.lang.String" itemvalue="pandas" />
+            <item index="71" class="java.lang.String" itemvalue="ipython-genutils" />
+            <item index="72" class="java.lang.String" itemvalue="backports.functools-lru-cache" />
+            <item index="73" class="java.lang.String" itemvalue="matplotlib" />
+            <item index="74" class="java.lang.String" itemvalue="pytz" />
+            <item index="75" class="java.lang.String" itemvalue="enum34" />
+            <item index="76" class="java.lang.String" itemvalue="pyparsing" />
+            <item index="77" class="java.lang.String" itemvalue="jsonschema" />
           </list>
         </value>
       </option>

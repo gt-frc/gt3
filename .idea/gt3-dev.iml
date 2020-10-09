@@ -2,13 +2,27 @@
 <module type="PYTHON_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/GT3.egg-info" />
+      <excludeFolder url="file://$MODULE_DIR$/build" />
+      <excludeFolder url="file://$MODULE_DIR$/dist" />
+      <excludeFolder url="file://$MODULE_DIR$/inputs" />
+      <excludeFolder url="file://$MODULE_DIR$/inputs/118888_1525" />
+      <excludeFolder url="file://$MODULE_DIR$/inputs/118888_1570" />
       <excludeFolder url="file://$MODULE_DIR$/inputs/123301_2800" />
-      <excludeFolder url="file://$MODULE_DIR$/inputs/170672_1900_bad_nbi" />
-      <excludeFolder url="file://$MODULE_DIR$/inputs/170680_2245_nbi_bad" />
-      <excludeFolder url="file://$MODULE_DIR$/inputs/171494_2380_nbi_bad" />
-      <excludeFolder url="file://$MODULE_DIR$/inputs/175826_2010_nbi_bad" />
+      <excludeFolder url="file://$MODULE_DIR$/inputs/123302_2810" />
+      <excludeFolder url="file://$MODULE_DIR$/inputs/144977_3000" />
+      <excludeFolder url="file://$MODULE_DIR$/inputs/164436_3720" />
+      <excludeFolder url="file://$MODULE_DIR$/inputs/164436_3740" />
+      <excludeFolder url="file://$MODULE_DIR$/inputs/164988_1915" />
+      <excludeFolder url="file://$MODULE_DIR$/inputs/170672_1900_bad_psi" />
+      <excludeFolder url="file://$MODULE_DIR$/inputs/170680_2245" />
+      <excludeFolder url="file://$MODULE_DIR$/inputs/171494_2380" />
+      <excludeFolder url="file://$MODULE_DIR$/inputs/175826_2010" />
+      <excludeFolder url="file://$MODULE_DIR$/inputs/92980_3000" />
+      <excludeFolder url="file://$MODULE_DIR$/inputs/92980_3600" />
       <excludeFolder url="file://$MODULE_DIR$/logs" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
+      <excludeFolder url="file://$MODULE_DIR$/venvclean/lib" />
     </content>
     <orderEntry type="jdk" jdkName="Python 2.7 (gt3-dev)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
