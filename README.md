@@ -1,4 +1,4 @@
-The Georgia Tech Tokamak Transport Code (GT3)
+The Georgia Tech Tokamak Transport Code (GT3). Also known as GTEDGE2.
 
 **Installation**
 
@@ -36,3 +36,41 @@ To install NeutPy:
 
 `$ pip install neutpy`
 
+**Usage**
+
+GT3 can be run in 2 different ways: via a config file and profiles or via a test data class.
+
+- **From Files**
+
+The primary method of running GT3 is via the gt3 class
+
+```python
+from GT3 import gt3
+```
+
+If `neutpy` is installed, you'll see a message indicating that it is being imported. Otherwise, a warning 
+will be given. If you will be running `neutpy`, the main configuration file needs to be placed in the
+CWD. A sample configuration file can be found on the neutpy github as `neutpy.conf`
+
+GT3 is instantiated in this manner by providing an input file.
+
+```python
+myPlasma = gt3(inputFile="myInputFile")
+```
+
+See the `/inputs` directory for example input files (generally called `togt3_d3d_shotid_timeid`).
+The `inputFile` argument takes a file relative to the current working directory (CWD). An input file will
+include some plasma parameters and meshing information. In addition, the locations of 1D and 2D
+profile data are entered into this file. The locations also must be relative to the CWD. See the
+`inputs` directory for an example with DIII-D shot 144977.3000.
+
+GT3 includes various modules that provide information and calculations about the plasma. Running `gt3()`
+with the `mode` argument will run different sets of modules (see `gt3.py` for a list of modes).
+Modules can also be run using the various arguments (`run_IOL()`, `run_NBI()`, `run_radial_transport()`, etc.).
+
+To run the full radial transport code, use the `mode='radialtrans'` argument in `gt3()` or run 
+`myPlasma.run_radial_transport()`.
+
+- **From A Class**
+
+*Documentation Coming Soon*

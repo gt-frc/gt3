@@ -9,6 +9,7 @@ from __future__ import division
 from neutpy import neutrals
 from collections import namedtuple
 import json
+import os.path
 from GT3.Core.Processors import NumpyEncoder
 
 
@@ -16,6 +17,7 @@ from GT3.Core.Processors import NumpyEncoder
 class Neutrals:
 
     def __init__(self, inp, core, cpus=False):
+
 
         if abs(1.0 - core.sep_val) > .0001:
             print "The separatrix value has been overwritten. Cannot run Neutrals calculation"
@@ -36,9 +38,12 @@ class Neutrals:
         except:
             # Run NeutPy
             print "Neutrals data not found. Running NeutPy"
+            if not self._check_conf("neutpy.conf"):
+                raise IOError("No NeutPy main configuration file found.")
             self.npi = neutrals()
             if cpus:
                 self.npi.set_cpu_cores(cpus)
+
             self.npi.from_gt3(core, inp)
             self.data = self.NeutralDataNT(self.npi.midpts[:, 0],
                                     self.npi.midpts[:, 1],
@@ -56,6 +61,8 @@ class Neutrals:
 
     def reRun(self, cpus=False):
         print ("Manually re-running NeutPy")
+        if not self._check_conf("neutpy.conf"):
+            raise IOError("No NeutPy main configuration file found.")
         self.npi = neutrals()
         if cpus:
             self.npi.set_cpu_cores(cpus)
@@ -87,4 +94,11 @@ class Neutrals:
         except Exception as e:
             print "Unable to save NeutPy data to file: %s" % str(e)
 
+    def _check_conf(self, f):
+        """
+        Checks to see if a neutpy.conf file exists
+        :return: A boolean of whether the file exists.
+        :rtype: bool
+        """
+        return os.path.isfile(f)
 
