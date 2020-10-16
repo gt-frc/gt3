@@ -668,6 +668,7 @@ class Core:
         # TODO: Verify this fus_rate calculation. I think it's wrong.
         self.fus_rate = 1 / 4 * self.n.D * self.n.D * self.sv.fus.dd + 1 / 4 * self.n.D * self.n.T * self.sv.fus.dt
         plt.clf()
+        plt.close()
 
     def plot_te(self, edge=False):
         """

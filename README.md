@@ -2,7 +2,7 @@ The Georgia Tech Tokamak Transport Code (GT3)
 
 **Installation**
 
-- ** Using pip
+**Using pip**
 
 `$ pip install GT3`
 
@@ -20,24 +20,19 @@ You can clone another branch from github as follows:
 
 `$ git clone -b <branch> https://github.com/gt-frc/gt3.git`
 
-Enter GT3
+**Installing Branches from GitHub via pip**
 
-`$ cd gt3`
+To use pip to install a development version of GT3, simply use
 
-Setup your virtual environment
+`$ pip install git+https://github.com/gt-frc/gt3@development`
 
-`$ virtualenv venv`
+**Neutrals Calculations**
 
-Activate it
+GT3 utilizes NeutPy (https://github.com/gt-frc/neutpy) for the calculation of 
+neutral particles recycling from the wall. Neutpy is an optional dependency. NeutPy
+also requires the Triangle 2D meshing package (see the NeutPy github for details).
 
-`$ source venv/bin/activate`
+To install NeutPy:
 
-Install packages
+`$ pip install neutpy`
 
-`$ pip install -r requirements.txt`
-
-Install NeutPy for neutrals calculations
-
-`$ cd Neutrals`
-
-`$ git clone https://github.com/gt-frc/neutpy.git`

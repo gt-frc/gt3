@@ -46,6 +46,7 @@ class gt3:
         self.neutFlag = neutFlag
         self.verbose = verbose
         self.beamPowerFracOverride = None
+        self.ntrl_cpu_override = False
 
         try:
             import neutpy
@@ -120,11 +121,12 @@ class gt3:
 
     def _run_neutpy(self, reRun=False):
         if self.neutpyLoaded:
-            self.ntrl = Neutrals(self.inp, self.core)
+            self.ntrl = Neutrals(self.inp, self.core, cpus=self.ntrl_cpu_override)
             if reRun:
-                self.ntrl.reRun()
+                self.ntrl.reRun(cpus=self.ntrl_cpu_override)
         else:
             print "NeutPy is not loaded. Cannot run Neutrals calculation"
+
 
     def override_NBI_Pwrfrac(self, frac):
         if isinstance(frac, list):
@@ -158,8 +160,11 @@ class gt3:
         return self
 
     def run_neutrals(self, reRun=False):
-
         self._run_neutpy(reRun=reRun)
+        return self
+
+    def override_ntrl_cpus(self, num):
+        self.ntrl_cpu_override = num
         return self
 
     def run_density_limit(self):

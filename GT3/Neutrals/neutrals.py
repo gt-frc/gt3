@@ -15,7 +15,7 @@ from GT3.Core.Processors import NumpyEncoder
 
 class Neutrals:
 
-    def __init__(self, inp, core):
+    def __init__(self, inp, core, cpus=False):
 
         if abs(1.0 - core.sep_val) > .0001:
             print "The separatrix value has been overwritten. Cannot run Neutrals calculation"
@@ -37,6 +37,8 @@ class Neutrals:
             # Run NeutPy
             print "Neutrals data not found. Running NeutPy"
             self.npi = neutrals()
+            if cpus:
+                self.npi.set_cpu_cores(cpus)
             self.npi.from_gt3(core, inp)
             self.data = self.NeutralDataNT(self.npi.midpts[:, 0],
                                     self.npi.midpts[:, 1],
@@ -52,9 +54,11 @@ class Neutrals:
             print 'unable to update values in core instance.'
             pass
 
-    def reRun(self):
+    def reRun(self, cpus=False):
         print ("Manually re-running NeutPy")
         self.npi = neutrals()
+        if cpus:
+            self.npi.set_cpu_cores(cpus)
         self.npi.from_gt3(self.core, self.inp)
         self.data = self.NeutralDataNT(self.npi.midpts[:, 0],
                                 self.npi.midpts[:, 1],
