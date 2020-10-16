@@ -11,7 +11,7 @@ from GT3.Core import Core
 from GT3.BeamDeposition import BeamDeposition
 from GT3.DensityLimit import DensityLimit
 from GT3.Marfe import Marfe
-from RadialTransport.radial_transport import RadialTransport
+from GT3.RadialTransport.radial_transport import RadialTransport
 
 try:
     from GT3.Neutrals import Neutrals
@@ -118,9 +118,11 @@ class gt3:
             self.imp = ImpRad(z=None, core=self.core)
             self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag)
 
-    def _run_neutpy(self):
+    def _run_neutpy(self, reRun=False):
         if self.neutpyLoaded:
             self.ntrl = Neutrals(self.inp, self.core)
+            if reRun:
+                self.ntrl.reRun()
         else:
             print "NeutPy is not loaded. Cannot run Neutrals calculation"
 
@@ -155,8 +157,9 @@ class gt3:
         self.imp = ImpRad(core=self.core)
         return self
 
-    def run_neutrals(self):
-        self._run_neutpy()
+    def run_neutrals(self, reRun=False):
+
+        self._run_neutpy(reRun=reRun)
         return self
 
     def run_density_limit(self):
@@ -199,6 +202,15 @@ class gt3:
     def disable_IOL(self):
         self.iolFlag = False
         print ("Re-running Radial Transport without IOL")
+        try:
+            self.rtrans
+        except:
+            self.run_radial_transport()
+        return self
+
+    def disable_neutrals(self):
+        self.neutFlag = False
+        print ("Running Radial Transport without neutral particles")
         try:
             self.rtrans
         except:

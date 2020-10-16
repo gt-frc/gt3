@@ -121,7 +121,10 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis, sep_val, core=None):
     elif len(contour_new) > 1:
         for contour in contour_new:
             # determine if contour is seperatrix, divertor legs, a main ib2ob line, or something else
-
+            contour = np.array(contour)
+            if not LineString(contour).intersects(wall) and wall.convex_hull.contains(LineString(contour)):
+                lcfs = contour
+                continue
             # Meaningless noise lines will not pass near the x-point, so check that first to elliminate them
             if LineString(contour).distance(Point(xpt_temp)) < 0.01:
                 # if the largest y value is larger than the y value of the magnetic axis AND the line

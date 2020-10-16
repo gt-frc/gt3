@@ -14,9 +14,11 @@ import json
 import yaml
 from pathos.multiprocessing import ProcessPool as Pool
 from pathos.multiprocessing import cpu_count
+import GT3.constants as constants
 
-m_d = physical_constants['deuteron mass'][0]
+m_d = constants.deuteron_mass
 z_d = 1
+MARKERSIZE = constants.MARKERSIZE
 
 
 class BeamDeposition:
@@ -236,37 +238,37 @@ class BeamDeposition:
 
     def plot_S_nbi(self):
         fig = self._plot_single_val(title="NBI Particle Source", yLabel=r'$S_{nbi}[\#/{m s}]$')
-        fig.scatter(self.beams_space, self.combined_beam_src_kept.Snbi, color='red')
+        fig.scatter(self.beams_space, self.combined_beam_src_kept.Snbi, color='red', s=MARKERSIZE)
         plt.show()
         return fig
 
     def plot_Q_nbi(self):
         fig = self._plot_single_val(title="NBI Energy Source", yLabel=r'$Q_{nbi}[W/m]$')
-        fig.scatter(self.beams_space, self.combined_beam_src_kept.Qnbi, color='red')
+        fig.scatter(self.beams_space, self.combined_beam_src_kept.Qnbi, color='red',s=MARKERSIZE)
         plt.show()
         return fig
 
     def plot_M_nbi(self):
         fig = self._plot_single_val(title="NBI Momentum Source", yLabel=r'$S_{nbi}[M/s}]$')
-        fig.scatter(self.beams_space, self.combined_beam_src_kept.Qnbi, color='red')
+        fig.scatter(self.beams_space, self.combined_beam_src_kept.Qnbi, color='red', s=MARKERSIZE)
         plt.show()
         return fig
 
     def plot_S_dens_nbi(self):
         fig = self._plot_single_val(title="NBI Particle Source Density", yLabel=r'$S_{nbi}[\#/{m^3 s}]$')
-        fig.scatter(self.beams_space, self.combined_beam_src_dens_kept.Snbi, color='red')
+        fig.scatter(self.beams_space, self.combined_beam_src_dens_kept.Snbi, color='red', s=MARKERSIZE)
         plt.show()
         return fig
 
     def plot_Q_dens_nbi(self):
         fig = self._plot_single_val(title="NBI Energy Source Density", yLabel=r'$Q_{nbi}[W/{m^3}]$')
-        fig.scatter(self.beams_space, self.combined_beam_src_dens_kept.Qnbi, color='red')
+        fig.scatter(self.beams_space, self.combined_beam_src_dens_kept.Qnbi, color='red', s=MARKERSIZE)
         plt.show()
         return fig
 
     def plot_M_dens_nbi(self):
         fig = self._plot_single_val(title="NBI Momentum Source Density", yLabel=r'$S_{nbi}[\frac{M}{s}]$')
-        fig.scatter(self.beams_space, self.combined_beam_src_dens_kept.Qnbi, color='red')
+        fig.scatter(self.beams_space, self.combined_beam_src_dens_kept.Qnbi, color='red', s=MARKERSIZE)
         plt.show()
         return fig
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python2
-# !/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
 Created on Fri May 18 13:22:31 2018
@@ -12,7 +11,6 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import griddata, UnivariateSpline
 from math import pi
 from collections import namedtuple
-from scipy import constants
 from shapely.geometry import LineString, Point, MultiPoint
 from matplotlib.path import Path
 from Functions.FindXPtMagAxis import find_xpt_mag_axis
@@ -30,7 +28,9 @@ from Functions.CalcKappaElong import calc_kappa_elong
 from Functions.CreateVolInterp import create_vol_interp
 from Functions.CalcChiJet import calc_chi_jet
 from scipy.interpolate import interp1d
-import GT3
+import GT3.constants as constants
+
+MARKERSIZE = constants.MARKERSIZE
 
 e = constants.elementary_charge
 u_0 = constants.mu_0
@@ -667,6 +667,7 @@ class Core:
         )
         # TODO: Verify this fus_rate calculation. I think it's wrong.
         self.fus_rate = 1 / 4 * self.n.D * self.n.D * self.sv.fus.dd + 1 / 4 * self.n.D * self.n.T * self.sv.fus.dt
+        plt.clf()
 
     def plot_te(self, edge=False):
         """
@@ -684,7 +685,7 @@ class Core:
         fig.set_title(title)
         if edge:
             fig.set_xlim(0.85, self.sep_val)
-        fig.scatter(self.rho[:, 0], val, color=color, s=4)
+        fig.scatter(self.rho[:, 0], val, color=color, s=MARKERSIZE)
         plt.show()
         return fig
 
@@ -710,18 +711,18 @@ class Core:
 
     def _shapely_obj_plot_hanlder(self, obj, ax):
         if isinstance(obj, Point):
-            ax.scatter(obj.x, obj.y, color='red', marker='o')
+            ax.scatter(obj.x, obj.y, color='red', marker='o', s=MARKERSIZE)
             return ax
         if isinstance(obj, MultiPoint):
             for p in obj:
-                ax.scatter(p.x, p.y, color='red', marker='o')
+                ax.scatter(p.x, p.y, color='red', marker='o', s=MARKERSIZE)
             return ax
         if isinstance(obj, Path):
             ls = LineString(obj.vertices)
-            ax.plot(*ls.xy, color='red', marker='o')
+            ax.plot(*ls.xy, color='red', marker='o', s=MARKERSIZE)
             return ax
         if isinstance(obj, LineString):
-            ax.plot(obj.xy, color='red', marker='o')
+            ax.plot(*obj.xy, color='red', marker='o', s=MARKERSIZE)
             return ax
 
     def _unknown_data_plot_helper(self, obj, ax):
@@ -739,7 +740,7 @@ class Core:
         # Does it have an xy property?
 
         try:
-            ax.plot(*obj.xy)
+            ax.plot(*obj.xy, s=MARKERSIZE)
             return ax
         except:
             pass
@@ -832,7 +833,7 @@ class Core:
         Plots the 1D GT3.Core ion and electron temperatures
         """
         fig = self._plot_base(self.T_fsa.e.kev, yLabel=r'$T [keV]$', title="GT3.Core ion/electron temperatures", edge=edge)
-        fig.scatter(self.rho[:, 0], self.T_fsa.i.kev, color="blue")
+        fig.scatter(self.rho[:, 0], self.T_fsa.i.kev, color="blue", s=MARKERSIZE)
         fig.legend([r'$T_e$', r'$T_i$'])
         return fig
 
@@ -855,7 +856,7 @@ class Core:
         Plots the 1D GT3.Core ion and electron densities
         """
         fig = self._plot_base(self.n_fsa.e, yLabel=r'$n [#/m^3]$', title="GT3.Core ion/electron densities", edge=edge)
-        fig.scatter(self.rho[:, 0], self.n_fsa.i, color="blue")
+        fig.scatter(self.rho[:, 0], self.n_fsa.i, color="blue", s=MARKERSIZE)
         fig.legend([r'$n_e$', r'$n_i$'])
         return fig
 

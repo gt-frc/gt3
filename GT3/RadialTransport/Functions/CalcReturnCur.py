@@ -4,7 +4,7 @@
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 
-def calc_return_cur(r, part_src_nbi_lost, gamma, izn_rate, ch_d, iol_adjusted=False, F_orb=None):
+def calc_return_cur(r, part_src_nbi_lost, gamma, ch_d, iol_adjusted=False, F_orb=None):
     # Piper Changes: This calculates the return current from fast and thermal IOL.
     # This is a new quantity that i want to calculate. Big part of my thesis.
 

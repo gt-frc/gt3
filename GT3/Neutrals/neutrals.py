@@ -47,7 +47,7 @@ class Neutrals:
             # Save data
             self._save_data()
         try:
-            core.update_ntrl_data(self.data)
+            self.core.update_ntrl_data(self.data)
         except:
             print 'unable to update values in core instance.'
             pass
@@ -63,6 +63,11 @@ class Neutrals:
                                 self.npi.iznrate_s_raw,
                                 self.npi.iznrate_t_raw)
         self._save_data()
+        try:
+            self.core.update_ntrl_data(self.data)
+        except:
+            print 'unable to update values in core instance.'
+            pass
 
     def _save_data(self):
         try:

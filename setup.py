@@ -4,11 +4,21 @@ import setuptools
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
-deps = ['matplotlib', 'multiprocess', 'scipy', 'numpy', 'pandas', 'pathos', 'Shapely', 'contours', 'enum34', 'PyYAML']
+deps = ['matplotlib',
+        'multiprocess',
+        'scipy',
+        'numpy',
+        'pandas',
+        'pathos',
+        'Shapely',
+        'contours',
+        'enum34',
+        'PyYAML',
+        'texttable']
 
 setuptools.setup(
     name="GT3",
-    version="0.0.1",
+    version="0.0.2",
     author="Maxwell D. Hill, Jonathan J. Roveto, Nicholas Piper",
     install_requires=deps,
     author_email="max.hill@pm.me, veto1024@gmail.com, doom@gatech.edu",

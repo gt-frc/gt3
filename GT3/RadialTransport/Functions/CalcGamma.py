@@ -6,7 +6,7 @@ import numpy as np
 from math import exp
 import matplotlib.pyplot as plt
 
-def calc_gamma_diff_method(r, a, part_src_nbi_tot, part_src_nbi_lost, izn_rate, dVdrho, iol_adjusted=False, F_orb=None,
+def calc_gamma_diff_method(r, a, part_src_nbi_tot, part_src_nbi_lost, izn_rate, dVdrho, iol_adjusted=False, F_orb=None, neutFlag=True,
                            verbose=False):
     dVdr = UnivariateSpline(r, dVdrho(r / a) / a, k=2, s=0)
     dF_orb = UnivariateSpline(r, F_orb, k=3, s=0).derivative()
@@ -16,7 +16,13 @@ def calc_gamma_diff_method(r, a, part_src_nbi_tot, part_src_nbi_lost, izn_rate, 
     iolPeak = np.where(dF_orb(r) == dF_orb(r).max())
 
     def f(t, gamma, sion, snbi, snbi_loss, dFdr, iolFlag, peak):
-        S = snbi(t) + sion(t)
+        if neutFlag:
+            #if t/a >= 0.95:
+                #S = snbi(t) + sion(t)
+            #else:
+            S = snbi(t)
+        else:
+            S = snbi(t)
         # Physically, if the IOL peak has occured, everything radially outward should be dFdr = 0.0 since F(r)
         # should equal 0.5 until r=1.0.66
         dFdrval = dFdr(t)
@@ -62,9 +68,12 @@ def calc_gamma_diff_method(r, a, part_src_nbi_tot, part_src_nbi_lost, izn_rate, 
 
     return gamma(r)
 
-def calc_gamma_int_method(r, part_src_nbi_tot, part_src_nbi_lost, izn_rate, iol_adjusted=False, F_orb=None):
+def calc_gamma_int_method(r, part_src_nbi_tot, part_src_nbi_lost, izn_rate, iol_adjusted=False, F_orb=None, neutFlag=True):
     # Piper Changes: Added cylindrical integral method as a separate function. This will be set to a separate variable in the main code.
     gamma = np.zeros(r.shape)
+
+    if not neutFlag:
+        izn_rate = [0.] * len(izn_rate)
 
     # Boundary condition at magnetic axis. Needs to be in units of ions/m^3.
     # Only has the second term, since it's the center value. Also uses delta_r of the next point to avoid indexing into a non-existant location.

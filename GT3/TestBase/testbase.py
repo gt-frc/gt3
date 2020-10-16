@@ -43,6 +43,7 @@ class TestClass:
         self.pbeam = 0.8
         self.rtang = 1.146
         self.R_loss = .5
+        self.sep_val = 1.0
 
 
         """
@@ -61,6 +62,7 @@ class TestClass:
         self.xi_ib_pts = 10
         self.xi_ob_pts = 10
         self.numcos = 20
+        self.sep_val = 1.0
 
         """
         Define the meshing parameters

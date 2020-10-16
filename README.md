@@ -2,6 +2,11 @@ The Georgia Tech Tokamak Transport Code (GT3)
 
 **Installation**
 
+- ** Using pip
+
+`$ pip install GT3`
+
+**Installing from GitHub**
 
 - **Master branch**
 
@@ -31,7 +36,7 @@ Install packages
 
 `$ pip install -r requirements.txt`
 
-Install NeutPy
+Install NeutPy for neutrals calculations
 
 `$ cd Neutrals`
 

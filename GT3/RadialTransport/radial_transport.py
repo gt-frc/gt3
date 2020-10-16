@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import sys
 from GT3 import Core, BeamDeposition
 from collections import namedtuple
-from scipy import constants
 from math import sqrt
 from scipy.interpolate import UnivariateSpline, interp1d
 from GT3.RadialTransport.Functions.CorePatch import corePatch
@@ -29,11 +28,12 @@ from GT3.RadialTransport.Functions.CalcErMomBal import calc_Er_mom_bal
 from GT3.RadialTransport.Functions.CalcErIOL import calc_Er_iol
 from GT3.RadialTransport.Functions.CalcVpol import calc_vpol
 from GT3.RadialTransport.Functions.CalcCXCool import calc_cxcool
+import GT3.constants as constants
 
 eps_0 = constants.epsilon_0
 e = constants.elementary_charge
 m_e = constants.electron_mass
-m_d = constants.physical_constants['deuteron mass'][0]
+m_d = constants.deuteron_mass
 m_c = 12 / constants.N_A / 1E3  # in kg
 
 z_d = 1  # atomic number of deuterium
@@ -42,6 +42,8 @@ ch_d = e * z_d  # charge of deuterium
 ch_c = e * z_c  # charge of carbon
 
 E_phi = 0.04  # toroidal electrostatic potential
+
+MARKERSIZE = constants.MARKERSIZE
 
 
 def viscCalc(data, core):
@@ -186,13 +188,13 @@ class RadialTransport:
         # Piper changes: Changed names of particle and heat flux so it's easier to tell what method is used.
         self.gamma_diff_D = calc_gamma_diff_method(r, core.a, self.part_src_nbi, self.part_src_nbi_lost, self.izn_rate, core.dVdrho,
                                                    iol_adjusted=iolFlag,
-                                                   F_orb=F_orb_d)  # Differential Cylindrical Method
+                                                   F_orb=F_orb_d, neutFlag=neutFlag)  # Differential Cylindrical Method
         self.gamma_int_D = calc_gamma_int_method(r, self.part_src_nbi_tot, self.part_src_nbi_lost, self.izn_rate, iol_adjusted=iolFlag,
-                                                 F_orb=F_orb_d)  # Integral Cylindrical Method
+                                                 F_orb=F_orb_d, neutFlag=neutFlag)  # Integral Cylindrical Method
         self.gamma_C = np.zeros(self.gamma_int_D.shape)
 
         # Piper changes: Calculate radial return current (Uses integral cylindrical gamma)
-        self.jr_iol = calc_return_cur(r, self.part_src_nbi_lost, self.gamma_int_D, self.izn_rate, ch_d, iol_adjusted=iolFlag,
+        self.jr_iol = calc_return_cur(r, self.part_src_nbi_lost, self.gamma_int_D, ch_d, iol_adjusted=iolFlag,
                                       F_orb=F_orb_d)
         self.Er_iol, self.iol_term, self.diamag_term, self.diamag_term_orig, self.neut_dens_term = calc_Er_iol(n.i, n.e,
                                                                                                                m_d, n.n,
@@ -272,8 +274,10 @@ class RadialTransport:
                                                                                   B_p)
 
         # calculate nu_drags
+        #mbal_rhs_D = calc_mbal_rhs(self.mom_src_tor_D_tot, z_d, n.i, B_p,
+        #                           self.gamma_int_D)  # Piper Changes: Uses integral cylindrical gamma
         mbal_rhs_D = calc_mbal_rhs(self.mom_src_tor_D_tot, z_d, n.i, B_p,
-                                   self.gamma_int_D)  # Piper Changes: Uses integral cylindrical gamma
+                                   self.gamma_diff_D)  # Piper Changes: Uses integral cylindrical gamma
         mbal_rhs_C = calc_mbal_rhs(self.mom_src_tor_C_tot, z_c, n.C, B_p, self.gamma_C)
 
         nu_c_DC = 1 / calc_t90(m_d, m_c, z_d, z_c, n.C, T.i.J)
@@ -363,16 +367,16 @@ class RadialTransport:
 
     def plot_chi_terms(self, edge=True):
         fig = self._plot_base(self.conv25, title="", yLabel="q[W/m^2]", edge=edge)
-        fig.scatter(self.rhor, self.heatin, color="blue", s=6)
-        fig.scatter(self.rhor, self.heatvisc, color="purple", s=6)
-        fig.scatter(self.rhor, self.Qi_diff, color="black", s=6)
+        fig.scatter(self.rhor, self.heatin, color="blue", s=MARKERSIZE)
+        fig.scatter(self.rhor, self.heatvisc, color="purple", s=MARKERSIZE)
+        fig.scatter(self.rhor, self.Qi_diff, color="black", s=MARKERSIZE)
         #fig.legend([r"$q^{conv}$", r"$q^{heatin}$", r"$q^{tot}$"])
         fig.legend([r"$q^{conv}$", r"$q^{heatin}$", r"$q^{visc}$", r"$q^{tot}$"])
         return fig
 
     def plot_gamma(self, edge=True):
         fig = self._plot_base(self.gamma_int_D, title="Radial particle flux", yLabel=r"$\Gamma[W/m^3]$", edge=edge)
-        fig.scatter(self.rhor, self.gamma_diff_D, color="blue", s=6)
+        fig.scatter(self.rhor, self.gamma_diff_D, color="blue", s=MARKERSIZE)
         fig.legend([r"$\Gamma_{r, int}$", r"$\Gamma_{r, diff}$"])
         return fig
 
@@ -427,7 +431,7 @@ class RadialTransport:
         fig.set_title(title)
         if edge:
             fig.set_xlim(0.85, 1.0)
-        fig.scatter(self.rhor, val, color=color, s=8)
+        fig.scatter(self.rhor, val, color=color, s=MARKERSIZE)
         plt.show()
         return fig
 
@@ -439,7 +443,7 @@ class RadialTransport:
 
     def plot_n(self, edge=True):
         fig = self._plot_base(self.core.n_fsa.e, yLabel=r'$n_e[\#/m^3]$', title="Plasma Densities", edge=edge)
-        fig.scatter(self.rhor, self.core.n_fsa.i, color="blue", s=4)
+        fig.scatter(self.rhor, self.core.n_fsa.i, color="blue", s=MARKERSIZE)
         return fig
 
     def plot_nn_therm(self, edge=True):
@@ -459,7 +463,7 @@ class RadialTransport:
 
     def plot_T(self, edge=True):
         fig = self._plot_base(self.core.T_fsa.e.kev, yLabel=r'$T[keV]$', title="Plasma Temperature", edge=edge)
-        fig.scatter(self.rhor, self.core.T_fsa.i.kev,  color="blue", s=4)
+        fig.scatter(self.rhor, self.core.T_fsa.i.kev,  color="blue", s=MARKERSIZE)
         plt.show()
         return fig
 
@@ -468,7 +472,7 @@ class RadialTransport:
 
     def plot_S_sources(self, edge=True, logPlot=True):
         fig = self._plot_base(self.part_src_nbi, yLabel=r'$S_r[#/m^3s]$', title="Radial sources", edge=edge)
-        fig.scatter(self.rhor, self.izn_rate, color="green", s=4)
+        fig.scatter(self.rhor, self.izn_rate, color="green", s=MARKERSIZE)
         if logPlot:
             fig.set_yscale("log")
 
@@ -478,8 +482,8 @@ class RadialTransport:
 
     def plot_Q_sources(self, edge=True, logPlot=False):
         fig = self._plot_base(self.en_src_nbi_i, yLabel=r'$Q_r[W/m^3]$', title="Radial sources", edge=edge)
-        fig.scatter(self.rhor, self.cool_rate, color="green", s=4)
-        fig.scatter(self.rhor, self.qie, color="black", s=4)
+        fig.scatter(self.rhor, self.cool_rate, color="green", s=MARKERSIZE)
+        fig.scatter(self.rhor, self.qie, color="black", s=MARKERSIZE)
         if logPlot:
             fig.set_yscale("log")
         plt.show()
@@ -488,9 +492,9 @@ class RadialTransport:
 
     def plot_Chi_i_comp(self, edge=True):
         fig = self._plot_base(self.chi.i.chi1, yLabel=r'$\chi_{r,i}$', title="", edge=edge)
-        fig.scatter(self.rhor, self.chi.i.chi2, color="blue", s=8)
-        fig.scatter(self.rhor, self.chi.i.chi3, color="green", s=8)
-        fig.scatter(self.rhor, self.chi.i.chi4, color="purple", s=4)
+        fig.scatter(self.rhor, self.chi.i.chi2, color="blue", s=MARKERSIZE)
+        fig.scatter(self.rhor, self.chi.i.chi3, color="green", s=MARKERSIZE)
+        fig.scatter(self.rhor, self.chi.i.chi4, color="purple", s=MARKERSIZE)
         fig.legend([r"$q^{cond} = q^{tot}$",
                     r"$q^{cond} = q^{tot}-q^{conv}$",
                     r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}$",
