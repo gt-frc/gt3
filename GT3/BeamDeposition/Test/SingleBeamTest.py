@@ -9,9 +9,9 @@ if __name__=="__main__":
         test = GT3TestBase()
         shot = gt3(preparedInput=test)
         shot.run_NBI()
-        print "Test successful"
+        print("Test successful")
     except Exception as e:
-        print "Test failed"
+        print("Test failed")
         raise e
 
 

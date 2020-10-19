@@ -10,8 +10,8 @@ import sys
 import re
 import matplotlib.pyplot as plt
 import numpy as np
-from math import pi
-import ConfigParser
+from GT3.utilities.PlotBase import PlotBase
+import configparser
 
 from shapely.geometry import LineString
 
@@ -81,11 +81,11 @@ class ReadInfile:
             filename = parser.get(section, name)
             filepath = os.path.join(os.getcwd(), filename)
             return np.genfromtxt(filepath, comments='#')
-        except ConfigParser.NoOptionError:
-            print "%s not found" % name
+        except configparser.NoOptionError:
+            print("%s not found" % name)
             return
         except IOError:
-            print "%s not found" % name
+            print("%s not found" % name)
             return
 
     def read_vars(self, infile):
@@ -95,7 +95,7 @@ class ReadInfile:
         :type infile: str
         """
 
-        config = ConfigParser.RawConfigParser()
+        config = configparser.RawConfigParser()
         config.read(infile)
 
         # Grid construction parameters
@@ -107,11 +107,11 @@ class ReadInfile:
         self.thetapts_approx = config.getint('Mesh', 'thetapts_approx')
         try:
             self.Er_scale = config.getfloat('Mesh', 'Er_scale')
-        except ConfigParser.NoOptionError:
+        except configparser.NoOptionError:
             self.Er_scale = 1.
         try:
             self.psi_scale = config.getfloat('Mesh', 'psi_scale')
-        except ConfigParser.NoOptionError:
+        except configparser.NoOptionError:
             self.psi_scale = 1.
         self.sollines_psi_max = config.getfloat('Mesh', 'sollines_psi_max')
         self.num_sollines = config.getint('Mesh', 'num_sollines')
@@ -129,7 +129,7 @@ class ReadInfile:
         self.R_loss = config.getfloat('Plasma', 'R_loss')
         try:
             self.sep_val = config.getfloat('Plasma', 'sep_val')
-        except ConfigParser.NoOptionError:
+        except configparser.NoOptionError:
             self.sep_val = 1.0
 
 
@@ -168,12 +168,12 @@ class ReadInfile:
         """
         Show the parameters of this shot
         """
-        print '**PARAMETERS FOR SHOT \'{}\'.'.format(self.shotlabel)
-        for key in vars(self).iteritems():
+        print('**PARAMETERS FOR SHOT \'{}\'.'.format(self.shotlabel))
+        for key in vars(self).items():
             if key[0][0] != '_' and key[0] != 'line' and key[0] != 'infile' and key[0] != 'variable' and key[
                 0] != 'value':
-                print ('{} = {}'.format(key[0], key[1]))
-        print '**END OF PARAMETERS**'
+                print(('{} = {}'.format(key[0], key[1])))
+        print('**END OF PARAMETERS**')
 
     def _plot_base(self, xLabel=r'$\rho$', yLabel="Value", title="Title", edge=False):
 
@@ -188,7 +188,7 @@ class ReadInfile:
         return fig
 
     def plot_raw_Ti(self, edge=False):
-        fig = self._plot_base(edge=edge)
+        fig = self._plot_base(self.Ti_data.T[0], edge=edge)
         fig.scatter(self.Ti_data.T[0], self.Ti_data.T[1], color="black", s=8)
         return fig
 

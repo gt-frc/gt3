@@ -109,3 +109,6 @@ logs/
 # Input files
 /inputs/
 /neutSensitivity.py
+
+# Any backup files
+*.bak

@@ -20,9 +20,9 @@ class TestClass:
     def __init__(self, shotid=164436, timeid=3740):
         self.shotid = shotid
         self.timeid = timeid
-        print "This is the GT3 Test Base Class"
-        print "This class uses DIII-D shot %s.%s for debugging purposes" % (self.shotid, self.timeid)
-        print "Use the print_summary method to see a summary of this shot"
+        print("This is the GT3 Test Base Class")
+        print("This class uses DIII-D shot %s.%s for debugging purposes" % (self.shotid, self.timeid))
+        print("Use the print_summary method to see a summary of this shot")
 
         """
         Generate various 0D parameters for the plasma from shot 164436.3740
@@ -87,7 +87,7 @@ class TestClass:
         self.neutfile_loc = os.path.dirname(__file__) + '/TestBaseProfiles/gt3_%s_%s_outneuts.json' % (self.shotid, self.timeid)
 
     def print_summary(self):
-        print "0D Parameters \n"
+        print("0D Parameters \n")
         table1 = texttable.Texttable()
         table1.set_cols_align(["l", "l", "m", "m"])
         table1.set_cols_valign(["m", "m", "m", "m"])
@@ -111,9 +111,9 @@ class TestClass:
                         ["R_loss", "Fraction of IOL particles that do not return on loss orbits", self.R_loss, "1"]
                         ])
 
-        print table1.draw() + "\n"
+        print(table1.draw() + "\n")
 
-        print "1D Parameters \n"
+        print("1D Parameters \n")
         table2 = texttable.Texttable()
         table2.set_cols_align(["l", "l", "c"])
         table2.set_cols_valign(["m", "m", "m"])
@@ -130,9 +130,9 @@ class TestClass:
                          ["VtorD", "Toroidal main ion velocity", "m/s"],
                          ["wall_line", "LineString object for the machine wall", "n/a"]
                          ])
-        print table2.draw() + "\n"
+        print(table2.draw() + "\n")
 
-        print "Computation-related Parameters \n"
+        print("Computation-related Parameters \n")
         table3 = texttable.Texttable()
         table3.set_cols_align(["l", "l", "m"])
         table3.set_cols_valign(["m", "m", "m"])
@@ -149,12 +149,12 @@ class TestClass:
                          ["num_sollines", "Number of lines after the scrape-off layer", self.num_sollines],
                          ["numcos", "Number of cosine angles used in IOL calculation", self.numcos]
                          ])
-        print table3.draw()
+        print(table3.draw())
 
-        print "Nbeams location: %s" % self.nbeams_loc
+        print("Nbeams location: %s" % self.nbeams_loc)
 
 if __name__ == "__main__":
 
     plasma = getGT3Test()
     plasma.run_NBI()
-    print "DONE"
+    print("DONE")

@@ -6,13 +6,12 @@ Created on Tue Mar 20 08:58:46 2018
 @author: max
 """
 
-from __future__ import division
+
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
 from GT3 import Core, BeamDeposition
 from collections import namedtuple
-from math import sqrt
 from scipy.interpolate import UnivariateSpline, interp1d
 from GT3.RadialTransport.Functions.CorePatch import corePatch
 from GT3.RadialTransport.Functions.CalcReturnCur import calc_return_cur
@@ -29,12 +28,14 @@ from GT3.RadialTransport.Functions.CalcErIOL import calc_Er_iol
 from GT3.RadialTransport.Functions.CalcVpol import calc_vpol
 from GT3.RadialTransport.Functions.CalcCXCool import calc_cxcool
 import GT3.constants as constants
+from GT3.utilities.PlotBase import PlotBase
+from GT3.utilities.PlotBase import MARKERSIZE
 
 eps_0 = constants.epsilon_0
 e = constants.elementary_charge
 m_e = constants.electron_mass
 m_d = constants.deuteron_mass
-m_c = 12 / constants.N_A / 1E3  # in kg
+m_c = constants.carbon_mass
 
 z_d = 1  # atomic number of deuterium
 z_c = 6  # atomic number of carbon
@@ -42,8 +43,6 @@ ch_d = e * z_d  # charge of deuterium
 ch_c = e * z_c  # charge of carbon
 
 E_phi = 0.04  # toroidal electrostatic potential
-
-MARKERSIZE = constants.MARKERSIZE
 
 
 def viscCalc(data, core):
@@ -111,7 +110,7 @@ def calc_pinch_velocity(ext_term, pol_term, Er_term, tor_term):
     return vr_pinch
 
 
-class RadialTransport:
+class RadialTransport(PlotBase):
 
     def __init__(self, core, iol, nbi, iolFlag=True, neutFlag=True):
         """
@@ -136,6 +135,7 @@ class RadialTransport:
         # prepare core and iol quantities
         r = core.r.T[0]  # TODO: Should this be a flux surface average?
         self.rhor = core.r[:, 0] / core.a
+        self.set_plot_rho1d(self.rhor)
         """The rho vector"""
         self.core = core
         """The utilized GT3 core background plasma"""
@@ -247,7 +247,7 @@ class RadialTransport:
                                                  self.gamma_int_D,
                                                  self.gamma_C)  # Piper Changes: Uses integral cylindrical gamma
             # Piper changes: added a message to let the user know the D velocity was calculated.
-            print 'Deuterium toroidal velocity calculated from perturbation theory.'
+            print('Deuterium toroidal velocity calculated from perturbation theory.')
         else:
             # Piper Changes: For some reason this used to set D velocity to C velocity,
             # which overwrote the input D velocity.
@@ -262,7 +262,7 @@ class RadialTransport:
                                                                         self.vtor_C_total, self.vpol_C, z_c)
         except:
             self.vpol_D = self.vpol_C / 0.4
-            print 'could not calculate deuterium poloidal rotation'
+            print('could not calculate deuterium poloidal rotation')
             pass
 
         # Nick Changes: TEMPORARY - Calculate Er using pressure gradient vs. scale length.
@@ -366,6 +366,7 @@ class RadialTransport:
         self.D_i = m_d * core.T_fsa.i.J * (self.nu_c_j_k * (1. - ch_d / ch_c) + self.nu_drag_D) / ((ch_d * core.B_p_fsa)**2)
 
     def plot_chi_terms(self, edge=True):
+
         fig = self._plot_base(self.conv25, title="", yLabel="q[W/m^2]", edge=edge)
         fig.scatter(self.rhor, self.heatin, color="blue", s=MARKERSIZE)
         fig.scatter(self.rhor, self.heatvisc, color="purple", s=MARKERSIZE)
@@ -401,7 +402,7 @@ class RadialTransport:
 
     def plot_Q_i(self, edge=True):
         fig = self._plot_base(self.Qi_int, yLabel=r'$Q_i [W/m^2]$', title="Ion heat flux", edge=edge)
-        fig.scatter(self.rhor, self.Qi_diff, color="black")
+        fig.scatter(self.Qi_diff, color="black")
         fig.legend([r"$Q^{int}_i$", r"$Q^{diff}_i$"])
         return fig
 
@@ -420,20 +421,6 @@ class RadialTransport:
                             E_orb=self.iol.eorb_d_therm_1D,
                             verbose=True)
 
-    def _plot_base(self, val, xLabel=r'$\rho$', yLabel="Value", title="Title", color='red', edge=False):
-
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(xLabel, fontsize=30)
-        fig.set_ylabel(yLabel, fontsize=30)
-        plt.xticks(fontsize=20)
-        plt.yticks(fontsize=20)
-        fig.set_title(title)
-        if edge:
-            fig.set_xlim(0.85, 1.0)
-        fig.scatter(self.rhor, val, color=color, s=MARKERSIZE)
-        plt.show()
-        return fig
 
     def plot_ni(self, edge=True):
         return self._plot_base(self.core.n_fsa.i, yLabel=r'$n_i[\#/m^3]$', title="Ion Density", edge=edge)

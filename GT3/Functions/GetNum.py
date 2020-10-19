@@ -14,17 +14,17 @@ def getNum(prompt, valType):
     if valType=='f':
         while True:
             try:
-                return float(input(prompt))
+                return float(eval(input(prompt)))
             except:
                 print("Invalid input \n")
     elif valType=='i':
         while True:
             try:
-                x = input(prompt)
-                if isinstance(x, (int, long)):
+                x = eval(input(prompt))
+                if isinstance(x, int):
                     return(int(x))
                 else:
-                    print "Invalid input \n"
+                    print("Invalid input \n")
                     continue
             except:
-                print "Invalid input \n"
+                print("Invalid input \n")

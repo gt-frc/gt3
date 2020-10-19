@@ -1,3 +1,3 @@
 #!/usr/bin/python
 
-from imp_radiation import *
+from .imp_radiation import *

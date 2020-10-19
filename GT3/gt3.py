@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-from __future__ import division
+
 import sys
 from GT3.IOL import IOL
 from GT3.SOL import Sol
@@ -11,11 +11,13 @@ from GT3.Core import Core
 from GT3.BeamDeposition import BeamDeposition
 from GT3.DensityLimit import DensityLimit
 from GT3.Marfe import Marfe
-from GT3.RadialTransport.radial_transport import RadialTransport
+from GT3.RadialTransport import RadialTransport
 
 try:
     from GT3.Neutrals import Neutrals
 except ImportError:
+    pass
+except ModuleNotFoundError:
     pass
 
 class gt3:
@@ -51,6 +53,8 @@ class gt3:
         try:
             import neutpy
             self.neutpyLoaded = True
+        except ModuleNotFoundError:
+            self.neutpyLoaded = False
         except ImportError:
             self.neutpyLoaded = False
 
@@ -125,14 +129,14 @@ class gt3:
             if reRun:
                 self.ntrl.reRun(cpus=self.ntrl_cpu_override)
         else:
-            print "NeutPy is not loaded. Cannot run Neutrals calculation"
+            print("NeutPy is not loaded. Cannot run Neutrals calculation")
 
 
     def override_NBI_Pwrfrac(self, frac):
         if isinstance(frac, list):
             self.beamPowerFracOverride = frac
         else:
-            print "Please provide the NBI power fraction override as a list"
+            print("Please provide the NBI power fraction override as a list")
 
     def run_SOL(self):
         self.sol = Sol(self.inp, self.core)

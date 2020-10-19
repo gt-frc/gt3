@@ -1,3 +1,3 @@
 #!/usr/bin/env python2
 
-from core import *
+from .core import *

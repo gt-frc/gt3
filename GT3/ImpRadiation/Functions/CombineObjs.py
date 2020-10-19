@@ -19,5 +19,5 @@ def combine_objs(obj1, obj2):
 
     temp = dict2.copy()
     new_dict = dict1.update(dict2)
-    new_nt = namedtuple('new', new_dict.keys())(*new_dict.values())
+    new_nt = namedtuple('new', list(new_dict.keys()))(*list(new_dict.values()))
     return new_nt

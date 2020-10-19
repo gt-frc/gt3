@@ -14,11 +14,12 @@ deps = ['matplotlib',
         'contours',
         'enum34',
         'PyYAML',
-        'texttable']
+        'texttable',
+        'deprecation']
 
 setuptools.setup(
     name="GT3",
-    version="0.0.2",
+    version="0.0.3",
     author="Maxwell D. Hill, Jonathan J. Roveto, Nicholas Piper",
     install_requires=deps,
     author_email="max.hill@pm.me, veto1024@gmail.com, doom@gatech.edu",
@@ -28,7 +29,8 @@ setuptools.setup(
     url="https://github.com/gt-frc/gt3/",
     packages=setuptools.find_packages(),
     classifiers=[
-        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3.8",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Development Status :: 4 - Beta",
@@ -36,7 +38,7 @@ setuptools.setup(
         "Natural Language :: English",
         "Topic :: Scientific/Engineering :: Physics"
     ],
-    python_requires='>=2.7',
+    python_requires='>=3.8',
 )
 
 if __name__ == '__main__':

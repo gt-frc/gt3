@@ -1,3 +1,3 @@
 #!/usr/bin/python
 
-from marfe import *
+from .marfe import *
