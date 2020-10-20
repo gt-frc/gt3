@@ -3,7 +3,10 @@
 
 from GT3.Functions.GetNum import getNum
 from collections import namedtuple
+from deprecation import deprecated as Deprecated
 
+
+@Deprecated(deprecated_in="0.0.3", details="Interactive mode is to be removed in 0.0.4", removed_in="0.0.4")
 def getVals(s, t, f):
     """
 
