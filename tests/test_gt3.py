@@ -5,8 +5,8 @@ import GT3
 from tests.ShotBase import *
 from matplotlib.axes._axes import Axes
 
-class CommonFunctions(object):
 
+class CommonFunctions(object):
     """Tests to see if a shot has the expected attributes typical for a fully run shot."""
 
     def test_gt3_has_core(cls):
@@ -29,6 +29,7 @@ class SingleNullRun(SingleLowerNullTest, CommonFunctions):
         super(SingleNullRun, cls).setUpClass()
         cls.plasma.run_radial_transport()
 
+
 class DoubleNullRun(DoubleNullTest, CommonFunctions):
 
     @classmethod
@@ -36,12 +37,14 @@ class DoubleNullRun(DoubleNullTest, CommonFunctions):
         super(DoubleNullRun, cls).setUpClass()
         cls.plasma.run_radial_transport()
 
+
 class NegativeTriangularityRun(NegativeTriangularityTest, CommonFunctions):
 
     @classmethod
     def setUpClass(cls):
         super(NegativeTriangularityRun, cls).setUpClass()
         cls.plasma.run_radial_transport()
+
 
 class RunModificationTest(SingleLowerNullTest):
 
@@ -64,6 +67,7 @@ class RunModificationTest(SingleLowerNullTest):
         self.plasma.run_radial_transport()
         self.assertTrue(hasattr(self.plasma, "rtrans"))
         self.assertIsInstance(self.plasma.rtrans, GT3.RadialTransport)
+
 
 class PlotCoreTest(DoubleNullTest):
 
@@ -118,8 +122,6 @@ class PlotCoreTest(DoubleNullTest):
         for v in plot_vars:
             self.plot_tester(v)
 
-
-
     def test_plot_beams(self):
         """
         Plot all plots in the NBI module
@@ -146,14 +148,14 @@ class PlotCoreTest(DoubleNullTest):
                      self.plasma.rtrans.plot_Chi_i_comp,
                      self.plasma.rtrans.plot_Q_sources,
                      self.plasma.rtrans.plot_S_sources,
-                     self.plasma.rtrans.plot_chi_terms,]
+                     self.plasma.rtrans.plot_chi_terms, ]
         self.plot_tester(self.plasma.rtrans.plot_gamma_diff)
-
 
     @classmethod
     def tearDownClass(cls):
         cls.plt.clf()
         cls.plt.close()
+
 
 class PlotIOLTest(DoubleNullTest):
 
@@ -167,6 +169,17 @@ class PlotIOLTest(DoubleNullTest):
     def test_plot_iol_F_i(self):
         self.plasma.iol.plot_F_i(edge=True)
         self.assertIsInstance(self.plasma.iol.plot_F_i(), Axes)
+
+
+class GT3TestClassTest(unittest.TestCase, CommonFunctions):
+    @classmethod
+    def setUpClass(cls):
+        super(GT3TestClassTest, cls).setUpClass()
+        from GT3 import gt3
+        from GT3.TestBase.testbase import TestClass
+        cls.plasma = gt3(preparedInput=TestClass())
+        cls.plasma.run_radial_transport()
+
 
 if __name__ == '__main__':
     unittest.main()

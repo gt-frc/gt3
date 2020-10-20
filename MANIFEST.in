@@ -1,0 +1,3 @@
+graft GT3/TestBase/TestBaseProfiles/*
+exclude GT3/TestBase/TestBaseProfiles/*outbeams*
+exclude GT3/TestBase/TestBaseProfiles/*outneuts*
