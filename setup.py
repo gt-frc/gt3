@@ -22,6 +22,7 @@ setuptools.setup(
     version="0.0.3",
     author="Maxwell D. Hill, Jonathan J. Roveto, Nicholas Piper",
     install_requires=deps,
+    include_package_Data=True,
     author_email="max.hill@pm.me, veto1024@gmail.com, doom@gatech.edu",
     description="GT3 - The Georgia Tech Tokamak Transport codebase",
     long_description=long_description,
