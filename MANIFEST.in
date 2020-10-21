@@ -1,0 +1,3 @@
+include GT3/TestBase/TestBaseProfiles
+include GT3/TestBase/TestBaseProfiles/*
+exclude GT3/TestBase/TestBaseProfiles/*out*

@@ -38,8 +38,8 @@ class dataSmoother:
     def save(self):
         answer = ""
         while answer not in ["y", "n"]:
-            answer = raw_input("OK to continue [Y/N]? ").lower()
-        print "Backing up old file"
+            answer = input("OK to continue [Y/N]? ").lower()
+        print("Backing up old file")
         os.rename(self.filename, self.filename + '.bak')
         contents = np.array([self.rho, self.spline(self.rho)]).T
         savetxt(self.filename + "_clean", contents, delimiter='    ')
@@ -48,7 +48,7 @@ class dataSmoother:
 
     def set_knots(self, knots):
         self.spline = LSQUnivariateSpline(self.rho, self.orig_data, knots, k=5)
-        print "knots set"
+        print("knots set")
 
     def _plot_base(self):
         plot = plt.figure()

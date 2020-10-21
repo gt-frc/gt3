@@ -3,7 +3,10 @@
 
 from GT3.Functions.GetNum import getNum
 from collections import namedtuple
+from deprecation import deprecated as Deprecated
 
+
+@Deprecated(deprecated_in="0.0.3", details="Interactive mode is to be removed in 0.0.4", removed_in="0.0.4")
 def getVals(s, t, f):
     """
 
@@ -19,9 +22,9 @@ def getVals(s, t, f):
     data ={}
     """ Function that gets 0D plasma values from user input """
 
-    print """Enter 0D plasma parameters for shot %s.%s
+    print("""Enter 0D plasma parameters for shot %s.%s
 
-             File will be generated at inputs/%s""" % (str(s), str(t), str(f))
+             File will be generated at inputs/%s""" % (str(s), str(t), str(f)))
 
     # data={'eq1' : 1.6E-19,
     #       'eq2' : 9.6E-19,

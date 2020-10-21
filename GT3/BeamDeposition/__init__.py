@@ -1,3 +1,4 @@
 #!/usr/bin/python
 #
-from BeamDeposition import *
+
+from .BeamDeposition import BeamDeposition

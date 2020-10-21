@@ -171,7 +171,7 @@ class Beam:
                 """The normalized H(r) function on [0., a]"""
                 if self.pwrFracOverride:
                     self.pwrfrac = self.pwrFracOverride
-                    print "Power fraction overwritten: " + str(self.pwrfrac)
+                    print(("Power fraction overwritten: " + str(self.pwrfrac)))
                 else:
                     self.pwrfrac = self.calc_power_frac(self.beamE)
                 self.dPdV = self.calc_dPdV(self.PowerProfiles)
@@ -184,7 +184,7 @@ class Beam:
                 self.calc_mom_sources(self.IOLSplit)
 
             except Exception as e:
-                print "Failed to rebuild beam %s with error: %s" % (self.name, str(e))
+                print(("Failed to rebuild beam %s with error: %s" % (self.name, str(e))))
 
 
     def is_new(self, config):
@@ -203,15 +203,15 @@ class Beam:
         self.angle_3 = None
         """The interpolator for Energy Group 3 for the launch angle on [0., 1.]"""
 
-        print "Running %s Beam" % config.name
-        if self.verbose: print "Calculating energy group 1"
+        print(("Running %s Beam" % config.name))
+        if self.verbose: print("Calculating energy group 1")
         h_res_1, self.angle_1 = self.calcHofRho(self.beamE)
 
-        if self.verbose: print  "Calculating energy group 2"
+        if self.verbose: print("Calculating energy group 2")
         h_res_2, self.angle_2 = self.calcHofRho(self.beamE / 2.)
         """The H(rho) and launch angle(rho) for Energy Group 2 on [0., 1.]"""
 
-        if self.verbose: print "Calculating energy group 3"
+        if self.verbose: print("Calculating energy group 3")
         h_res_3, self.angle_3 = self.calcHofRho(self.beamE / 3.)  # type: (UnivariateSpline, UnivariateSpline)
         """The H(rho) and launch angle(rho) for Energy Group 3 on [0., 1.]"""
 
@@ -226,7 +226,7 @@ class Beam:
         """The normalized H(r) function on [0., a]"""
         if self.pwrFracOverride:
             self.pwrfrac = self.pwrFracOverride
-            print "Power fraction overwritten: " + str(self.pwrfrac)
+            print(("Power fraction overwritten: " + str(self.pwrfrac)))
         else:
             self.pwrfrac = self.calc_power_frac(self.beamE)
         self.dPdV = self.calc_dPdV(self.PowerProfiles)
@@ -240,7 +240,7 @@ class Beam:
         end=time()
 
         if self.timing:
-            print """
+            print(("""
             Timing summary:
             
             Total runtime: %s seconds
@@ -256,7 +256,7 @@ class Beam:
                                                            self.prof_mfp['count'],
                                                            np.sum(self.prof_mfp['time']),
                                                            self.prof_D['count'],
-                                                           np.sum(self.prof_D['time']))
+                                                           np.sum(self.prof_D['time']))))
 
 
     def calc_iol(self, iol):
@@ -696,7 +696,7 @@ class Beam:
 
         for n, val in enumerate(self.rho):
         #for n, val in enumerate([.5]):
-            if self.verbose: print val
+            if self.verbose: print(val)
             if float(val)== self.sep_val:
                 Hresult[n] = 0.
                 angle_result[n] = 0.
@@ -713,17 +713,17 @@ class Beam:
             angleFunTopLambda = lambda y, x, val=val: self.hofrpzJ(x, y, val, mfp, posFlag, smallFlag) * y / Rpm(x)
 
             RUpperLimit = lambda x: min(Rpm(x), self.rtang + sqrt((self.beamWidth / 2.0)**2 - x**2))
-            if self.verbose: print "Beginning integration of node n=%s" % n
+            if self.verbose: print(("Beginning integration of node n=%s" % n))
             now = time()
 
-            if self.verbose: print "Running positive"
+            if self.verbose: print("Running positive")
             if smallFlag:
                 result_pos[n] = pi * self.kappa(val) * self.beamdblquad(hofrpzJLambda, 0., Zulimit, RLowerLimit, RUpperLimit, val)
             else:
                 result_pos[n] = 2.0 * self.beamdblquad(hofrpzJLambda, 0., Zulimit, RLowerLimit, RUpperLimit, val)
             posFlag = False
 
-            if self.verbose: print "Running negative"
+            if self.verbose: print("Running negative")
             if smallFlag:
                 result_minus[n] = pi * self.kappa(val) * self.beamdblquad(hofrpzJLambda, 0., Zulimit, RLowerLimit, RUpperLimit,
                                                                         val)
@@ -744,14 +744,14 @@ class Beam:
             angle_result[n] = (angle_top_pos + angle_top_neg)/(angle_bottom_neg + angle_bottom_pos)
             #angle_result[n] = (angle_top_pos / angle_bottom_pos) + (angle_top_neg / angle_bottom_neg)
 
-            if self.verbose: print "Node n=%s completed in %s s" % (n, total)
-            if self.verbose: print "Result: %s" % Hresult[n]
-            if self.timing: print "Root scalar count: %s" % self.prof_root["count"]
-            if self.timing: print "Root scalar total time: %s" % np.sum(self.prof_root['time'])
-            if self.timing: print "MFP count: %s" % self.prof_mfp["count"]
-            if self.timing: print "MFP total time: %s" % np.sum(self.prof_mfp['time'])
-            if self.timing: print "D calc count: %s" % self.prof_D["count"]
-            if self.timing: print "D calc total time: %s" % np.sum(self.prof_D['time'])
+            if self.verbose: print(("Node n=%s completed in %s s" % (n, total)))
+            if self.verbose: print(("Result: %s" % Hresult[n]))
+            if self.timing: print(("Root scalar count: %s" % self.prof_root["count"]))
+            if self.timing: print(("Root scalar total time: %s" % np.sum(self.prof_root['time'])))
+            if self.timing: print(("MFP count: %s" % self.prof_mfp["count"]))
+            if self.timing: print(("MFP total time: %s" % np.sum(self.prof_mfp['time'])))
+            if self.timing: print(("D calc count: %s" % self.prof_D["count"]))
+            if self.timing: print(("D calc total time: %s" % np.sum(self.prof_D['time'])))
 
         Hofrho=UnivariateSpline(self.rho, Hresult, k=3, s=0)
         """The H(rho) interpolator on [0., 1.]"""
@@ -798,8 +798,8 @@ class Beam:
                 try:
                     results[a] = fixed_quad(flambda, xllimit(mesh[a]), xulimit(mesh[a]), n=4)[0] * (yulimit - yllimit) / yres
                 except:
-                    print "Something went wrong"
-                if self.verbose: print "Integration result for a = %s: %s" % (a, results[a])
+                    print("Something went wrong")
+                if self.verbose: print(("Integration result for a = %s: %s" % (a, results[a])))
         return np.sum(results)
 
     def hofrpzJ(self, Zb, Rb, rho_val, mfp, p, smallFlag):
@@ -817,7 +817,7 @@ class Beam:
         :type Rb: THe beam-R coordinate
         :return:
         """
-        if self.verbose: print "Coordinates: (Rb,Z) = (%s, %s)" % (Rb, Zb)
+        if self.verbose: print(("Coordinates: (Rb,Z) = (%s, %s)" % (Rb, Zb)))
         Rpm_of_Z = lambda x, n=rho_val: self.get_Rpm(x, n, p)
 
         RLowerLimit = lambda x: self.rtang - sqrt((self.beamWidth / 2.) ** 2 - x ** 2)
@@ -938,9 +938,9 @@ class Beam:
                         part3plus = exp(-1. * D0plus) + gamma * exp(-1. * (D0plus + 2.0 * D1plus))
 
                         hplus = part1plus * part2plus * part3plus
-                        if self.verbose: print "Posiitve: Part 1: %s" % part1plus
-                        if self.verbose: print "Posiitve: Part 2: %s" % part2plus
-                        if self.verbose: print "Posiitve: Part 3: %s" % part3plus
+                        if self.verbose: print(("Posiitve: Part 1: %s" % part1plus))
+                        if self.verbose: print(("Posiitve: Part 2: %s" % part2plus))
+                        if self.verbose: print(("Posiitve: Part 3: %s" % part3plus))
                         if self.dVdr(r) <= 0.:
                             warnings.warn("Beams Module - Warning - dV/dr is negative at rho = %s" % rho_val)
                             hplus = 0.
@@ -985,10 +985,10 @@ class Beam:
                             raise ValueError("Beams Module - Error - hminus is negative at rho = %s" % rho_val)
                         if isinf(hminus):
                             raise ValueError("Beams Module - Error - hminus is infinite at rho = %s" % rho_val)
-                        if self.verbose: print "Negative: Part 1: %s" % part1minus
-                        if self.verbose: print "Negative: Part 2: %s" % part2minus
-                        if self.verbose: print "Negative: Part 3: %s" % part3minus
-                        if self.verbose: print "Negative result: %s" % hminus
+                        if self.verbose: print(("Negative: Part 1: %s" % part1minus))
+                        if self.verbose: print(("Negative: Part 2: %s" % part2minus))
+                        if self.verbose: print(("Negative: Part 3: %s" % part3minus))
+                        if self.verbose: print(("Negative result: %s" % hminus))
                         return hminus
                     else:
                         return 0
@@ -1048,7 +1048,7 @@ class Beam:
             try:
                 result = fixed_quad(DfunLambda, R1, R2, n=2)[0]
             except:
-                print "Something went wrong"
+                print("Something went wrong")
             if result < 0.:
                 raise ValueError("Attenuation D is negative")
             self.prof_D['time'].append(time() - now)
@@ -1058,7 +1058,7 @@ class Beam:
             try:
                 return cumtrapz([DfunLambda(a) for a in np.linspace(R1, R2, 10)], np.linspace(R1, R2, 10))[-1]
             except:
-                print "Something went wrong"
+                print("Something went wrong")
 
     def Dfun(self, x, Zb, mfp):
         """
@@ -1096,7 +1096,7 @@ class Beam:
         try:
             result = root_scalar(fluxrho_l, bracket=[0., self.sep_val]).root
         except Exception as e:
-            print "Problem with root calculation: %s" % str(e)
+            print(("Problem with root calculation: %s" % str(e)))
             result = .9
 
         self.prof_root['count'] += 1

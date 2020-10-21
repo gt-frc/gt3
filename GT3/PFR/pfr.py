@@ -5,7 +5,7 @@ Created on Fri May 18 15:04:43 2018
 
 @author: max
 """
-from __future__ import division
+
 import numpy as np
 from shapely.geometry import LineString
 from shapely.ops import polygonize, linemerge

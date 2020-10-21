@@ -5,7 +5,7 @@ Created on Fri May 18 15:14:01 2018
 
 @author: max
 """
-from __future__ import division
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata, UnivariateSpline
@@ -52,15 +52,15 @@ class Sol:
         sollines_psi_max_contours = c.contour(inp.sollines_psi_max)
         num_lines = len(sollines_psi_max_contours)
 
-        print 'num_lines = ', num_lines
+        print('num_lines = ', num_lines)
         if num_lines == 1:
             # then this is probably the correct line. Check to see how many times it intersects
             # with the first wall
             num_wall_ints = len(LineString(sollines_psi_max_contours[0]).intersection(inp.wall_line))
-            print 'num_wall_ints = ', num_wall_ints
+            print('num_wall_ints = ', num_wall_ints)
             if num_wall_ints > 2:
-                print 'It looks like your sollines_psi_max value might be intersecting the wall.' \
-                      'Try reducing it. Stopping.'
+                print('It looks like your sollines_psi_max value might be intersecting the wall.' \
+                      'Try reducing it. Stopping.')
                 raise Exception("It looks like your sollines_psi_max value might be intersecting the wall. Try reducing it.")
         else:
             for i, line in enumerate(sollines_psi_max_contours):
@@ -73,8 +73,8 @@ class Sol:
                     # with the first wall
                     num_wall_ints = len(LineString(line).intersection(inp.wall_line))
                     if num_wall_ints > 2:
-                        print 'It looks like your sollines_psi_max value might be intersecting the wall.' \
-                              'Try reducing it. Stopping.'
+                        print('It looks like your sollines_psi_max value might be intersecting the wall.' \
+                              'Try reducing it. Stopping.')
                         raise Exception("It looks like your sollines_psi_max value might be intersecting the wall. Try reducing it.")
                     else:
                         break
@@ -218,19 +218,19 @@ class Sol:
         Te_ib = np.linspace(Te_ib_wall, Te_sep_cut[0], inp.xi_ib_pts, endpoint=False)
         Te_ob = np.linspace(Te_sep_cut[-1], Te_ob_wall, inp.xi_ob_pts, endpoint=True)
 
-        print
-        print '#####################################'
-        print ' divertor values'
-        print ' ni_ib_wall = ', ni_ib_wall
-        print ' ni_ob_wall = ', ni_ob_wall
-        print ' ne_ib_wall = ', ne_ib_wall
-        print ' ne_ob_wall = ', ne_ob_wall
-        print ' Ti_ib_wall(ev) = ', Ti_ib_wall / 1.6021E-19
-        print ' Ti_ob_wall(ev) = ', Ti_ob_wall / 1.6021E-19
-        print ' Te_ib_wall(ev) = ', Te_ib_wall / 1.6021E-19
-        print ' Te_ob_wall(ev) = ', Te_ob_wall / 1.6021E-19
-        print '#####################################'
-        print
+        print()
+        print('#####################################')
+        print(' divertor values')
+        print(' ni_ib_wall = ', ni_ib_wall)
+        print(' ni_ob_wall = ', ni_ob_wall)
+        print(' ne_ib_wall = ', ne_ib_wall)
+        print(' ne_ob_wall = ', ne_ob_wall)
+        print(' Ti_ib_wall(ev) = ', Ti_ib_wall / 1.6021E-19)
+        print(' Ti_ob_wall(ev) = ', Ti_ob_wall / 1.6021E-19)
+        print(' Te_ib_wall(ev) = ', Te_ib_wall / 1.6021E-19)
+        print(' Te_ob_wall(ev) = ', Te_ob_wall / 1.6021E-19)
+        print('#####################################')
+        print()
 
         # define density and temperature gradients along the inboard and outboard divertor legs
         dnidr_ib_wall = dnidr_sep_cut[0]

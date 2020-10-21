@@ -10,7 +10,7 @@ Created on Thu Dec 28 02:13:04 2017
 #
 ###############################################################################
 
-import graphs as graphs
+from . import graphs as graphs
 import matplotlib.pyplot as plt
 import pickle
 import numpy as np
@@ -34,8 +34,8 @@ def yRangeFind(inList):
     flat=x.flatten()
     flat.sort()
     #return [flat[2]*.75,flat[-2]*1.25]
-    a=long(flat[2]*.75)
-    b=long(flat[-2]*1.25)
+    a=int(flat[2]*.75)
+    b=int(flat[-2]*1.25)
     try:
         aval=1*10**int(floor(log10(a)))
         if (ceil(log10(b))-(log10(b))) <=.25:
@@ -516,7 +516,7 @@ if __name__ == "__main__":
 #            with open("outputs/s%s.%s.noIOL.dat" % (str(shotid), str(timeid)), "wb") as f:
 #                pickle.dump(shot, f)
         except Exception as e:
-            print e
+            print(e)
         try:
             f.close()
         except:
@@ -556,7 +556,7 @@ if __name__ == "__main__":
 #            with open("outputs/s%s.%s.noneuts.dat" % (str(shotid), str(timeid)), "wb") as f:
 #                pickle.dump(shot, f)
         except Exception as e:
-            print e
+            print(e)
         try:
             f.close()
         except:

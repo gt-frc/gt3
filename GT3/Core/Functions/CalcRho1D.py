@@ -13,6 +13,6 @@ def calc_rho1d(edge_rho=None, rhopts_core=None, rhopts_edge=None, rhopts=None):
         try:
             rho1d = np.linspace(0, 1, rhopts)
         except:
-            print 'rho parameters not defined. Using 100 evenly spaced rho values'
+            print('rho parameters not defined. Using 100 evenly spaced rho values')
             rho1d = np.linspace(0, 1, 100)
     return rho1d

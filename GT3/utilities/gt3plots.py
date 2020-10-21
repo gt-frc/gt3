@@ -11,6 +11,7 @@ from matplotlib import rc
 ## for Palatino and other serif fonts use:
 rc('font', **{'family':'serif', 'serif':['Palatino']})
 rc('text', usetex=True)
+import sys
 
 class gt3plots():
     sys.dont_write_bytecode = True 
@@ -90,7 +91,7 @@ class gt3plots():
     labels = ax1.clabel(CS1, CS1.levels[::], inline=1, fmt=fmt, fontsize=20, manual = manual_locations)
     for l in labels:
         l.set_rotation(0)
-    print 'myshot.param.d3d_iter = ', myshot.param.d3d_iter
+    print('myshot.param.d3d_iter = ', myshot.param.d3d_iter)
     if myshot.param.d3d_iter==1:
         ax1.plot(ITER_wall_x, ITER_wall_y, lw=6)
     else:

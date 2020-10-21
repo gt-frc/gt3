@@ -1,3 +1,3 @@
 #!/usr/bin/python
 
-from testbase import *
+from .testbase import *

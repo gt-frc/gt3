@@ -22,9 +22,10 @@
       <excludeFolder url="file://$MODULE_DIR$/inputs/92980_3600" />
       <excludeFolder url="file://$MODULE_DIR$/logs" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
+      <excludeFolder url="file://$MODULE_DIR$/venv3" />
       <excludeFolder url="file://$MODULE_DIR$/venvclean/lib" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 2.7 (gt3-dev)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.8 (gt3-dev)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="R Skeletons" level="application" />
     <orderEntry type="library" name="R User Library" level="project" />

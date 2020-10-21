@@ -5,32 +5,29 @@ Created on Fri May 18 13:22:31 2018
 
 @author: max
 """
-from __future__ import division
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata, UnivariateSpline
 from math import pi
 from collections import namedtuple
-from shapely.geometry import LineString, Point, MultiPoint
-from matplotlib.path import Path
-from Functions.FindXPtMagAxis import find_xpt_mag_axis
-from Functions.CalcPsiNorm import calc_psi_norm
-from Functions.CalcRho2PsiInterp import calc_rho2psi_interp
-from Functions.CalcGrad import calc_grad
-from Functions.CalcFSA import calc_fsa
-from Functions.CalcSV import calc_svion_st, calc_svel_st, calc_svrec_st, calc_svcx_st, calc_svfus
-from Functions.CalcFsPerimInt import calc_fs_perim_int
-from Functions.CreateSurfAreaInterp import create_surf_area_interp
-from Functions.CalcTheta1D import calc_theta1d
-from Functions.CalcPtsLines import calc_pts_lines
-from Functions.CalcRZ import calc_RZ
-from Functions.CalcKappaElong import calc_kappa_elong
-from Functions.CreateVolInterp import create_vol_interp
-from Functions.CalcChiJet import calc_chi_jet
+from .Functions.FindXPtMagAxis import find_xpt_mag_axis
+from .Functions.CalcPsiNorm import calc_psi_norm
+from .Functions.CalcRho2PsiInterp import calc_rho2psi_interp
+from .Functions.CalcGrad import calc_grad
+from .Functions.CalcFSA import calc_fsa
+from .Functions.CalcSV import calc_svion_st, calc_svel_st, calc_svrec_st, calc_svcx_st, calc_svfus
+from .Functions.CalcFsPerimInt import calc_fs_perim_int
+from .Functions.CreateSurfAreaInterp import create_surf_area_interp
+from .Functions.CalcTheta1D import calc_theta1d
+from .Functions.CalcPtsLines import calc_pts_lines
+from .Functions.CalcRZ import calc_RZ
+from .Functions.CalcKappaElong import calc_kappa_elong
+from .Functions.CreateVolInterp import create_vol_interp
+from .Functions.CalcChiJet import calc_chi_jet
 from scipy.interpolate import interp1d
 import GT3.constants as constants
-
-MARKERSIZE = constants.MARKERSIZE
+from GT3.utilities import PlotBase
 
 e = constants.elementary_charge
 u_0 = constants.mu_0
@@ -48,7 +45,7 @@ m_a = 6.643e-27
 
 
 # noinspection SpellCheckingInspection
-class Core:
+class Core(PlotBase.PlotBase):
 
     sep_val_overridden = False  # type: bool
     """Has the separatrix value been overridden?"""
@@ -62,7 +59,6 @@ class Core:
     """The V(psi) interpolator on [0., 1.]"""
 
     def __init__(self, inp):
-        # type: (GT3.ReadInfile) -> GT3.Core
         # Hold the input as a class attribute for use in functions
 
         self.inp = inp
@@ -70,7 +66,7 @@ class Core:
         self.sep_val = inp.sep_val
         if abs(1.0 - float(self.sep_val)) > 0.0001:
             self.sep_val_overridden = True
-            print "The separatrix value is being overwritten. GT3.SOL will be omitted."
+            print("The separatrix value is being overwritten. GT3.SOL will be omitted.")
         # this assumes that psi is given as a square array
         psi_shape = int(np.sqrt(inp.psirz_exp[:, 0].shape[0]))  # type: int
 
@@ -141,6 +137,7 @@ class Core:
 
         # create rho and theta arrays (initializing the main computational grid)
         self.theta, self.rho = np.meshgrid(theta1d, rho1d)
+        self.set_plot_rho1d(self.rho[:, 0])
 
 
         self.psi = self.rho2psi(self.rho)
@@ -163,6 +160,7 @@ class Core:
         self.r = self.rho * self.a
 
         self.R, self.Z = calc_RZ(self, self.rho, self.theta, theta_xpt, self.pts, self.psi_data, self.psi_norm, self.lines)
+        self.set_plot_RZ(self.R, self.Z)
 
         self.xpt_loc = np.where(self.Z == np.amin(self.Z))
         self.obmp_loc = np.where(self.R == np.amax(self.R))
@@ -412,9 +410,9 @@ class Core:
                 for i, rhoval in enumerate(rho1d):
                     self.E_pot[i] = E_r_fit.integral(rhoval, self.sep_val)
             except:
-                print "Error in E_pot integration"
+                print("Error in E_pot integration")
         except:
-            print 'Er data not supplied. Setting E_r and E_pot to zero.'
+            print('Er data not supplied. Setting E_r and E_pot to zero.')
             self.E_r = np.zeros(self.rho.shape)
             self.E_pot = np.zeros(self.rho.shape)
         # initialize E_r and the corresponding electric potential
@@ -674,116 +672,9 @@ class Core:
         """
         Plots the GT3.Core electron temperature
         """
-        fig = self._plot_base(self.T_fsa.e.kev,yLabel=r'$T_e [keV]$', title="GT3.Core Electron Temperature", edge=edge)
+        fig = self._plot_base(self.T_fsa.e.kev, yLabel=r'$T_e [keV]$', title="GT3.Core Electron Temperature", edge=edge)
         return fig
 
-    def _plot_base(self, val, xLabel=r'$\rho$', yLabel="Value", title="Title", color='red', edge=False):
-
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        fig.set_xlabel(xLabel, fontsize=20)
-        fig.set_ylabel(yLabel, fontsize=20)
-        fig.set_title(title)
-        if edge:
-            fig.set_xlim(0.85, self.sep_val)
-        fig.scatter(self.rho[:, 0], val, color=color, s=MARKERSIZE)
-        plt.show()
-        return fig
-
-    def _plot_with_wall(self):
-        """
-        Generates a Matplotlib plot with the wall pre-plotted.
-
-        :return: An Axis object with the wall line plotted
-        """
-        fig_width = 6.0
-        # Check to see if self.Z/R have been defind yet to generate a figure height, as they aren't immediately
-        # calculated
-        try:
-            fig_height = (np.amax(self.Z) - np.amin(self.Z)) / (np.amax(self.R) - np.amin(self.R)) * fig_width
-        except:
-            fig_height = 9.0
-
-        fig = plt.figure(figsize=(0.975*fig_width, fig_height))
-        ax1 = fig.add_subplot(1, 1, 1)
-        ax1.axis('equal')
-        ax1.plot(np.asarray(self.wall_line.xy)[0], np.asarray(self.wall_line.xy)[1], color='black', lw=1.5)
-        return ax1
-
-    def _shapely_obj_plot_hanlder(self, obj, ax):
-        if isinstance(obj, Point):
-            ax.scatter(obj.x, obj.y, color='red', marker='o', s=MARKERSIZE)
-            return ax
-        if isinstance(obj, MultiPoint):
-            for p in obj:
-                ax.scatter(p.x, p.y, color='red', marker='o', s=MARKERSIZE)
-            return ax
-        if isinstance(obj, Path):
-            ls = LineString(obj.vertices)
-            ax.plot(*ls.xy, color='red', marker='o', s=MARKERSIZE)
-            return ax
-        if isinstance(obj, LineString):
-            ax.plot(*obj.xy, color='red', marker='o', s=MARKERSIZE)
-            return ax
-
-    def _unknown_data_plot_helper(self, obj, ax):
-        # Is it a shapely or similar object?
-        if isinstance(obj, (Point, MultiPoint, Path, LineString)):
-            return self._shapely_obj_plot_hanlder(obj, ax)
-
-        # Does it have the vertices property to convert to a LineString?
-        try:
-            ls = LineString(obj.vertices)
-            return self._shapely_obj_plot_hanlder(ls, ax)
-        except:
-            pass
-
-        # Does it have an xy property?
-
-        try:
-            ax.plot(*obj.xy, s=MARKERSIZE)
-            return ax
-        except:
-            pass
-
-        # Can I turn it into a point?
-        try:
-            p = Point(obj)
-            return self._shapely_obj_plot_hanlder(p, ax)
-        except:
-            pass
-
-        # Can I turn it into a LineString directly?
-        try:
-            ls = LineString(obj)
-            return self._shapely_obj_plot_hanlder(ls, ax)
-        except:
-            pass
-
-        # No dice. Raising error.
-        raise
-
-    def plot_with_wall(self, obj=None):
-        ax = self._plot_with_wall()
-
-        try:
-            return self._unknown_data_plot_helper(obj, ax)
-        except:
-            pass
-
-        # Is it an iterable?
-        try:
-            obj.__iter__
-            for p in obj:
-                try:
-                    ax = self._unknown_data_plot_helper(p, ax)
-                except:
-                    raise
-            return ax
-        except:
-            pass
-
-        print "Could not plot given data"
 
     def plot_exp_psi(self, res=50):
         ax = self._plot_with_wall()
@@ -791,7 +682,7 @@ class Core:
             ax.contour(self.R, self.Z, self.psi, res)
             return ax
         except NameError:
-            print "Psi not defined"
+            print("Psi not defined")
             pass
 
     def plot_L_t_i(self, edge=False):
@@ -805,28 +696,28 @@ class Core:
         """
         Plots the GT3.Core electron temperature scale length
         """
-        fig = self._plot_base(self.L.T.e[:,0], yLabel=r'$L_{T,e} [m]$', title="GT3.Core Electron Temperature Scale Length", edge=edge)
+        fig = self._plot_base( self.L.T.e[:,0], yLabel=r'$L_{T,e} [m]$', title="GT3.Core Electron Temperature Scale Length", edge=edge)
         return fig
 
     def plot_L_n_i(self, edge=False):
         """
         Plots the GT3.Core ion density scale length
         """
-        fig = self._plot_base(self.L.n.i[:,0], yLabel=r'$L_{n,i} [m]$', title="GT3.Core Ion Density Scale Length", edge=edge)
+        fig = self._plot_base( self.L.n.i[:,0], yLabel=r'$L_{n,i} [m]$', title="GT3.Core Ion Density Scale Length", edge=edge)
         return fig
 
     def plot_L_n_e(self, edge=False):
         """
         Plots the GT3.Core electron density scale length
         """
-        fig = self._plot_base(self.L.n.e[:,0], yLabel=r'$L_{n,e} [m]$', title="GT3.Core Electron Density Scale Length", edge=edge)
+        fig = self._plot_base( self.L.n.e[:,0], yLabel=r'$L_{n,e} [m]$', title="GT3.Core Electron Density Scale Length", edge=edge)
         return fig
 
     def plot_ti(self, edge=False):
         """
         Plots the GT3.Core ion temperature
         """
-        fig = self._plot_base(self.T_fsa.e.kev, yLabel=r'$T_i [keV]$', title="GT3.Core Ion Temperature", edge=edge)
+        fig = self._plot_base( self.T_fsa.e.kev, yLabel=r'$T_i [keV]$', title="GT3.Core Ion Temperature", edge=edge)
         return fig
 
     def plot_t(self, edge=False):
@@ -834,7 +725,7 @@ class Core:
         Plots the 1D GT3.Core ion and electron temperatures
         """
         fig = self._plot_base(self.T_fsa.e.kev, yLabel=r'$T [keV]$', title="GT3.Core ion/electron temperatures", edge=edge)
-        fig.scatter(self.rho[:, 0], self.T_fsa.i.kev, color="blue", s=MARKERSIZE)
+        fig.scatter(self.rho[:, 0], self.T_fsa.i.kev, color="blue")
         fig.legend([r'$T_e$', r'$T_i$'])
         return fig
 
@@ -857,7 +748,7 @@ class Core:
         Plots the 1D GT3.Core ion and electron densities
         """
         fig = self._plot_base(self.n_fsa.e, yLabel=r'$n [#/m^3]$', title="GT3.Core ion/electron densities", edge=edge)
-        fig.scatter(self.rho[:, 0], self.n_fsa.i, color="blue", s=MARKERSIZE)
+        fig.scatter(self.rho[:, 0], self.n_fsa.i, color="blue")
         fig.legend([r'$n_e$', r'$n_i$'])
         return fig
 
@@ -868,7 +759,7 @@ class Core:
         fig = self._plot_base(self.n_fsa.n.s, yLabel=r'$n_{o,s} [#/m^3]$', title="GT3.Core Slow Neutral Density", edge=edge)
         return fig
 
-    def plot_ntrl_s(self, edge=False):
+    def plot_ntrl_t(self, edge=False):
         """
         Plots the 1D GT3.Core thermal neutral density
         """

@@ -5,8 +5,7 @@ Created on Sat May 19 14:27:42 2018
 
 @author: max
 """
-from __future__ import division
-from neutpy import neutrals
+
 from collections import namedtuple
 import json
 import os.path
@@ -17,10 +16,13 @@ from GT3.Core.Processors import NumpyEncoder
 class Neutrals:
 
     def __init__(self, inp, core, cpus=False):
-
+        try:
+            from neutpy import neutrals
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError("Neutpy is not installed or could not be loaded. Neutrals data will be unavailable.")
 
         if abs(1.0 - core.sep_val) > .0001:
-            print "The separatrix value has been overwritten. Cannot run Neutrals calculation"
+            print("The separatrix value has been overwritten. Cannot run Neutrals calculation")
             return
         # Try to read in specified neutrals data file. If it's not there, then prepare inputs for and run neutpy
         self.NeutralDataNT = namedtuple('NeutralsData', 'R Z n_n_slow n_n_thermal izn_rate_slow izn_rate_thermal')
@@ -35,9 +37,10 @@ class Neutrals:
                                         ntrl_data['nn_t_raw'],
                                         ntrl_data['izn_rate_slow'],
                                         ntrl_data['izn_rate_thermal'])
+            print("Neutrals data successfully loaded from {}".format(inp.neutfile_loc))
         except:
             # Run NeutPy
-            print "Neutrals data not found. Running NeutPy"
+            print("Neutrals data not found. Running NeutPy")
             if not self._check_conf("neutpy.conf"):
                 raise IOError("No NeutPy main configuration file found.")
             self.npi = neutrals()
@@ -55,12 +58,17 @@ class Neutrals:
             self._save_data()
         try:
             self.core.update_ntrl_data(self.data)
+            print("Core data updated from neutrals")
         except:
-            print 'unable to update values in core instance.'
+            print('unable to update values in core instance.')
             pass
 
     def reRun(self, cpus=False):
         print ("Manually re-running NeutPy")
+        try:
+            from neutpy import neutrals
+        except ModuleNotFoundError:
+            raise ModuleNotFoundError("Neutpy is not installed or could not be loaded. Neutrals data will be unavailable.")
         if not self._check_conf("neutpy.conf"):
             raise IOError("No NeutPy main configuration file found.")
         self.npi = neutrals()
@@ -77,7 +85,7 @@ class Neutrals:
         try:
             self.core.update_ntrl_data(self.data)
         except:
-            print 'unable to update values in core instance.'
+            print('unable to update values in core instance.')
             pass
 
     def _save_data(self):
@@ -92,7 +100,7 @@ class Neutrals:
                 out_dict['izn_rate_thermal'] = self.data.izn_rate_thermal
                 json.dump(out_dict, f, indent=4, cls=NumpyEncoder)
         except Exception as e:
-            print "Unable to save NeutPy data to file: %s" % str(e)
+            print("Unable to save NeutPy data to file: %s" % str(e))
 
     def _check_conf(self, f):
         """

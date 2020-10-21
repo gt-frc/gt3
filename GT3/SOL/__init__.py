@@ -1,3 +1,3 @@
 #!/usr/bin/python
 
-from sol import *
+from .sol import *

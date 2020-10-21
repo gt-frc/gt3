@@ -5,7 +5,7 @@ Created on Wed Apr 11 10:21:23 2018
 
 @author: max
 """
-from __future__ import division
+
 import numpy as np
 from GT3.ImpRadiation import ImpRad
 from collections import namedtuple
@@ -111,27 +111,27 @@ def calc_n_marfe(n, sv, T, L, Lz, chi_r):
     f0c = calc_f0c(n)
 
     if False:
-        print 'MARFE Index Parameters'
-        print ' chi_r = ', chi_r
-        print ' nu = ', nu
-        print ' L.T^-1 = ', 1/L.T
-        print ' L.n^-1 = ', 1/L.n
-        print ' C2 = ', C2
-        print ' fz = ', fz
-        print ' f0 = ', f0
-        print ' f0c = ', f0c
-        print ' E_ion = ', E_ion
-        print ' sv.ion = ', sv.ion
-        print ' sv.ion_ddT = ', sv.ion_ddT
-        print ' sv.cx = ', sv.cx
-        print ' sv.cx_ddT = ', sv.cx_ddT
-        print ' sv.el = ', sv.el
-        print ' sv.el_ddT = ', sv.el_ddT
-        print ' Lz_t = ', Lz_t
-        print ' dLzdT = ', dLzdT
-        print ' T.i.J = ',T.i.J
-        print ' n.e = ', n.e
-        print
+        print('MARFE Index Parameters')
+        print(' chi_r = ', chi_r)
+        print(' nu = ', nu)
+        print(' L.T^-1 = ', 1/L.T)
+        print(' L.n^-1 = ', 1/L.n)
+        print(' C2 = ', C2)
+        print(' fz = ', fz)
+        print(' f0 = ', f0)
+        print(' f0c = ', f0c)
+        print(' E_ion = ', E_ion)
+        print(' sv.ion = ', sv.ion)
+        print(' sv.ion_ddT = ', sv.ion_ddT)
+        print(' sv.cx = ', sv.cx)
+        print(' sv.cx_ddT = ', sv.cx_ddT)
+        print(' sv.el = ', sv.el)
+        print(' sv.el_ddT = ', sv.el_ddT)
+        print(' Lz_t = ', Lz_t)
+        print(' dLzdT = ', dLzdT)
+        print(' T.i.J = ',T.i.J)
+        print(' n.e = ', n.e)
+        print()
 
     term1 = chi_r * (nu * L.T**-2 + (C2 - 1.0) * L.T**-1 * L.n**-1)
     term2 = fz * ((nu + 1 - C2) * Lz_t / (T.i.J+T.e.J)/2 - dLzdT)
@@ -139,12 +139,12 @@ def calc_n_marfe(n, sv, T, L, Lz, chi_r):
     term4 = f0c * (3.0 / 2.0 * (sv.cx + sv.el) * (nu - 1.0 - (T.i.J+T.e.J)/2 * (sv.cx_ddT + sv.el_ddT) / (sv.cx + sv.el)))
 
     if False:
-        print
-        print 'term1 = ', term1
-        print 'term2 = ', term2
-        print 'term3 = ', term3
-        print 'term4 = ', term4
-        print 'term 2+3+4 = ', term2 + term3 + term4
+        print()
+        print('term1 = ', term1)
+        print('term2 = ', term2)
+        print('term3 = ', term3)
+        print('term4 = ', term4)
+        print('term 2+3+4 = ', term2 + term3 + term4)
 
     n_marfe = term1 / \
               (
@@ -165,7 +165,7 @@ class Marfe:
         """
         if core is not None:
             if inputs is not None:
-                print 'ignoring \'inputs\' and attempting to use core instance'
+                print('ignoring \'inputs\' and attempting to use core instance')
             # use 'core' instance to create inputs for calc_n_marfe
 
             nn_mult = 1.0
@@ -289,14 +289,14 @@ class Marfe:
             )
 
             if False:
-                print 'L_xpt.n^-1 = ',1/L_xpt.n
-                print 'L_xpt.T^-1 = ',1/L_xpt.T
-                print 'L_obmp.n^-1 = ',1/L_obmp.n
-                print 'L_obmp.T^-1 = ',1/L_obmp.T
-                print 'L_top.n^-1 = ',1/L_top.n
-                print 'L_top.T^-1 = ',1/L_top.T
-                print 'L_ibmp.n^-1 = ',1/L_ibmp.n
-                print 'L_ibmp.T^-1 = ',1/L_ibmp.T
+                print('L_xpt.n^-1 = ',1/L_xpt.n)
+                print('L_xpt.T^-1 = ',1/L_xpt.T)
+                print('L_obmp.n^-1 = ',1/L_obmp.n)
+                print('L_obmp.T^-1 = ',1/L_obmp.T)
+                print('L_top.n^-1 = ',1/L_top.n)
+                print('L_top.T^-1 = ',1/L_top.T)
+                print('L_ibmp.n^-1 = ',1/L_ibmp.n)
+                print('L_ibmp.T^-1 = ',1/L_ibmp.T)
                 # sys.exit()
 
             Lz_xpt = namedtuple('Lz', 't ddT')(
@@ -325,31 +325,31 @@ class Marfe:
         else:
             raise Exception("No inputs provided")
 
-        print
-        print '######################################'
-        print
-        print 'ni = ', n_xpt.i
-        print 'ne = ', n_xpt.e
-        print 'nn_xpt = ', n_xpt.n.tot
-        print 'nn_obmp = ', n_obmp.n.tot
-        print 'n_marfe = ',self.n_marfe
-        print
-        print 'Ti(ev) = ', T_xpt.i.ev
-        print 'Te(ev) = ', T_xpt.e.ev
-        print
-        print 'L_n^-1 (xpt) = ',1/L_xpt.n
-        print 'L_T^-1 (xpt) = ',1/L_xpt.T
-        print
-        print 'L_n^-1 (obmp) = ',1/L_obmp.n
-        print 'L_T^-1 (obmp) = ',1/L_obmp.T
-        print
-        print 'L_n^-1 (av) = ',1/L_av.n
-        print 'L_T^-1 (av) = ',1/L_av.T
-        print
-        print 'nC / ne = ', n_xpt.W / n_xpt.e
-        print 'nn / ne (xpt) = ', (n_xpt.n.s + n_xpt.n.t) / n_xpt.e
-        print 'nn / ne (obmp) = ', (n_obmp.n.s + n_obmp.n.t) / n_obmp.e
-        print 'MI = ', self.MI
-        print
-        print '######################################'
-        print
+        print()
+        print('######################################')
+        print()
+        print('ni = ', n_xpt.i)
+        print('ne = ', n_xpt.e)
+        print('nn_xpt = ', n_xpt.n.tot)
+        print('nn_obmp = ', n_obmp.n.tot)
+        print('n_marfe = ',self.n_marfe)
+        print()
+        print('Ti(ev) = ', T_xpt.i.ev)
+        print('Te(ev) = ', T_xpt.e.ev)
+        print()
+        print('L_n^-1 (xpt) = ',1/L_xpt.n)
+        print('L_T^-1 (xpt) = ',1/L_xpt.T)
+        print()
+        print('L_n^-1 (obmp) = ',1/L_obmp.n)
+        print('L_T^-1 (obmp) = ',1/L_obmp.T)
+        print()
+        print('L_n^-1 (av) = ',1/L_av.n)
+        print('L_T^-1 (av) = ',1/L_av.T)
+        print()
+        print('nC / ne = ', n_xpt.W / n_xpt.e)
+        print('nn / ne (xpt) = ', (n_xpt.n.s + n_xpt.n.t) / n_xpt.e)
+        print('nn / ne (obmp) = ', (n_obmp.n.s + n_obmp.n.t) / n_obmp.e)
+        print('MI = ', self.MI)
+        print()
+        print('######################################')
+        print()

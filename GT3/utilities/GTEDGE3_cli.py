@@ -11,8 +11,8 @@
 
 from GT3.gt3 import gt3
 from GT3.GT3Prep import gt3Prep
-
 import sys, argparse, warnings, datetime, os
+import deprecation
 
 
 
@@ -23,6 +23,8 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
+@deprecation.deprecated(deprecated_in="0.0.3", details="GT3 no longer utilizes this CLI interface")
 
 def argFunc(a):
     argDic={}
@@ -49,6 +51,7 @@ def argFunc(a):
 def customwarn(message, category, filename, lineno, file=None, line=None):
     sys.stderr.write(warnings.formatwarning(message, category, filename, lineno))
 
+@deprecation.deprecated(deprecated_in="0.0.3", details="GT3 no longer utilizes this CLI interface")
 def runGT3(shotargs):
     ###########################################################################
     #
@@ -85,7 +88,7 @@ def runGT3(shotargs):
     warnings.showwarning = customwarn
 
 
-    print "shotid=%s   runid=%s    timeid=%s   IOL Correction=%s" % (str(shotid),str(runid),str(timeid),str(IOL))
+    print("shotid=%s   runid=%s    timeid=%s   IOL Correction=%s" % (str(shotid),str(runid),str(timeid),str(IOL)))
     maxfile='togt3_d3d_'+str(shotid)+'_'+str(timeid)
     gt3Prep(shotid, timeid, runid, maxfile, quiet = quiet, genFiles=False)
 
@@ -100,57 +103,3 @@ def runGT3(shotargs):
 
 
     return myPlasma
-
-
-
-
-###############################################################################
-#
-#
-#    MAIN PROGRAM as CLI Interface
-#
-#	usage: GTEDGE3_cli.py [-h] [-nbRun [NBRUN]] [-IOL [IOL]] shotid timeid runid
-#
-#	positional arguments:
-#	shotid          DIII-D shot id
-#	timeid          DIII-D time id
-#	runid           DIII-D run id
-#
-#	optional arguments:
-#	-h, --help      show this help message and exit
-#	-nbRun [NBRUN]  Run NBeams (default: True)
-#	-IOL [IOL]      Correct for IOL (default: True)
-#
-#
-###############################################################################   
-    
-if __name__== "__main__":
-
-
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("shotid",help="DIII-D shot id")
-    parser.add_argument("timeid",help="DIII-D time id")
-    parser.add_argument("runid",help="DIII-D run id")
-    parser.add_argument("-nbRun",type=str2bool,nargs='?',#const=True,
-                        default=True,help="Run NBeams")
-    parser.add_argument("-IOL",type=str2bool,nargs='?',#const=True,
-                        default=True,help="Correct for IOL")
-    parser.add_argument("-reNeut",type=str2bool,nargs='?',#const=True,
-                        default=True,help="Rerun the neutrals")
-    praser.add_argument("-neutrals", type=str2bool, nargs='?',
-                        default=True, help="Calculates neutrals")
-    parser.add_argument("-gt3Method",type=str2bool,nargs='?',#const="brndiolneuts",
-                        default="brndiolneuts",help="What GT3 method to run")
-    parser.add_argument("-debug", type=str2bool, nargs='?',
-                        default="False", help="Produce Radial Transport debug profiles")
-    parser.add_argument("-q",action='store_true',help="Disable informational popus")
-    
-
-    try:
-        args=parser.parse_args()
-    except SystemExit as err:
-        if err.code==2:
-            parser.print_help()
-        sys.exit(0)
-    run(argFunc(args))
-

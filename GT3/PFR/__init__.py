@@ -1,3 +1,3 @@
 #!/usr/bin/python
 
-from pfr import *
+from .pfr import *

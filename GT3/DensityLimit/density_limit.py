@@ -5,12 +5,12 @@ Created on Tue Apr 10 20:24:53 2018
 
 @author: max
 """
-from __future__ import division
+
 import numpy as np
 from scipy.special import jv
 import sys
 from math import sqrt
-from Functions.CalcQuadratic import calc_quadratic
+from .Functions.CalcQuadratic import calc_quadratic
 
 
 class DensityLimit:
@@ -63,18 +63,18 @@ class DensityLimit:
         dSdT = ni * nn * dsv_ion_dT
 
         if False:
-            print 'sv_ion = ', sv_ion
-            print 'nn = ', nn
-            print 'ni = ', ni
-            print 'Ti = ', Ti
-            print 'a = ', a
-            print 'dSdn = ', dSdn
-            print 'D_hat = ', D_hat
-            print 'dHdn = ', dHdn
-            print 'Ua = ', Ua
-            print 'sv_fus = ', sv_fus
-            print 'fz = ', fz
-            print 'Lz = ', Lz
+            print('sv_ion = ', sv_ion)
+            print('nn = ', nn)
+            print('ni = ', ni)
+            print('Ti = ', Ti)
+            print('a = ', a)
+            print('dSdn = ', dSdn)
+            print('D_hat = ', D_hat)
+            print('dHdn = ', dHdn)
+            print('Ua = ', Ua)
+            print('sv_fus = ', sv_fus)
+            print('fz = ', fz)
+            print('Lz = ', Lz)
 
         ya = 3 * av(Ti) * (av(dSdn) - (5.5 / a) ** 2 * D_hat) - av(dHdn + 2 * ni * (1 / 4 * Ua * sv_fus - fz * Lz))
         yb = 3 * av(ni) * (av(dSdn) - (5.5 / a) ** 2 * D_hat) + 3 * av(Ti) * av(dSdT) - av(
@@ -82,17 +82,17 @@ class DensityLimit:
         yc = 3 * av(ni) * av(dSdT)
 
         if False:
-            print 'ya = ', ya
-            print 'yb = ', yb
-            print 'yc = ', yc
-            print
+            print('ya = ', ya)
+            print('yb = ', yb)
+            print('yc = ', yc)
+            print()
 
         y1, y2 = calc_quadratic(ya, yb, yc)
 
         if False:
-            print
-            print 'y1 = ', y1
-            print 'y2 = ', y2
+            print()
+            print('y1 = ', y1)
+            print('y2 = ', y2)
 
         t1y1 = chi_hat * (5.5 / a) ** 2 * av(g) + 2 * y1 * (fz * av(g * Lz) - av(1 / 4 * Ua * g * sv_fus))
         t2y1 = 2 * av(g ** 2 * (1 / 4 * Ua * dsv_fus_dT + fz * (-dLzdT)))
@@ -105,15 +105,15 @@ class DensityLimit:
         t4y2 = chi_hat * (5.5 / a) ** 2 * av(g) + 2 * y2 * (fz * av(g * Lz) - av(1 / 4 * Ua * g * sv_fus)) ** 2
 
         if False:
-            print
-            print 't1y1 = ', t1y1
-            print 't2y1 = ', t2y1
-            print 't3y1 = ', t3y1
-            print 't4y1 = ', t4y1
-            print 't1y2 = ', t1y2
-            print 't2y2 = ', t2y2
-            print 't3y2 = ', t3y2
-            print 't4y2 = ', t4y2
+            print()
+            print('t1y1 = ', t1y1)
+            print('t2y1 = ', t2y1)
+            print('t3y1 = ', t3y1)
+            print('t4y1 = ', t4y1)
+            print('t1y2 = ', t1y2)
+            print('t2y2 = ', t2y2)
+            print('t3y2 = ', t3y2)
+            print('t4y2 = ', t4y2)
 
         nlim1 = (1 / f) * (t1y1 / t2y1) * (1 + sqrt(1 + t3y1 / t4y1))
         nlim2 = (1 / f) * (t1y2 / t2y2) * (1 + sqrt(1 + t3y2 / t4y2))
@@ -121,21 +121,21 @@ class DensityLimit:
         nlim4 = (1 / f) * (t1y2 / t2y2) * (1 - sqrt(1 + t3y2 / t4y2))
 
         if False:
-            print
-            print 'nlim1 = ', nlim1
-            print 'nlim2 = ', nlim2
-            print 'nlim3 = ', nlim3
-            print 'nlim4 = ', nlim4
-            print
+            print()
+            print('nlim1 = ', nlim1)
+            print('nlim2 = ', nlim2)
+            print('nlim3 = ', nlim3)
+            print('nlim4 = ', nlim4)
+            print()
 
         nlim = min(i for i in [nlim1, nlim2, nlim3, nlim4] if i > 0)
 
         if n_av > nlim:
-            print 'n_av = ', n_av
-            print 'nlim = ', nlim
-            print 'Disruption predicted: YES'
+            print('n_av = ', n_av)
+            print('nlim = ', nlim)
+            print('Disruption predicted: YES')
         else:
-            print 'n_av = ', n_av
-            print 'nlim = ', nlim
-            print 'Disruption predicted: NO'
-        print
+            print('n_av = ', n_av)
+            print('nlim = ', nlim)
+            print('Disruption predicted: NO')
+        print()

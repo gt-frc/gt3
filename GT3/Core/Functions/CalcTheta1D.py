@@ -44,7 +44,7 @@ def calc_theta1d(pts, thetapts_approx):
     try:
         min_delta_theta = 2 * pi / thetapts_approx
     except:
-        print 'thetapts_approx not defined. Setting to 30'
+        print('thetapts_approx not defined. Setting to 30')
         min_delta_theta = 2 * pi / 30
 
     theta1d = np.zeros(0)

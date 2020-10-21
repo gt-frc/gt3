@@ -5,7 +5,7 @@ Created on Sat Mar 24 13:25:51 2018
 
 @author: max
 """
-from __future__ import division
+
 from subprocess import call
 from collections import namedtuple
 import numpy as np
@@ -45,25 +45,25 @@ class ImpRad:
         imp_names[74] = 'Tungsten'
 
         if (core is not None) and (z is not None):
-            print """Both core and z were specified. z will be ignored and core Lz parameters will be updated.'
+            print("""Both core and z were specified. z will be ignored and core Lz parameters will be updated.'
                   'If you would like a specific z only, then instantiate ImpRad as a standalone instance and'
-                  'pass z, but not a core instance."""
+                  'pass z, but not a core instance.""")
         if core is not None:
             for z in [6, 4, 74, 10, 18, 36]:  # list of all z elements in core. Update this list as necessary.
                 try:  # before running adpak, try to find a pickled interpolator somewhere in the main directory.
                     Lz, dLzdT = self.find_interp(z, imp_names)
                 except:
-                    print 'Pickled interpolater not found for {}. Running adpak.'.format(imp_names[z])
+                    print('Pickled interpolater not found for {}. Running adpak.'.format(imp_names[z]))
                     Lz, dLzdT = self.run_adpak(z, imp_names)
                 core.update_Lz_data(z, Lz, dLzdT)
 
         elif z is not None:
             try:  # before running adpak, try to find a pickled interpolator somewhere in the main directory.
-                print 'trying to find interpolation object'
+                print('trying to find interpolation object')
                 self.Lz, self.dLzdT = self.find_interp(z, imp_names)
             except:
-                print 'didn\'t work'
-                print 'Pickled interpolater not found for {}. Running adpak.'.format(imp_names[z])
+                print('didn\'t work')
+                print('Pickled interpolater not found for {}. Running adpak.'.format(imp_names[z]))
                 self.Lz, self.dLzdT = self.run_adpak(z, imp_names)
         else:
             raise Exception("Neither core nor z were specified. I can\'t read minds. Stopping.")
@@ -84,14 +84,14 @@ class ImpRad:
                     os.path.join(root, filename)
                     pkl_file_loc = os.path.join(root, filename)
                     pickle_in = open(pkl_file_loc, "rb")
-                    Lz_interp = pickle.load(pickle_in)
+                    Lz_interp = pickle.load(pickle_in, encoding='latin1')
                     pickle_in.close()
                 if filename == dLzdT_pkl_file:
                     dLzdT_found = True
                     os.path.join(root, filename)
                     pkl_file_loc = os.path.join(root, filename)
                     pickle_in = open(pkl_file_loc, "rb")
-                    dLzdT_interp = pickle.load(pickle_in)
+                    dLzdT_interp = pickle.load(pickle_in, encoding='latin1')
                     pickle_in.close()
         if Lz_found and dLzdT_found:
             return Lz_interp, dLzdT_interp
@@ -104,8 +104,7 @@ class ImpRad:
         # specify input parameters. These could easily be moved into an input file if necessary.
         inp = {}
         inp['z_imp'] = z  # impurity z
-        inp[
-            'laden'] = laden  # Flag for excitation energy and ion. potential calc. If 0 --> use Mayer formalism. If 1 --> use More formalism
+        inp['laden'] = laden  # Flag for excitation energy and ion. potential calc. If 0 --> use Mayer formalism. If 1 --> use More formalism
         inp['ladtip'] = ladtip  # If 1 --> use tabulated ionization potentials
         inp[
             'leci'] = leci  # Flag for calculation of ionization rates: 1: XSNQ, 2: Belfast group (for H through O) 3: Younger (Scandium and Fe)
@@ -152,7 +151,7 @@ class ImpRad:
                 inp['anneut'] = nf * 1 * 10 ** 13  # inp['nmin_n']
                 inp['vneut'] = Tn
 
-                inp2 = namedtuple('inp2', inp.keys())(*inp.values())
+                inp2 = namedtuple('inp2', list(inp.keys()))(*list(inp.values()))
 
                 # prepare input file
                 f = open('./toadpak', 'w')
@@ -174,7 +173,7 @@ class ImpRad:
                 f.write('\n' + '  nne = ' + str(inp2.nne))
                 # f.write('\n' + '  tei = ' + ' '.join(map(str, inp2.tei)))
                 # f.write('\n' + '  tei = ' +  np.array2string(inp2.tei, precision=3, separator=' ',suppress_small = False))
-                print np.array2string(inp2.tei, formatter={'float_kind': lambda x: "%.5f" % x})[1:-1]
+                print(np.array2string(inp2.tei, formatter={'float_kind': lambda x: "%.5f" % x})[1:-1])
                 f.write(
                     '\n' + '  tei = ' + np.array2string(inp2.tei, formatter={'float_kind': lambda x: "%.5f" % x})[1:-1])
                 f.write('\n' + '  anei = ' + ' '.join(map(str, inp2.anei)))

@@ -4,23 +4,25 @@ Created on Sat Aug  5 19:48:34 2017
 
 @author: max
 """
-from __future__ import division
+
 import numpy as np
 import matplotlib.pyplot as plt
 from math import pi, sqrt
 from collections import namedtuple
-from Functions.CalcIOLMaxwellian import calc_iol_maxwellian
-from Functions.CalcIOLMonoEn import calc_iol_mono_en
-from Functions.CalcIOLBeams import calc_iol_beams
+from .Functions.CalcIOLMaxwellian import calc_iol_maxwellian
+from .Functions.CalcIOLMonoEn import calc_iol_mono_en
+from .Functions.CalcIOLBeams import calc_iol_beams
+from GT3.utilities.PlotBase import PlotBase
 import sys
+import GT3.constants as constants
 
-m_d = 3.343583719e-27
-m_t = 5.006e-27
-m_c = 1.9926467e-26
-m_a = 6.643e-27
+m_d = constants.deuteron_mass
+m_t = constants.triton_mass
+m_c = constants.carbon_mass
+m_a = constants.alpha_mass
 
 
-class IOL:
+class IOL(PlotBase):
     """
     """
 
@@ -32,6 +34,7 @@ class IOL:
         angles = np.linspace(-1, 1, inp.numcos + 1)
         self.coslist = ((angles + np.roll(angles, -1)) / 2)[:-1]
         self.rho = core.rho
+        self.set_plot_rho1d(self.rho[:, 0])
         self.calc_iol_beams = calc_iol_beams
         polpts = len(core.rho[-1])
         radpts = len(core.rho.T[-1])
@@ -229,41 +232,29 @@ class IOL:
         self.morb_d_nbi_1D = self.morb_d_nbi[:, 0]
         self.eorb_d_nbi_1D = self.eorb_d_nbi[:, 0]
 
-    def plot_F_i(self):
+    def plot_F_i(self, edge=True):
         """
         Plots the 1D GT3.IOL differential ion number loss fraction
         """
+        fig = self._plot_base(self.forb_d_therm_1D, yLabel=r'$F(\rho)$',
+                              title="GT3.IOL differential ion number loss fraction", edge=edge, color='blue')
+        return fig
 
-        plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$F(\rho)$', fontsize=25)
-        fig1.set_title('GT3.IOL differential ion number loss fraction')
-        fig1.scatter(self.rho, self.forb_d_therm_1D, marker='o', color='blue')
-
-    def plot_M_i(self):
+    def plot_M_i(self, edge=True):
         """
         Plots the 1D GT3.IOL differential ion momentum loss fraction
         """
+        fig = self._plot_base(self.morb_d_therm_1D, yLabel=r'$M(\rho)$',
+                              title="GT3.IOL differential ion momentum loss fraction", edge=edge, color='green')
+        return fig
 
-        plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$\M(\rho)$', fontsize=25)
-        fig1.set_title('GT3.IOL differential ion momentum loss fraction')
-        fig1.scatter(self.rho, self.morb_d_therm_1D, marker='o', color='green')
-
-    def plot_E_i(self):
+    def plot_E_i(self, edge=True):
         """
         Plots the 1D GT3.IOL differential ion energy loss fraction
         """
-
-        plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$\frac{\partial E}{\partial r}$', fontsize=25)
-        fig1.set_title('GT3.IOL differential ion energy loss fraction')
-        fig1.scatter(self.rho, self.eorb_d_therm_1D, marker='o', color='red')
+        fig = self._plot_base(self.eorb_d_therm_1D, yLabel=r'$E(\rho)$',
+                              title="GT3.IOL differential ion energy loss fraction", edge=edge, color='red')
+        return fig
 
     def plot_all_i(self):
         plot = plt.figure()
@@ -285,41 +276,32 @@ class IOL:
         fig3.set_title('Ion momentum loss fraction')
         fig3.scatter(self.rho, self.morb_d_therm_1D, marker='o', color='green')
 
-    def plot_F_C(self):
+        return plot
+
+    def plot_F_C(self, edge=True):
         """
         Plots the 1D GT3.IOL differential carbon number loss fraction
         """
+        fig = self._plot_base(self.forb_c_therm_1D, yLabel=r'$\frac{\partial F}{\partial r}$',
+                              title="GT3.IOL differential carbon number loss fraction", edge=edge, color='blue')
+        return fig
 
-        plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$\frac{\partial F}{\partial r}$', fontsize=25)
-        fig1.set_title('GT3.IOL differential carbon number loss fraction')
-        fig1.scatter(self.rho, self.forb_c_therm_1D, marker='o', color='blue')
-
-    def plot_M_C(self):
+    def plot_M_C(self, edge=True):
         """
         Plots the 1D GT3.IOL differential carbon momentum loss fraction
         """
+        fig = self._plot_base(self.morb_c_therm_1D, yLabel=r'$\frac{\partial M}{\partial r}$',
+                              title="GT3.IOL differential carbon momentum loss fraction", edge=edge, color='green')
+        return fig
 
-        plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$\frac{\partial M}{\partial r}$', fontsize=25)
-        fig1.set_title('GT3.IOL differential carbon momentum loss fraction')
-        fig1.scatter(self.rho, self.morb_c_therm_1D, marker='o', color='green')
-
-    def plot_E_C(self):
+    def plot_E_C(self, edge=True):
         """
         Plots the 1D GT3.IOL differential carbon energy loss fraction
         """
+        fig = self._plot_base(self.eorb_c_therm_1D, yLabel=r'$\frac{\partial E}{\partial r}$',
+                              title="GT3.IOL differential carbon energy loss fraction", edge=edge, color='green')
+        return fig
 
-        plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$\frac{\partial E}{\partial r}$', fontsize=25)
-        fig1.set_title('GT3.IOL differential carbon energy loss fraction')
-        fig1.scatter(self.rho, self.eorb_c_therm_1D, marker='o', color='red')
 
     def plot_all_C(self):
         plot = plt.figure()
@@ -341,41 +323,32 @@ class IOL:
         fig3.set_title('Carbon momentum loss fraction')
         fig3.scatter(self.rho, self.morb_c_therm_1D, marker='o', color='green')
 
-    def plot_F_i_fast(self):
+        return plot
+
+    def plot_F_i_fast(self, edge=True):
         """
         Plots the 1D GT3.IOL differential fast ion number loss fraction
         """
+        fig = self._plot_base(self.forb_d_nbi_1D, yLabel=r'$\frac{\partial F}{\partial r}$',
+                              title="GT3.IOL differential fast ion number loss fraction", edge=edge, color='blue')
+        return fig
 
-        plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$\frac{\partial F}{\partial r}$', fontsize=25)
-        fig1.set_title('GT3.IOL differential fast ion number loss fraction')
-        fig1.scatter(self.rho, self.forb_d_nbi_1D, marker='o', color='blue')
-
-    def plot_M_i_fast(self):
+    def plot_M_i_fast(self,edge=True):
         """
         Plots the 1D GT3.IOL differential fast ion momentum loss fraction
         """
+        fig = self._plot_base(self.morb_d_nbi_1D, yLabel=r'$\frac{\partial M}{\partial r}$',
+                              title="GT3.IOL differential fast ion momentum loss fraction", edge=edge, color='green')
+        return fig
 
-        plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$\frac{\partial M}{\partial r}$', fontsize=25)
-        fig1.set_title('GT3.IOL differential fast ion momentum loss fraction')
-        fig1.scatter(self.rho, self.morb_d_nbi_1D, marker='o', color='green')
-
-    def plot_E_i_fast(self):
+    def plot_E_i_fast(self, edge=True):
         """
         Plots the 1D GT3.IOL differential fast ion energy loss fraction
         """
+        fig = self._plot_base(self.eorb_d_nbi_1D, yLabel=r'$\frac{\partial E}{\partial r}$',
+                              title="GT3.IOL differential fast ion energy loss fraction", edge=edge, color='red')
+        return fig
 
-        plot = plt.figure()
-        fig1 = plot.add_subplot(111)
-        fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$\frac{\partial E}{\partial r}$', fontsize=25)
-        fig1.set_title('GT3.IOL differential fast ion energy loss fraction')
-        fig1.scatter(self.rho, self.eorb_d_nbi_1D, marker='o', color='red')
 
     def plot_all_i_fast(self):
         plot = plt.figure()
@@ -397,55 +370,4 @@ class IOL:
         fig3.set_title('Fast ion momentum loss fraction')
         fig3.scatter(self.rho, self.morb_d_nbi_1D, marker='o', color='green')
 
-# iolplot=1
-# if iolplot==1:
-#    fig = plt.figure(figsize=(5, 5))
-#    fig.suptitle('IOL a, b, c in DIII-D with cos:{}'.format(coslist[-2]), fontsize=15)
-#    ax1 = fig.add_subplot(221)
-#    ax1.set_title(r'$v_{sep-1}$', fontsize=12)
-#    ax1.set_ylabel(r'R', fontsize=12)
-#    ax1.set_xlabel(r'Z', fontsize=12)
-#    ax1.axis('equal')
-#    ax1.grid(b=True, which='both', axis='both')
-#    CS = ax1.contourf(brnd.R, brnd.Z, v_sep_1[:, -2, :, 0].T, 500)
-#    plt.colorbar(CS)
-#
-#    ax2 = fig.add_subplot(222)
-#    ax2.set_title(r'$v_{sep-2}$', fontsize=12)
-#    ax2.set_ylabel(r'R', fontsize=12)
-#    ax2.set_xlabel(r'Z', fontsize=12)
-#    ax2.axis('equal')
-#    ax2.grid(b=True, which='both', axis='both')
-#    CS = ax2.contourf(brnd.R, brnd.Z, v_sep_2[:, -2, :, 0].T, 500)
-#    plt.colorbar(CS)
-#
-#    ax3 = fig.add_subplot(223)
-#    ax3.set_title(r'$v_{sep}$', fontsize=12)
-#    ax3.set_ylabel(r'R', fontsize=12)
-#    ax3.set_xlabel(r'Z', fontsize=12)
-#    ax3.axis('equal')
-#    ax3.grid(b=True, which='both', axis='both')
-#    #CS = ax3.pcolor(brnd.R, brnd.Z, v_sep[:, 10, :, 0].T, vmin=0, vmax=1E8)
-#    CS = ax3.contourf(brnd.R, brnd.Z, v_sep[:, -2, :, 0].T, 500)
-#    plt.colorbar(CS)
-
-#    plt.tight_layout()
-#    fig.subplots_adjust(top=0.84)
-# if iolplot==1:
-#     fig = plt.figure(figsize=(6, 8))
-#     fig.suptitle(r'IOL v_{} with cos:{}'.format('esc', coslist[0]), fontsize=15)
-#     ax1 = fig.add_subplot(111)
-#     #ax1.set_title(r'$v_{sep}$', fontsize=12)
-#     ax1.set_ylabel(r'Z', fontsize=12)
-#     ax1.set_xlabel(r'R', fontsize=12)
-#     ax1.axis('equal')
-#     ax1.grid(b=True, which='both', axis='both')
-#
-#     test = np.nanmin(v_sep, axis=3).T
-#
-#     CS = ax1.contourf(brnd.R, brnd.Z, np.log10((0.5*m*test[:, 0, :]**2)/(1.6021E-19 * 1.0E3)), 500)
-#     plt.colorbar(CS)
-#     #plt.tight_layout()
-#     fig.subplots_adjust(top=0.95)
-#     #fig.subplots_adjust(top=0.95)
-# return
+        return plot
