@@ -38,30 +38,45 @@ class Neutrals:
                                         ntrl_data['izn_rate_slow'],
                                         ntrl_data['izn_rate_thermal'])
             print("Neutrals data successfully loaded from {}".format(inp.neutfile_loc))
+            self._update_core()
         except:
             # Run NeutPy
             print("Neutrals data not found. Running NeutPy")
             if not self._check_conf("neutpy.conf"):
                 raise IOError("No NeutPy main configuration file found.")
-            self.npi = neutrals()
-            if cpus:
-                self.npi.set_cpu_cores(cpus)
 
-            self.npi.from_gt3(core, inp)
-            self.data = self.NeutralDataNT(self.npi.midpts[:, 0],
-                                    self.npi.midpts[:, 1],
-                                    self.npi.nn_s_raw,
-                                    self.npi.nn_t_raw,
-                                    self.npi.iznrate_s_raw,
-                                    self.npi.iznrate_t_raw)
-            # Save data
-            self._save_data()
+            try:
+                self._check_for_triangle()
+                self.npi = neutrals()
+                if cpus:
+                    self.npi.set_cpu_cores(cpus)
+
+                self.npi.from_gt3(core, inp)
+                self.data = self.NeutralDataNT(self.npi.midpts[:, 0],
+                                               self.npi.midpts[:, 1],
+                                               self.npi.nn_s_raw,
+                                               self.npi.nn_t_raw,
+                                               self.npi.iznrate_s_raw,
+                                               self.npi.iznrate_t_raw)
+                self._update_core()
+                # Save data
+                self._save_data()
+            except EnvironmentError:
+                pass
+
+
+    def _update_core(self):
         try:
             self.core.update_ntrl_data(self.data)
             print("Core data updated from neutrals")
         except:
             print('unable to update values in core instance.')
             pass
+
+    def _check_for_triangle(self):
+        from shutil import which
+        if which("triangle") == None:
+            raise EnvironmentError("Triangle is not installed. Neutpy cannot be run")
 
     def reRun(self, cpus=False):
         print ("Manually re-running NeutPy")

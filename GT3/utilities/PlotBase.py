@@ -41,17 +41,26 @@ class PlotBase:
         :return: An Axis object with the wall line plotted
         """
 
-        if not hasattr(self, "_wall_line"):
+        if not hasattr(self, "_wall_line") and not hasattr(self, "wall_line"):
             print("Wall Linestring has not been instantiated yet.")
             return
 
-        if not hasattr(self, "_Z"):
+        if not hasattr(self, "_Z") and not hasattr(self, "Z"):
             print("Z coordinates have not been instantiated yet.")
             return
 
-        if not hasattr(self, "_R"):
+        if not hasattr(self, "_R") and not hasattr(self, "R"):
             print("R coordinates have not been instantiated yet.")
             return
+
+        if not hasattr(self, "_wall_line"):
+            self._wall_line = self.wall_line
+
+        if not hasattr(self, "_Z"):
+            self._Z = self.Z
+
+        if not hasattr(self, "_R"):
+            self._R = self.R
 
         fig_width = 6.0
         # Check to see if self.Z/R have been defind yet to generate a figure height, as they aren't immediately
