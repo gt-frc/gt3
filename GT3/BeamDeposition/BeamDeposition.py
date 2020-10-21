@@ -1,8 +1,6 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-from .Test.DebugCore import debugCore
-from .Test.DebugInp import debugInp
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 from collections import namedtuple
@@ -190,8 +188,6 @@ class BeamDeposition(PlotBase):
 
                 try:
                     try:
-                        #Beam1 = Beam(beam_config_list[0])
-                        #Beam2 = Beam(beam_config_list[1])
                         self.beam_result = pool.map(Beam, beam_config_list)
                     except:
                         raise Exception("Pathos failed to run beam")

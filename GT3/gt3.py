@@ -194,17 +194,20 @@ class gt3:
         except AttributeError:
             print ("NBI module not run. Running now...")
             self.run_NBI()
-        try:
-            self.ntrl
-        except AttributeError:
-            print ("Neutrals module not run. Running now...")
-            self.run_neutrals()
 
         try:
             self.imp
         except AttributeError:
             print ("Impurity radiation module not run. Running now...")
             self.imp = ImpRad(z=6, core=self.core)
+
+        try:
+            self.ntrl
+        except AttributeError:
+            print ("Neutrals module not run. Running now...")
+            self.run_neutrals()
+
+
         self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag)
         return self
 

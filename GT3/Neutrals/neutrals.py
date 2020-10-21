@@ -37,6 +37,7 @@ class Neutrals:
                                         ntrl_data['nn_t_raw'],
                                         ntrl_data['izn_rate_slow'],
                                         ntrl_data['izn_rate_thermal'])
+            print("Neutrals data successfully loaded from {}".format(inp.neutfile_loc))
         except:
             # Run NeutPy
             print("Neutrals data not found. Running NeutPy")
@@ -57,6 +58,7 @@ class Neutrals:
             self._save_data()
         try:
             self.core.update_ntrl_data(self.data)
+            print("Core data updated from neutrals")
         except:
             print('unable to update values in core instance.')
             pass

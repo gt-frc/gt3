@@ -469,12 +469,12 @@ class RadialTransport(PlotBase):
 
     def plot_Q_sources(self, edge=True, logPlot=False):
         fig = self._plot_base(self.en_src_nbi_i, yLabel=r'$Q_r[W/m^3]$', title="Radial sources", edge=edge)
-        fig.scatter(self.rhor, self.cool_rate, color="green", s=MARKERSIZE)
-        fig.scatter(self.rhor, self.qie, color="black", s=MARKERSIZE)
+        fig.scatter(self.rhor, self.cxcool, color="green", s=MARKERSIZE)
+        fig.scatter(self.rhor, abs(self.qie), color="black", s=MARKERSIZE)
         if logPlot:
             fig.set_yscale("log")
         plt.show()
-        fig.legend(["Q_{nbi}", "Q_{cxcool}", "Q_{ie}"])
+        fig.legend([r"$Q_{nbi}$", r"$Q_{cxcool}$", r"$|Q_{ie}|$"])
         return fig
 
     def plot_Chi_i_comp(self, edge=True):
