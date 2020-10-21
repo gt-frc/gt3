@@ -61,7 +61,8 @@ class Neutrals:
                 self._update_core()
                 # Save data
                 self._save_data()
-            except EnvironmentError:
+            except EnvironmentError as e:
+                print(str(e))
                 pass
 
 
