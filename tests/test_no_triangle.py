@@ -14,8 +14,7 @@ class NoTriangleTest(SingleLowerNullTest):
         super(NoTriangleTest, cls).setUpClass()
         from shutil import which
         if which("triangle"):
-            print("Triangle has been found on this system. This test will not run")
-            return False
+            raise Exception("Triangle has been found on this system. This test will not run")
         cls.plasma.run_neutrals()
 
     def test_no_npi(self):

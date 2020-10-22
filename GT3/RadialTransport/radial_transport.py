@@ -485,7 +485,7 @@ class RadialTransport(PlotBase):
         fig.legend([r"$q^{cond} = q^{tot}$",
                     r"$q^{cond} = q^{tot}-q^{conv}$",
                     r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}$",
-                    r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}-q^{visc}$"],  prop={'size': 20})
+                    r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}-q^{visc}$"],  prop={'size': 20}, markerscale=2.5)
         return fig
 
     def plot_D(self, edge=True):

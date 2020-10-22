@@ -183,7 +183,7 @@ class gt3:
         self.mar = Marfe(self.inp, self.core)
         return self
 
-    def run_radial_transport(self):
+    def run_radial_transport(self, nbiReRun=False, ntrlReRun=False):
         try:
             self.iol
         except AttributeError:
@@ -193,7 +193,7 @@ class gt3:
             self.nbi
         except AttributeError:
             print ("NBI module not run. Running now...")
-            self.run_NBI()
+            self.run_NBI(reRun=nbiReRun)
 
         try:
             self.imp
@@ -205,7 +205,7 @@ class gt3:
             self.ntrl
         except AttributeError:
             print ("Neutrals module not run. Running now...")
-            self.run_neutrals()
+            self.run_neutrals(reRun=ntrlReRun)
 
 
         self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag)

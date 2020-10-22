@@ -5,7 +5,7 @@ import numpy as np
 from shapely.geometry import LineString, Point, MultiPoint
 from matplotlib import Path
 
-MARKERSIZE = 6
+MARKERSIZE = 10
 
 class PlotBase:
 
