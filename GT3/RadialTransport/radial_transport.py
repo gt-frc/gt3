@@ -428,7 +428,7 @@ class RadialTransport(PlotBase):
         return self._plot_base(self.nu_c_k_j, yLabel=r'$\nu_{k,j}$', title="Collision frequency", edge=edge)
 
     def plot_nu_jj(self, edge=True):
-        return self._plot_base(self.nu_c_k_j, yLabel=r'$\nu_{j,j}$', title="Collision frequency", edge=edge)
+        return self._plot_base(self.nu_c_j_j, yLabel=r'$\nu_{j,j}$', title="Collision frequency", edge=edge)
 
     def plot_ni(self, edge=True):
         return self._plot_base(self.core.n_fsa.i, yLabel=r'$n_i[\#/m^3]$', title="Ion Density", edge=edge)
