@@ -421,6 +421,14 @@ class RadialTransport(PlotBase):
                             E_orb=self.iol.eorb_d_therm_1D,
                             verbose=True)
 
+    def plot_nu_jk(self, edge=True):
+        return self._plot_base(self.nu_c_j_k, yLabel=r'$\nu_{j,k}$', title="Collision frequency", edge=edge)
+
+    def plot_nu_kj(self, edge=True):
+        return self._plot_base(self.nu_c_k_j, yLabel=r'$\nu_{k,j}$', title="Collision frequency", edge=edge)
+
+    def plot_nu_jj(self, edge=True):
+        return self._plot_base(self.nu_c_k_j, yLabel=r'$\nu_{j,j}$', title="Collision frequency", edge=edge)
 
     def plot_ni(self, edge=True):
         return self._plot_base(self.core.n_fsa.i, yLabel=r'$n_i[\#/m^3]$', title="Ion Density", edge=edge)
