@@ -425,22 +425,22 @@ class RadialTransport(PlotBase):
                             verbose=True)
 
     def plot_nu_jk(self, edge=True):
-        return self._plot_base(self.nu_c_j_k, yLabel=r'$\nu_{j,k}$', title="Collision frequency", edge=edge)
+        return self._plot_base(self.nu_c_j_k, yLabel=r'$\nu_{j,k}$', title="Ion-Impurity Collision frequency", edge=edge)
 
     def plot_nu_kj(self, edge=True):
-        return self._plot_base(self.nu_c_k_j, yLabel=r'$\nu_{k,j}$', title="Collision frequency", edge=edge)
+        return self._plot_base(self.nu_c_k_j, yLabel=r'$\nu_{k,j}$', title="Impurity-Ion Collision frequency", edge=edge)
 
     def plot_nu_jj(self, edge=True):
-        return self._plot_base(self.nu_c_j_j, yLabel=r'$\nu_{j,j}$', title="Collision frequency", edge=edge)
+        return self._plot_base(self.nu_c_j_j, yLabel=r'$\nu_{j,j}$', title="Ion-Ion Collision frequency", edge=edge)
 
     def plot_nu_ee(self, edge=True):
-        return self._plot_base(self.nu_c_e_e, yLabel=r'$\nu_{e,e}$', title="Collision frequency", edge=edge)
+        return self._plot_base(self.nu_c_e_e, yLabel=r'$\nu_{e,e}$', title="Electron-Electron Collision frequency", edge=edge)
 
     def plot_nu_je(self, edge=True):
-        return self._plot_base(self.nu_c_j_e, yLabel=r'$\nu_{j,e}$', title="Collision frequency", edge=edge)
+        return self._plot_base(self.nu_c_j_e, yLabel=r'$\nu_{j,e}$', title="Ion-Electron Collision frequency", edge=edge)
 
     def plot_nu_ej(self, edge=True):
-        return self._plot_base(self.nu_c_e_j, yLabel=r'$\nu_{e,j}$', title="Collision frequency", edge=edge)
+        return self._plot_base(self.nu_c_e_j, yLabel=r'$\nu_{e,j}$', title="Electron-Ion Collision frequency", edge=edge)
 
     def plot_ni(self, edge=True):
         return self._plot_base(self.core.n_fsa.i, yLabel=r'$n_i[\#/m^3]$', title="Ion Density", edge=edge)
