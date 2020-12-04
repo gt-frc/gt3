@@ -62,6 +62,7 @@ class ReadInfile:
         :param infile:
         :type infile: str
         """
+        super().__init__()
         sys.dont_write_bytecode = True
         self.read_vars(infile)
 
@@ -168,6 +169,7 @@ class ReadInfile:
         """
         Show the parameters of this shot
         """
+        raise NotImplementedError
         print('**PARAMETERS FOR SHOT \'{}\'.'.format(self.shotlabel))
         for key in vars(self).items():
             if key[0][0] != '_' and key[0] != 'line' and key[0] != 'infile' and key[0] != 'variable' and key[

@@ -10,9 +10,9 @@ def calc_gamma_diff_method(r, a, part_src_nbi_tot, part_src_nbi_lost, izn_rate, 
                            verbose=False):
     dVdr = UnivariateSpline(r, dVdrho(r / a) / a, k=2, s=0)
     dF_orb = UnivariateSpline(r, F_orb, k=3, s=0).derivative()
-    izn_rateint = UnivariateSpline(r, izn_rate, k=2, s=0)
-    part_src_nbi_totint = UnivariateSpline(r, part_src_nbi_tot, k=2, s=0)
-    part_src_nbi_lostint = UnivariateSpline(r, part_src_nbi_lost, k=2, s=0)
+    izn_rateint = UnivariateSpline(r, izn_rate.val, k=2, s=0)
+    part_src_nbi_totint = UnivariateSpline(r, part_src_nbi_tot.val, k=2, s=0)
+    part_src_nbi_lostint = UnivariateSpline(r, part_src_nbi_lost.val, k=2, s=0)
     iolPeak = np.where(dF_orb(r) == dF_orb(r).max())
 
     def f(t, gamma, sion, snbi, snbi_loss, dFdr, iolFlag, peak):

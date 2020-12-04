@@ -12,8 +12,9 @@ from shapely.ops import polygonize, linemerge
 import sys
 from contours.quad import QuadContourGenerator
 from GT3.Core.Functions.Cut import cut
+from deprecation import deprecated
 
-
+@deprecated(deprecated_in="0.0.3", removed_in="0.0.4", details="To be replaced with a more robust version at a future date.")
 class Pfr:
     def __init__(self, inp, core):
 

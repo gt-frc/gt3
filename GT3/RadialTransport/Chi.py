@@ -6,6 +6,8 @@ import numpy as np
 from collections import namedtuple
 from scipy import constants
 from math import sqrt
+from deprecation import deprecated
+
 
 
 m_d = constants.physical_constants['deuteron mass'][0]
@@ -14,9 +16,10 @@ z_d = 1  # atomic number of deuterium
 z_c = 6  # atomic number of carbon
 ch_d = e * z_d  # charge of deuterium
 ch_c = e * z_c  # charge of carbon
+from GT3 import Core
 
 
-
+@deprecated(deprecated_in="0.0.3", removed_in="0.0.4", details="Chi has been folded back into RadialTransport")
 class Chi:
     """
     Chi class claculates various chis and provides source terms as necessary
@@ -58,12 +61,12 @@ class Chi:
 
         return L.T.e * ((self.Qe / (ch_d * n.e * T.e.ev)) - 2.5 * gameltemp / n.e)
 
-    def viscCalc(self, data, core, n, T):
+    def viscCalc(self, data, core: Core, n, T):
         f1 = 1 # Must determine later, appears to be geometeric factor in Eq(4) in POP052504(2010)
-        fp = core.B_p_fsa/core.B_t_fsa
+        fp = core.B.pol.fsa/core.B.tor.fsa
         vth = [sqrt(2. * a  * ch_d / m_d) for a in T.i.ev]
         eta0 = [a * m_d * b * c * core.R0_a * f1 for a,b,c in zip(n.i, vth, core.q[:,0])]
-        eta4 = [a * m_d * c * ch_d / (ch_d * abs(b)) for a, b, c in zip(n.i, core.B_t_fsa, T.i.ev)]
+        eta4 = [a * m_d * c * ch_d / (ch_d * abs(b)) for a, b, c in zip(n.i, core.B.tor.fsa, T.i.ev)]
         vrad = data.gamma_diff_D / n.i
 
         # a = vtor    b = fp   c = eta0

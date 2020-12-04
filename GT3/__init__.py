@@ -14,3 +14,4 @@ except:
     #############################################""")
 
 from .gt3 import *
+from ._version import __version__

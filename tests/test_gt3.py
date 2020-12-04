@@ -98,27 +98,24 @@ class PlotCoreTest(DoubleNullTest):
         """
         Plot all plots in the Core module
         """
-        plot_vars = [self.plasma.core.plot_t,
-                     self.plasma.core.plot_n,
-                     self.plasma.core.plot_ni,
-                     self.plasma.core.plot_ntrl_s,
-                     self.plasma.core.plot_izn_rate_total,
-                     self.plasma.core.plot_izn_rate_t,
-                     self.plasma.core.plot_ntrl_total,
-                     self.plasma.core.plot_ntrl_s,
-                     self.plasma.core.plot_ntrl_t,
-                     self.plasma.core.plot_er,
-                     self.plasma.core.plot_L_n_e,
-                     self.plasma.core.plot_L_n_i,
-                     self.plasma.core.plot_L_t_e,
-                     self.plasma.core.plot_L_t_i,
-                     self.plasma.core.plot_pressure_C,
-                     self.plasma.core.plot_pressure_D,
-                     self.plasma.core.plot_pressure_e,
-                     self.plasma.core.plot_vpol_C,
-                     self.plasma.core.plot_vpol_D,
-                     self.plasma.core.plot_vtor_C,
-                     self.plasma.core.plot_vtor_D]
+
+        plot_vars = [self.plasma.core.n.i.plot_fsa,
+                     self.plasma.core.n.e.plot_fsa,
+                     self.plasma.core.n.n.s.plot2D,
+                     self.plasma.core.n.n.t.plot2D,
+                     self.plasma.core.n.n.tot.plot2D,
+                     self.plasma.core.T.i.ev.plot2D,
+                     self.plasma.core.T.i.J.plot2D,
+                     self.plasma.core.T.i.kev.plot2D,
+                     self.plasma.core.T.e.ev.plot2D,
+                     self.plasma.core.T.i.ev.L.plot2D,
+                     self.plasma.core.T.e.J.L.plot2D,
+                     self.plasma.core.n.i.L.plot2D,
+                     self.plasma.core.n.n.s.L.plot2D,
+                     self.plasma.core.n.n.tot.L.plot2D,
+                     self.plasma.core.v.D.pol.plot2D,
+                     self.plasma.core.v.C.tor.plot2D]
+
         for v in plot_vars:
             self.plot_tester(v)
 
@@ -126,12 +123,12 @@ class PlotCoreTest(DoubleNullTest):
         """
         Plot all plots in the NBI module
         """
-        plot_vars = [self.plasma.nbi.plot_S_nbi,
-                     self.plasma.nbi.plot_S_dens_nbi,
-                     self.plasma.nbi.plot_M_nbi,
-                     self.plasma.nbi.plot_M_dens_nbi,
-                     self.plasma.nbi.plot_Q_nbi,
-                     self.plasma.nbi.plot_Q_dens_nbi]
+        plot_vars = [self.plasma.nbi.combined_beam_src_dens_lost.Snbi.plot,
+                     self.plasma.nbi.combined_beam_src_dens_lost.Qnbi.plot,
+                     self.plasma.nbi.combined_beam_src_dens_lost.Mnbi.plot,
+                     self.plasma.nbi.combined_beam_src_kept.Snbi.plot,
+                     self.plasma.nbi.combined_beam_src_kept.Qnbi.plot,
+                     self.plasma.nbi.combined_beam_src_kept.Mnbi.plot]
         for v in plot_vars:
             self.plot_tester(v)
 
@@ -139,17 +136,17 @@ class PlotCoreTest(DoubleNullTest):
         """
         Plot all plots in the Radial Transport module
         """
-        plot_vars = [self.plasma.rtrans.plot_n,
-                     self.plasma.rtrans.plot_ni,
-                     self.plasma.rtrans.plot_D,
-                     self.plasma.rtrans.plot_gamma_diff,
-                     self.plasma.rtrans.plot_T,
-                     self.plasma.rtrans.plot_gamma,
-                     self.plasma.rtrans.plot_Chi_i_comp,
+        plot_vars = [self.plasma.rtrans.gamma.D.diff.plot,
+                     self.plasma.rtrans.gamma.D.int.plot,
+                     self.plasma.rtrans.gamma.e.int.plot,
+                     self.plasma.rtrans.gamma.C.int.plot,
+                     self.plasma.rtrans.gamma.plot_D,
+                     self.plasma.rtrans.gamma.plot_C,
                      self.plasma.rtrans.plot_Q_sources,
                      self.plasma.rtrans.plot_S_sources,
-                     self.plasma.rtrans.plot_chi_terms, ]
-        self.plot_tester(self.plasma.rtrans.plot_gamma_diff)
+                     self.plasma.rtrans.plot_chi_terms]
+        for v in plot_vars:
+            self.plot_tester(v)
 
     @classmethod
     def tearDownClass(cls):
@@ -179,6 +176,7 @@ class GT3TestClassTest(unittest.TestCase, CommonFunctions):
         from GT3.TestBase.testbase import TestClass
         cls.plasma = gt3(preparedInput=TestClass())
         cls.plasma.run_radial_transport()
+        TestClass().print_summary()
 
 
 if __name__ == '__main__':

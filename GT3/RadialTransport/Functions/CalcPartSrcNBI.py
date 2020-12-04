@@ -2,7 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+from deprecation import deprecated
 
+
+@deprecated(deprecated_in="0.0.3", removed_in="0.0.4", details="NBI-related calculations are now performed in the NBI module")
 def calc_part_src_nbi(beam, iol_adjusted=False, F_orb_nbi=None):
     """
     """

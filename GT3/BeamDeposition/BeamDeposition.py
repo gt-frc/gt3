@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import UnivariateSpline, interp1d
 from collections import namedtuple
 import os, sys
 from .Functions.Beam import Beam
@@ -12,6 +12,8 @@ from pathos.multiprocessing import ProcessPool as Pool
 from pathos.multiprocessing import cpu_count
 import GT3.constants as constants
 from GT3.utilities.PlotBase import PlotBase
+from GT3 import Core
+from GT3.Core.Functions.ProfileClasses import OneDProfile
 
 m_d = constants.deuteron_mass
 z_d = 1
@@ -31,6 +33,8 @@ class BeamDeposition(PlotBase):
     BeamSources = namedtuple('BeamSources', 'Snbi Qnbi Mnbi')
 
     def __init__(self, inp, core, iol=None, reRun=False, pwrFracOverride=None):
+        super().__init__()
+        self._core = core
         sys.dont_write_bytecode = True
         # If deposition profile is provided as an input, use that.
         # Note, this is designed to read in the dP/dr(r) quantity, not dP/dV(r).
@@ -38,7 +42,7 @@ class BeamDeposition(PlotBase):
         # that is deposited in the plasma.
 
         self.beams_space = np.linspace(0., core.sep_val, 50)
-        """The rho space used by the Beams module on [0., 1.] or [0., sep_val]"""
+        """The rho space used by the Beams module on [0., 1.] or [0., sep_val] to speed up computation"""
 
         self.set_plot_rho1d(self.beams_space)
 
@@ -58,34 +62,57 @@ class BeamDeposition(PlotBase):
 
         try:
             # Combine into one beam.
+            total_S = self._to_main_grid(np.array([a.part_src.total for a in self.beam_result]).sum(axis=0))
+            total_Q = self._to_main_grid(np.array([a.en_src.total for a in self.beam_result]).sum(axis=0))
+            total_M = self._to_main_grid(np.array([a.mom_src.total for a in self.beam_result]).sum(axis=0))
 
-            self.combined_beam_src_total = self.BeamSources(np.array([a.part_src.total for a in self.beam_result]).sum(axis=0),
-                                          np.array([a.en_src.total for a in self.beam_result]).sum(axis=0),
-                                          np.array([a.mom_src.total for a in self.beam_result]).sum(axis=0))
+            self.combined_beam_src_total = self.BeamSources(OneDProfile(core.psi, total_S, core.R, core.Z),
+                                                            OneDProfile(core.psi, total_Q, core.R, core.Z),
+                                                            OneDProfile(core.psi, total_M, core.R, core.Z))
 
-            self.combined_beam_src_lost = self.BeamSources(np.array([a.part_src.lost for a in self.beam_result]).sum(axis=0),
-                                          np.array([a.en_src.lost for a in self.beam_result]).sum(axis=0),
-                                          np.array([a.mom_src.lost for a in self.beam_result]).sum(axis=0))
+            lost_S = self._to_main_grid(np.array([a.part_src.lost for a in self.beam_result]).sum(axis=0))
+            lost_Q = self._to_main_grid(np.array([a.en_src.lost for a in self.beam_result]).sum(axis=0))
+            lost_M = self._to_main_grid(np.array([a.mom_src.lost for a in self.beam_result]).sum(axis=0))
 
-            self.combined_beam_src_kept = self.BeamSources(np.array([a.part_src.kept for a in self.beam_result]).sum(axis=0),
-                                          np.array([a.en_src.kept for a in self.beam_result]).sum(axis=0),
-                                          np.array([a.mom_src.kept for a in self.beam_result]).sum(axis=0))
+            self.combined_beam_src_lost = self.BeamSources(OneDProfile(core.psi, lost_S, core.R, core.Z),
+                                                           OneDProfile(core.psi, lost_Q, core.R, core.Z),
+                                                           OneDProfile(core.psi, lost_M, core.R, core.Z))
 
-            self.combined_beam_src_dens_total = self.BeamSources(np.array([a.part_src_dens.total for a in self.beam_result]).sum(axis=0),
-                                          np.array([a.en_src_dens.total for a in self.beam_result]).sum(axis=0),
-                                          np.array([a.mom_src_dens.total for a in self.beam_result]).sum(axis=0))
+            kept_S = self._to_main_grid(np.array([a.part_src.lost for a in self.beam_result]).sum(axis=0))
+            kept_Q = self._to_main_grid(np.array([a.en_src.lost for a in self.beam_result]).sum(axis=0))
+            kept_M = self._to_main_grid(np.array([a.mom_src.lost for a in self.beam_result]).sum(axis=0))
 
-            self.combined_beam_src_dens_lost = self.BeamSources(np.array([a.part_src_dens.lost for a in self.beam_result]).sum(axis=0),
-                                          np.array([a.en_src_dens.lost for a in self.beam_result]).sum(axis=0),
-                                          np.array([a.mom_src_dens.lost for a in self.beam_result]).sum(axis=0))
+            self.combined_beam_src_kept = self.BeamSources(OneDProfile(core.psi, kept_S, core.R, core.Z),
+                                                           OneDProfile(core.psi, kept_Q, core.R, core.Z),
+                                                           OneDProfile(core.psi, kept_M, core.R, core.Z))
 
-            self.combined_beam_src_dens_kept = self.BeamSources(np.array([a.part_src_dens.kept for a in self.beam_result]).sum(axis=0),
-                                          np.array([a.en_src_dens.kept for a in self.beam_result]).sum(axis=0),
-                                          np.array([a.mom_src_dens.kept for a in self.beam_result]).sum(axis=0))
+            dens_total_S = self._to_main_grid(np.array([a.part_src_dens.total for a in self.beam_result]).sum(axis=0))
+            dens_total_Q = self._to_main_grid(np.array([a.en_src_dens.total for a in self.beam_result]).sum(axis=0))
+            dens_total_M = self._to_main_grid(np.array([a.mom_src_dens.total for a in self.beam_result]).sum(axis=0))
+
+            self.combined_beam_src_dens_total = self.BeamSources(OneDProfile(core.psi, dens_total_S, core.R, core.Z),
+                                                                OneDProfile(core.psi, dens_total_Q, core.R, core.Z),
+                                                                OneDProfile(core.psi, dens_total_M, core.R, core.Z))
+
+            dens_lost_S = self._to_main_grid(np.array([a.part_src_dens.lost for a in self.beam_result]).sum(axis=0))
+            dens_lost_Q = self._to_main_grid(np.array([a.en_src_dens.lost for a in self.beam_result]).sum(axis=0))
+            dens_lost_M = self._to_main_grid(np.array([a.mom_src_dens.lost for a in self.beam_result]).sum(axis=0))
+
+            self.combined_beam_src_dens_lost = self.BeamSources(OneDProfile(core.psi, dens_lost_S, core.R, core.Z),
+                                                                OneDProfile(core.psi, dens_lost_Q, core.R, core.Z),
+                                                                OneDProfile(core.psi, dens_lost_M, core.R, core.Z))
+
+            dens_kept_S = self._to_main_grid(np.array([a.part_src_dens.kept for a in self.beam_result]).sum(axis=0))
+            dens_kept_Q = self._to_main_grid(np.array([a.en_src_dens.kept for a in self.beam_result]).sum(axis=0))
+            dens_kept_M = self._to_main_grid(np.array([a.mom_src_dens.kept for a in self.beam_result]).sum(axis=0))
+
+            self.combined_beam_src_dens_kept = self.BeamSources(OneDProfile(core.psi, dens_kept_S, core.R, core.Z),
+                                                                OneDProfile(core.psi, dens_kept_Q, core.R, core.Z),
+                                                                OneDProfile(core.psi, dens_kept_M, core.R, core.Z))
         except Exception as e:
             raise Exception("NBI module failed to create main beam profiles with error: %s" % str(e))
 
-    def load_beams(self, inp, core, iol):
+    def load_beams(self, inp, core: Core, iol):
         try:
             self.beam_result = []
             with open(os.path.join(os.getcwd(), inp.beams_out_json), "r") as f:
@@ -101,16 +128,14 @@ class BeamDeposition(PlotBase):
                                                                         core.kappa_vals,
                                                                         core.a,
                                                                         core.R0_a,
-                                                                        UnivariateSpline(core.rho[:, 0],
-                                                                                         core.T_fsa.e.kev)(
+                                                                        UnivariateSpline(core.rho[:, 0], core.T.e.kev.to1D())(
                                                                             self.beams_space),
                                                                         UnivariateSpline(core.rho[:, 0],
-                                                                                         core.T_fsa.i.kev)(
+                                                                                         core.T.i.kev.to1D())(
                                                                             self.beams_space),
-                                                                        UnivariateSpline(core.rho[:, 0], core.n_fsa.e)(
+                                                                        UnivariateSpline(core.rho[:, 0], core.n.e.to1D())(
                                                                             self.beams_space),
-                                                                        UnivariateSpline(core.rho[:, 0],
-                                                                                         core.z_eff_fsa)(
+                                                                        UnivariateSpline(core.rho[:, 0], core.z_eff.to1D())(
                                                                             self.beams_space),
                                                                         beam[0],
                                                                         beam[1],
@@ -131,7 +156,7 @@ class BeamDeposition(PlotBase):
         except Exception as e:
             raise Exception("Failed to load beams output file: %s" % str(e))
 
-    def call_beams(self, inp, core, iol):
+    def call_beams(self, inp, core: Core, iol):
         # Call signature: def calcHofRho(rho, r2vol, dVdr, rtang, shaf_shift, kappa_vals, beamHeight, beamWidth, gaussR, Te, TC, R0, ne, beamE, Zeff, a)
 
         try:
@@ -158,14 +183,14 @@ class BeamDeposition(PlotBase):
                                                              core.shaf_shift,
                                                              core.kappa_vals,
                                                              core.a,
-                                                             core.R0_g,
-                                                             UnivariateSpline(core.rho[:, 0], core.T_fsa.e.kev)(
+                                                             core.R0_a,
+                                                             UnivariateSpline(core.rho[:, 0], core.T.e.kev.to1D())(
                                                                  self.beams_space),
-                                                             UnivariateSpline(core.rho[:, 0], core.T_fsa.i.kev)(
+                                                             UnivariateSpline(core.rho[:, 0], core.T.i.kev.to1D())(
                                                                  self.beams_space),
-                                                             UnivariateSpline(core.rho[:, 0], core.n_fsa.e)(
+                                                             UnivariateSpline(core.rho[:, 0], core.n.e.to1D())(
                                                                  self.beams_space),
-                                                             UnivariateSpline(core.rho[:, 0], core.z_eff_fsa)(
+                                                             UnivariateSpline(core.rho[:, 0], core.z_eff.to1D())(
                                                                  self.beams_space),
                                                              d['rtang'],
                                                              d['beamWidth'],
@@ -223,27 +248,5 @@ class BeamDeposition(PlotBase):
         except:
             print("No Beams JSON file found. Using single-beam data")
 
-
-    def plot_S_nbi(self):
-        fig = self._plot_base(self.combined_beam_src_kept.Snbi, title="NBI Particle Source", yLabel=r'$S_{nbi}[\#/{m s}]$')
-        return fig
-
-    def plot_Q_nbi(self):
-        fig = self._plot_base(self.combined_beam_src_kept.Qnbi, title="NBI Energy Source", yLabel=r'$Q_{nbi}[W/m]$')
-        return fig
-
-    def plot_M_nbi(self):
-        fig = self._plot_base(self.combined_beam_src_kept.Qnbi, title="NBI Momentum Source", yLabel=r'$S_{nbi}[M/s}]$')
-        return fig
-
-    def plot_S_dens_nbi(self):
-        fig = self._plot_base(self.combined_beam_src_dens_kept.Snbi, title="NBI Particle Source Density", yLabel=r'$S_{nbi}[\#/{m^3 s}]$')
-        return fig
-
-    def plot_Q_dens_nbi(self):
-        fig = self._plot_base(self.combined_beam_src_dens_kept.Qnbi, title="NBI Energy Source Density", yLabel=r'$Q_{nbi}[W/{m^3}]$')
-        return fig
-
-    def plot_M_dens_nbi(self):
-        fig = self._plot_base(self.combined_beam_src_dens_kept.Mnbi, title="NBI Momentum Source Density", yLabel=r'$S_{nbi}[\frac{M}{s}]$')
-        return fig
+    def _to_main_grid(self, val):
+        return np.array(interp1d(self.beams_space, val, kind="linear")(self._core.rho[:, 0]))

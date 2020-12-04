@@ -27,5 +27,5 @@ def calc_coul_log(z1, z2, T_J, n2):
 
 def calc_coul_log_j_k(z_j, z_k, T_j, n_k):
     # Coulomb logarithm calculation in GTEDGE PARAM subroutine.
-    coul_log = np.log(12 * pi * (T_j**1.5) * ((eps_0/e)**1.5) / (np.sqrt(n_k) * (z_k**2.0) * z_j))
+    coul_log = np.log(12 * pi * (T_j**1.5) * ((eps_0/e)**1.5) / (np.sqrt(n_k.val) * (z_k**2.0) * z_j))
     return coul_log

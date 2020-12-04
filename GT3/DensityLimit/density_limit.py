@@ -28,7 +28,7 @@ class DensityLimit:
             return numerator / denominator
 
         ni = core.n.i[:, 0]
-        Ti = core.T.i.J[:, 0]
+        Ti = core.T.i.J.to1D()
         n0 = ni[0]
         n_av = av(ni)
         f = n0 / n_av

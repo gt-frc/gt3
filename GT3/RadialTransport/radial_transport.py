@@ -28,8 +28,9 @@ from GT3.RadialTransport.Functions.CalcErIOL import calc_Er_iol
 from GT3.RadialTransport.Functions.CalcVpol import calc_vpol
 from GT3.RadialTransport.Functions.CalcCXCool import calc_cxcool
 import GT3.constants as constants
+from GT3.Core.Functions.ProfileClasses import OneDProfile, TemperatureProfiles, DensityProfiles, PressureProfiles, Flux
 from GT3.utilities.PlotBase import PlotBase
-from GT3.utilities.PlotBase import MARKERSIZE
+from GT3 import Core, BeamDeposition
 
 eps_0 = constants.epsilon_0
 e = constants.elementary_charge
@@ -44,6 +45,19 @@ ch_c = e * z_c  # charge of carbon
 
 E_phi = 0.04  # toroidal electrostatic potential
 
+class RadTransTemperatureProfiles(TemperatureProfiles):
+
+    def __init__(self, core: Core, *args, **kwargs):
+        super().__init__(core.psi, core.R, core.Z, ProfileType=OneDProfile, *args, **kwargs)
+
+class RadTransDensityProfiles(DensityProfiles):
+    def __init__(self, core: Core, *args, **kwargs):
+        super().__init__(core.psi, core.R, core.Z, ProfileType=OneDProfile, *args, **kwargs)
+
+class RadTransPressureProfiles(PressureProfiles):
+    def __init__(self, core: Core, *args, **kwargs):
+        super().__init__(core.psi, core.R, core.Z, ProfileType=OneDProfile, *args, **kwargs)
+
 
 def viscCalc(data, core):
     """
@@ -51,9 +65,9 @@ def viscCalc(data, core):
     :type core: Core
     :type data: RadialTransport
     """
-    fp = core.B_p_fsa / core.B_t_fsa
-    ni = core.n_fsa.i
-    Ti = core.T_fsa.i.J
+    fp = core.B.pol.fsa / core.B.tor.fsa
+    ni = core.n.i.fsa
+    Ti = core.T.i.J.fsa
     q = core.q[:, 0]
     R0 = core.R0_a
     vth = data.vpol_D[0]
@@ -67,8 +81,8 @@ def viscCalc(data, core):
     #eta0 = [a * m_d * b * c * core.R0_a * f1 for a, b, c in zip(n.i, vth, core.q[:, 0])]
     eta0 = ni * m_d * vth * q * R0 * geom
     #eta4 = [a * m_d * c * ch_d / (ch_d * abs(b)) for a, b, c in zip(n.i, core.B_t_fsa, T.i.ev)]
-    eta4 = ni * m_d * Ti / (ch_d * abs(core.B_t_fsa))
-    vrad = data.gamma_diff_D / ni
+    eta4 = ni * m_d * Ti / (ch_d * abs(core.B.tor.fsa.val))
+    vrad = data.gamma.D.diff / ni
 
     # a = vtor    b = fp   c = eta0
     # d = vrad    f = vthet g = eta 4
@@ -80,44 +94,39 @@ def viscCalc(data, core):
     res = res - 0.5 * vpol * vpolS * (eta0 * vrad + eta4 * (vtor + .5 * vpol))
     return res / R0
 
-def calc_chi_e(Qe, gamma_diff_D, gamma_C, n, L, T):
+def calc_chi_e(Qe, gamma_diff_D, gamma_C, n, T):
     gameltemp = 1.0 * gamma_diff_D + 6.0 * gamma_C   #OHHHH gamma electron!!! HA HA HA HA WE DON'T KNOW WHAT THE FUCK GAMMA_C IS
-
-    return L.T.e * ((Qe / (ch_d * n.e * T.e.ev)) - 2.5 * gameltemp / n.e)
+    return T.e.J.L * ((Qe / (ch_d * n.e * T.e.ev)) - 2.5 * gameltemp / n.e.val)
 
 def calc_external_term(M_phi, n_j, ch_j, B_p):
     ext_term = (-M_phi - (n_j * ch_j * E_phi)) / (n_j * ch_j * B_p)
     return ext_term
 
-
 def calc_poloidal_term(n_j, m_j, ch_j, nu_jk, nu_dj, B_t, B_p, v_pol_j):
     pol_term = (n_j * m_j * (nu_jk + nu_dj) * B_t * v_pol_j) / (n_j * ch_j * (B_p ** 2.0))
     return pol_term
-
 
 def calc_radial_E_field_term(n_j, m_j, ch_j, nu_jk, nu_dj, Er, B_p):
     Er_term = (n_j * m_j * (nu_jk + nu_dj) * Er) / (n_j * ch_j * (B_p ** 2.0))
     return Er_term
 
-
 def calc_toroidal_term(n_j, m_j, ch_j, nu_jk, B_p, v_tor_k):
     tor_term = (-n_j * m_j * nu_jk * v_tor_k) / (n_j * ch_j * B_p)
     return tor_term
-
 
 def calc_pinch_velocity(ext_term, pol_term, Er_term, tor_term):
     vr_pinch = ext_term + pol_term + Er_term + tor_term
     return vr_pinch
 
-
 class RadialTransport(PlotBase):
 
-    def __init__(self, core, iol, nbi, iolFlag=True, neutFlag=True):
+    def __init__(self, core, iol, nbi: BeamDeposition, iolFlag=True, neutFlag=True):
         """
 
         :type nbi: BeamDeposition
         :type core: Core
         """
+        super().__init__()
         sys.dont_write_bytecode = True
 
         ##############################################################
@@ -125,12 +134,7 @@ class RadialTransport(PlotBase):
         ##############################################################
 
         # prepare beams object
-        corePatch(core, neutFlag)  # Patch to update values not brought in via ffiles (ni, zeff)
-        #neutPatch(core)
-        try:
-            dn_dr = core.dn_dr_fsa
-        except:
-            dn_dr = None
+        #corePatch(core, neutFlag)  # Patch to update values not brought in via ffiles (ni, zeff)
 
         # prepare core and iol quantities
         r = core.r.T[0]  # TODO: Should this be a flux surface average?
@@ -146,17 +150,41 @@ class RadialTransport(PlotBase):
         self.iolFlag = iolFlag
 
 
-        self.izn_rate = core.izn_rate_fsa  # TODO: Should this be a flux surface average or a flux surface total?
-        self.cool_rate = core.cool_rate_fsa  # TODO: Should this be a flux surface average or a flux surface total?
-        n = core.n_fsa
+        self.izn_rate = core.izn_rate.tot.fsa  # TODO: Should this be a flux surface average or a flux surface total?
+        self.cool_rate = core.cool_rate.fsa  # TODO: Should this be a flux surface average or a flux surface total?
 
-        T = core.T_fsa
-        L = core.L_fsa
-        B_p = core.B_p_fsa
-        B_t = core.B_t_fsa
-        Er = core.E_r_fsa  # * 1000.0 # Piper Changes: Convert input Er from kV/m to V/m
-        Lp = core.Lp_fsa
-        dp_dr = core.dp_dr_fsa
+        n = RadTransDensityProfiles(self.core,
+                                    i=self.core.n.i.fsa,
+                                    e=self.core.n.e.fsa,
+                                    C=self.core.n.C.fsa,
+                                    ns=self.core.n.n.s.fsa,
+                                    nt=self.core.n.n.t.fsa)
+
+
+        T = RadTransTemperatureProfiles(self.core,
+                                        i=self.core.T.i.kev.fsa,
+                                        e=self.core.T.e.kev.fsa,
+                                        C=self.core.T.C.kev.fsa)
+
+        p = RadTransPressureProfiles(self.core,
+                                     i=self.core.p.i.fsa,
+                                     e=self.core.p.e.fsa,
+                                     C=self.core.p.C.fsa)
+
+
+        B_p = core.B.pol.fsa
+        B_t = core.B.tor.fsa
+        Er = core.E_r.fsa  # * 1000.0 # Piper Changes: Convert input Er from kV/m to V/m
+
+        # Put some information in instances for debugging purposes. The use of n, T, p, etc. makes writing equations
+        # easier.
+        self._n = n
+        self._T = T
+        self._p = p
+        self._Bp = B_p
+        self._Bt = B_t
+        self._Er = Er
+
 
         # prepare iol quantities
         F_orb_d = iol.forb_d_therm_1D
@@ -180,40 +208,44 @@ class RadialTransport(PlotBase):
         # particle balance
         ##############################################################
 
-        self.part_src_nbi = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_total.Snbi)(self.rhor))
-        self.part_src_nbi_tot = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_total.Snbi)(self.rhor))
-        self.part_src_nbi_lost = np.array(interp1d(nbi.beams_space, nbi.combined_beam_src_dens_lost.Snbi, kind="linear")(self.rhor))
-        self.part_src_nbi_kept = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_kept.Snbi)(self.rhor))
+        self.part_src_nbi = nbi.combined_beam_src_dens_total.Snbi
+        self.part_src_nbi_tot = nbi.combined_beam_src_dens_total.Snbi
+        self.part_src_nbi_lost = nbi.combined_beam_src_dens_lost.Snbi
+        self.part_src_nbi_kept = nbi.combined_beam_src_dens_kept.Snbi
 
         # Piper changes: Changed names of particle and heat flux so it's easier to tell what method is used.
-        self.gamma_diff_D = calc_gamma_diff_method(r, core.a, self.part_src_nbi, self.part_src_nbi_lost, self.izn_rate, core.dVdrho,
-                                                   iol_adjusted=iolFlag,
-                                                   F_orb=F_orb_d, neutFlag=neutFlag)  # Differential Cylindrical Method
-        self.gamma_int_D = calc_gamma_int_method(r, self.part_src_nbi_tot, self.part_src_nbi_lost, self.izn_rate, iol_adjusted=iolFlag,
-                                                 F_orb=F_orb_d, neutFlag=neutFlag)  # Integral Cylindrical Method
-        self.gamma_C = np.zeros(self.gamma_int_D.shape)
+        gamma_diff_D = calc_gamma_diff_method(r, core.a, self.part_src_nbi, self.part_src_nbi_lost, self.izn_rate, core.dVdrho,
+                                              iol_adjusted=iolFlag,
+                                              F_orb=F_orb_d, neutFlag=neutFlag)  # Differential Cylindrical Method
+        gamma_int_D = calc_gamma_int_method(r, self.part_src_nbi_tot, self.part_src_nbi_lost, self.izn_rate, iol_adjusted=iolFlag,
+                                            F_orb=F_orb_d, neutFlag=neutFlag)  # Integral Cylindrical Method
+
+        self.gamma = Flux(core,
+                          D_diff=gamma_diff_D,
+                          D_int=gamma_int_D,
+                          C_diff=np.zeros(gamma_int_D.shape),
+                          C_int=np.zeros(gamma_int_D.shape))
 
         # Piper changes: Calculate radial return current (Uses integral cylindrical gamma)
-        self.jr_iol = calc_return_cur(r, self.part_src_nbi_lost, self.gamma_int_D, ch_d, iol_adjusted=iolFlag,
+        self.jr_iol = calc_return_cur(r, self.part_src_nbi_lost, self.gamma.D.int, ch_d, iol_adjusted=iolFlag,
                                       F_orb=F_orb_d)
         self.Er_iol, self.iol_term, self.diamag_term, self.diamag_term_orig, self.neut_dens_term = calc_Er_iol(n.i, n.e,
                                                                                                                m_d, n.n,
                                                                                                                B_t,
-                                                                                                               Lp.i,
-                                                                                                               dp_dr.i,
+                                                                                                               p,
                                                                                                                e * z_d,
                                                                                                                T.i,
-                                                                                                               dn_dr,
+                                                                                                               n.n.tot.derivative(),
                                                                                                                self.izn_rate,
                                                                                                                self.jr_iol)
 
         ##############################################################
         # momentum balance
         ##############################################################
-        self.mom_src_nbi = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_total.Mnbi)(self.rhor))
-        self.mom_src_nbi_tot = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_total.Mnbi)(self.rhor))
-        self.mom_src_nbi_lost = np.array(interp1d(nbi.beams_space, nbi.combined_beam_src_dens_lost.Mnbi, kind="linear")(self.rhor))
-        self.mom_src_nbi_kept = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_kept.Mnbi)(self.rhor))
+        self.mom_src_nbi = nbi.combined_beam_src_dens_total.Mnbi
+        self.mom_src_nbi_tot = nbi.combined_beam_src_dens_total.Mnbi
+        self.mom_src_nbi_lost = nbi.combined_beam_src_dens_lost.Mnbi
+        self.mom_src_nbi_kept = nbi.combined_beam_src_dens_kept.Mnbi
 
         # calculate momentum source from anomalous torque
         self.mom_src_anom = np.zeros(r.shape)  # TODO: Anomolous torque
@@ -228,14 +260,14 @@ class RadialTransport(PlotBase):
 
         # calculate carbon toroidal rotation
         self.vtor_C_intrin = calc_intrin_rot(M_orb_c, T.i.J, m_c)
-        self.vtor_C_total = core.v_1D.tor.C
+        self.vtor_C_total = core.v.C.tor.fsa
         self.vtor_C_fluid = self.vtor_C_total - self.vtor_C_intrin
 
         # calculate deuterium toroidal rotation
         self.vtor_D_intrin = calc_intrin_rot(M_orb_d, T.i.J, m_d)
 
         # Piper Changes: Changed core.v_1D.tor.C.any() to core.v_1D.tor.D.any(). Carbon velocity should be a given.
-        if not core.v_1D.tor.D.any():  # if array is all zeros, then no input. Use perturbation theory.
+        if not core.v.i.tor.isNonZero():  # if array is all zeros, then no input. Use perturbation theory.
             self.vtor_D_total = calc_vtor_d_pert(self.vtor_C_total,
                                                  self.vtor_C_intrin,
                                                  self.vtor_D_intrin,
@@ -244,21 +276,21 @@ class RadialTransport(PlotBase):
                                                  n,
                                                  T,
                                                  B_p,
-                                                 self.gamma_int_D,
-                                                 self.gamma_C)  # Piper Changes: Uses integral cylindrical gamma
+                                                 self.gamma.D.int,
+                                                 self.gamma.C.int)  # Piper Changes: Uses integral cylindrical gamma
             # Piper changes: added a message to let the user know the D velocity was calculated.
             print('Deuterium toroidal velocity calculated from perturbation theory.')
         else:
             # Piper Changes: For some reason this used to set D velocity to C velocity,
             # which overwrote the input D velocity.
-            self.vtor_D_total = core.v_1D.tor.D
+            self.vtor_D_total = core.v.i.tor.fsa
 
         self.vtor_fluid_D = self.vtor_D_total - self.vtor_D_intrin
 
         # calculate carbon and deuterium poloidal rotation
         try:
-            self.vpol_C = core.v_1D.pol.C
-            self.vpol_D, self.vpol_D_assum, self.vpol_D_alt = calc_vpol(Er, self.vtor_D_total, Lp, T, n, z_d, B_t, B_p,
+            self.vpol_C = core.v.C.pol.fsa
+            self.vpol_D, self.vpol_D_assum, self.vpol_D_alt = calc_vpol(Er, self.vtor_D_total, p, T, n, z_d, B_t, B_p,
                                                                         self.vtor_C_total, self.vpol_C, z_c)
         except:
             self.vpol_D = self.vpol_C / 0.4
@@ -266,10 +298,10 @@ class RadialTransport(PlotBase):
             pass
 
         # Nick Changes: TEMPORARY - Calculate Er using pressure gradient vs. scale length.
-        self.Er_calc_D, self.Er_pres_term_D, self.Er_vxb_term_D = calc_Er_mom_bal(n.i, e * z_d, dp_dr.i, T.i, Lp.i,
+        self.Er_calc_D, self.Er_pres_term_D, self.Er_vxb_term_D = calc_Er_mom_bal(n.i, e * z_d, p.i.derivative(),
                                                                                   self.vtor_D_total, self.vpol_D, B_t,
                                                                                   B_p)
-        self.Er_calc_C, self.Er_pres_term_C, self.Er_vxb_term_C = calc_Er_mom_bal(n.C, e * z_c, dp_dr.C, T.C, Lp.C,
+        self.Er_calc_C, self.Er_pres_term_C, self.Er_vxb_term_C = calc_Er_mom_bal(n.C, e * z_c, p.C.derivative(),
                                                                                   self.vtor_C_total, self.vpol_C, B_t,
                                                                                   B_p)
 
@@ -277,8 +309,8 @@ class RadialTransport(PlotBase):
         #mbal_rhs_D = calc_mbal_rhs(self.mom_src_tor_D_tot, z_d, n.i, B_p,
         #                           self.gamma_int_D)  # Piper Changes: Uses integral cylindrical gamma
         mbal_rhs_D = calc_mbal_rhs(self.mom_src_tor_D_tot, z_d, n.i, B_p,
-                                   self.gamma_diff_D)  # Piper Changes: Uses integral cylindrical gamma
-        mbal_rhs_C = calc_mbal_rhs(self.mom_src_tor_C_tot, z_c, n.C, B_p, self.gamma_C)
+                                   self.gamma.D.diff)  # Piper Changes: Uses integral cylindrical gamma
+        mbal_rhs_C = calc_mbal_rhs(self.mom_src_tor_C_tot, z_c, n.C, B_p, self.gamma.C.int)
 
         nu_c_DC = 1 / calc_t90(m_d, m_c, z_d, z_c, n.C, T.i.J)
         nu_c_CD = 1 / calc_t90(m_c, m_d, z_c, z_d, n.i, T.i.J)
@@ -315,15 +347,10 @@ class RadialTransport(PlotBase):
 
         # I don't honestly understand why anything but densities are used anywhere. Changed to just use densities.
 
-        part_src_nbi = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_total.Snbi)(self.rhor))
-        part_src_nbi_tot = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_total.Snbi)(self.rhor))
-        part_src_nbi_lost = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_lost.Snbi)(self.rhor))
-        part_src_nbi_kept = np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_kept.Snbi)(self.rhor))
-
-        self.en_src_nbi_i = 0.5 * np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_total.Qnbi)(self.rhor))
-        self.en_src_nbi_i_tot = 0.5 * np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_total.Qnbi)(self.rhor))
-        self.en_src_nbi_i_lost = 0.5 * np.array(interp1d(nbi.beams_space, nbi.combined_beam_src_dens_lost.Qnbi, kind="linear")(self.rhor))
-        self.en_src_nbi_i_kept = 0.5 * np.array(UnivariateSpline(nbi.beams_space, nbi.combined_beam_src_dens_kept.Qnbi)(self.rhor))
+        self.en_src_nbi_i = OneDProfile(core.psi, 0.5 * nbi.combined_beam_src_dens_total.Qnbi, core.R, core.Z)
+        self.en_src_nbi_i_tot = OneDProfile(core.psi, 0.5 * nbi.combined_beam_src_dens_total.Qnbi, core.R, core.Z)
+        self.en_src_nbi_i_lost = OneDProfile(core.psi, 0.5 * nbi.combined_beam_src_dens_lost.Qnbi, core.R, core.Z)
+        self.en_src_nbi_i_kept = OneDProfile(core.psi, 0.5 * nbi.combined_beam_src_dens_kept.Qnbi, core.R, core.Z)
 
         ################################################################################################################
         #
@@ -333,64 +360,62 @@ class RadialTransport(PlotBase):
         #
         ################################################################################################################
 
-        self.en_src_nbi_e = self.en_src_nbi_i_kept
+        self.en_src_nbi_e = OneDProfile(core.psi, self.en_src_nbi_i_kept, core.R, core.Z)
         self.cxcool = calc_cxcool(core, n, T)
         self.qie = calc_qie(n, T, ion_species='D')
 
         # calculate radial heat flux. Piper changes: Separated heat flux equations into differential and integral cylindrical methods.
-        self.Qi_diff = calc_Qi_diff_method(r, core.a, self.cxcool, self.qie, self.en_src_nbi_i_tot,
+        Qi_diff = calc_Qi_diff_method(r, core.a, self.cxcool, self.qie, self.en_src_nbi_i_tot,
                                            self.en_src_nbi_i_lost, core.dVdrho, iol_adjusted=iolFlag,
                                            E_orb=E_orb_d)  # previously called qheat. Differential Method.
 
-        self.Qi_int = calc_Qi_int_method(r, n, T, self.qie, self.en_src_nbi_i_kept, self.cool_rate, iol_adjusted=iolFlag,
+        Qi_int = calc_Qi_int_method(r, n, T, self.qie, self.en_src_nbi_i_kept, self.cool_rate, iol_adjusted=iolFlag,
                                                    E_orb=E_orb_d)  # Integral method.
-        self.Qe_diff = calc_Qe_diff_method(r, core.a, self.en_src_nbi_e, self.cool_rate, calc_qie(n, T))  # Differential Method.
+        Qe_diff = calc_Qe_diff_method(r, core.a, self.en_src_nbi_e, self.cool_rate, calc_qie(n, T))  # Differential Method.
 
-        self.Qe_int = calc_Qe_int_method(r, n, T, self.en_src_nbi_e, self.cool_rate)  # Integral method.
+        Qe_int = calc_Qe_int_method(r, n, T, self.en_src_nbi_e, self.cool_rate)  # Integral method.
 
-        self.conv15 = UnivariateSpline(core.r[:, 0], 3. * .5 * ch_d * self.gamma_diff_D * T.i.ev, k=3, s=0)(core.r[:, 0])
-        self.conv25 = UnivariateSpline(core.r[:, 0], 5. * .5 * ch_d * self.gamma_diff_D * T.i.ev, k=3, s=0)(core.r[:, 0])
+        self.Q = Flux(core, label=r"$Q_r",
+                      D_int=Qi_int,
+                      D_diff=Qi_diff,
+                      e_int=Qe_int,
+                      e_diff=Qe_diff)
 
-        self.heatvisc = viscCalc(self, core)
+        conv15 = UnivariateSpline(core.r[:, 0], 3. * .5 * ch_d * self.gamma.D.diff * T.i.ev, k=3, s=0)(core.r[:, 0])
+        conv25 = UnivariateSpline(core.r[:, 0], 5. * .5 * ch_d * self.gamma.D.diff * T.i.ev, k=3, s=0)(core.r[:, 0])
+        hvisc = viscCalc(self, core)
 
-        self.heatin = UnivariateSpline(core.r[:, 0],
-                                       .5 * self.gamma_diff_D * m_d * (self.vtor_D_total ** 2 + self.vpol_D ** 2), k=3,
+
+        heatin = UnivariateSpline(core.r[:, 0],
+                                       .5 * self.gamma.D.diff * m_d * (self.vtor_D_total ** 2 + self.vpol_D ** 2), k=3,
                                        s=0)(core.r[:, 0])  # TODO: Provide logic that uses vtor_D_intrin/fluid depending on IOL Switch, currently too small to matter
+
+        self.conv15 = OneDProfile(self.core.psi, conv15, self.core.R, self.core.Z)
+        self.conv25 = OneDProfile(self.core.psi, conv25, self.core.R, self.core.Z)
+        self.heatvisc = OneDProfile(self.core.psi, hvisc, self.core.R, self.core.Z)
+        self.heatin = OneDProfile(self.core.psi, heatin, self.core.R, self.core.Z)
 
         self.chi = namedtuple('chi', 'i e')(
             namedtuple('i', 'chi1 chi2 chi3 chi4')(
-                (self.Qi_diff) * L.T.i / (n.i * T.i.ev * ch_d),
-                (self.Qi_diff - self.conv25) * L.T.i / (n.i * T.i.ev * ch_d),
-                (self.Qi_diff - self.conv25 - self.heatin) * L.T.i / (n.i * T.i.ev * ch_d),
-                (self.Qi_diff - self.conv25 - self.heatin - self.heatvisc) * L.T.i / (n.i * T.i.ev * ch_d)
-            ), calc_chi_e(self.Qe_diff, self.gamma_diff_D, self.gamma_C, n, L, T)
+                (self.Q.D.diff) * T.i.J.L / (n.i * T.i.ev * ch_d),
+                (self.Q.D.diff - self.conv25) * T.i.kev.L / (n.i * T.i.ev * ch_d),
+                (self.Q.D.diff - self.conv25 - self.heatin) * T.i.J.L / (n.i * T.i.ev * ch_d),
+                (self.Q.D.diff - self.conv25 - self.heatin - self.heatvisc) * T.i.J.L / (n.i * T.i.ev * ch_d)
+            ), calc_chi_e(self.Q.e.diff, self.gamma.D.diff, self.gamma.C.diff, n, T)
         )
 
-        self.D_i = m_d * core.T_fsa.i.J * (self.nu_c_j_k * (1. - ch_d / ch_c) + self.nu_drag_D) / ((ch_d * core.B_p_fsa)**2)
+        self.D_i = m_d * T.i.J * (self.nu_c_j_k * (1. - ch_d / ch_c) + self.nu_drag_D) / ((ch_d * core.B.pol.fsa)**2)
 
     def plot_chi_terms(self, edge=True):
 
         fig = self._plot_base(self.conv25, title="", yLabel="q[W/m^2]", edge=edge)
-        fig.scatter(self.rhor, self.heatin, color="blue", s=MARKERSIZE)
-        fig.scatter(self.rhor, self.heatvisc, color="purple", s=MARKERSIZE)
-        fig.scatter(self.rhor, self.Qi_diff, color="black", s=MARKERSIZE)
+        fig.scatter(self.rhor, self.heatin, color="blue", s=self._markerSize)
+        fig.scatter(self.rhor, self.heatvisc, color="purple", s=self._markerSize)
+        fig.scatter(self.rhor, self.Q.D.diff, color="black", s=self._markerSize)
         #fig.legend([r"$q^{conv}$", r"$q^{heatin}$", r"$q^{tot}$"])
         fig.legend([r"$q^{conv}$", r"$q^{heatin}$", r"$q^{visc}$", r"$q^{tot}$"])
         return fig
 
-    def plot_gamma(self, edge=True):
-        fig = self._plot_base(self.gamma_int_D, title="Radial particle flux", yLabel=r"$\Gamma[W/m^3]$", edge=edge)
-        fig.scatter(self.rhor, self.gamma_diff_D, color="blue", s=MARKERSIZE)
-        fig.legend([r"$\Gamma_{r, int}$", r"$\Gamma_{r, diff}$"])
-        return fig
-
-    def plot_gamma_diff(self, edge=True):
-        fig = self._plot_base(self.gamma_diff_D, title="Radial particle flux", yLabel=r"$\Gamma[W/m^3]$", edge=edge)
-        return fig
-
-    def plot_gamma_int(self, edge=True):
-        fig = self._plot_base(self.gamma_int_D, title="Radial particle flux", yLabel=r"$\Gamma[W/m^3]$", edge=edge)
-        return fig
 
     def plot_gamma_diff_calc(self):
         calc_gamma_diff_method(self.rhor * self.core.a,
@@ -403,14 +428,7 @@ class RadialTransport(PlotBase):
                                F_orb=self.iol.forb_d_therm_1D,
                                verbose=True)
 
-    def plot_Q_i(self, edge=True):
-        fig = self._plot_base(self.Qi_int, yLabel=r'$Q_i [W/m^2]$', title="Ion heat flux", edge=edge)
-        fig.scatter(self.Qi_diff, color="black")
-        fig.legend([r"$Q^{int}_i$", r"$Q^{diff}_i$"])
-        return fig
 
-    def plot_Q_e_int(self, edge=True):
-        return self._plot_base(self.Qe_int, yLabel=r'$Q_e^{int} [W/m^2]$', title="Electron heat flux", edge=edge)
 
     def plot_q_diff_calc(self):
         calc_Qi_diff_method(self.rhor * self.core.a,
@@ -442,44 +460,12 @@ class RadialTransport(PlotBase):
     def plot_nu_ej(self, edge=True):
         return self._plot_base(self.nu_c_e_j, yLabel=r'$\nu_{e,j}$', title="Electron-Ion Collision frequency", edge=edge)
 
-    def plot_ni(self, edge=True):
-        return self._plot_base(self.core.n_fsa.i, yLabel=r'$n_i[\#/m^3]$', title="Ion Density", edge=edge)
-
-    def plot_ne(self, edge=True):
-        return self._plot_base(self.core.n_fsa.e, yLabel=r'$n_e[\#/m^3]$', title="Electron Density", edge=edge)
-
-    def plot_n(self, edge=True):
-        fig = self._plot_base(self.core.n_fsa.e, yLabel=r'$n_e[\#/m^3]$', title="Plasma Densities", edge=edge)
-        fig.scatter(self.rhor, self.core.n_fsa.i, color="blue", s=MARKERSIZE)
-        return fig
-
-    def plot_nn_therm(self, edge=True):
-        return self._plot_base(self.core.n_fsa.n.t, yLabel=r'$n_{n,therm}[\#/m^3]$', title="Thermal Neutral Density", edge=edge)
-
-    def plot_nn_cold(self, edge=True):
-        return self._plot_base(self.core.n_fsa.n.s, yLabel=r'$n_{n,slow}[\#/m^3]$', title="Cold Neutral Density", edge=edge)
-
-    def plot_nn_total(self, edge=True):
-        return self._plot_base(self.core.n_fsa.n.tot, yLabel=r'$n_{n,total}[\#/m^3]$', title="Total Neutral Density", edge=edge)
-
-    def plot_Ti(self, edge=True):
-        return self._plot_base(self.core.T_fsa.i.kev, yLabel=r'$T_i[keV]$', title="Ion Temperature", edge=edge)
-
-    def plot_Te(self, edge=True):
-        return self._plot_base(self.core.T_fsa.e.kev, yLabel=r'$T_e[keV]$', title="Electron Temperature", edge=edge)
-
-    def plot_T(self, edge=True):
-        fig = self._plot_base(self.core.T_fsa.e.kev, yLabel=r'$T[keV]$', title="Plasma Temperature", edge=edge)
-        fig.scatter(self.rhor, self.core.T_fsa.i.kev,  color="blue", s=MARKERSIZE)
-        plt.show()
-        return fig
-
     def plot_Er(self, edge=True):
         return self._plot_base(self.Er_calc_C, yLabel=r'$E_r[V/m]$', title="Radial Electric Field", edge=edge)
 
     def plot_S_sources(self, edge=True, logPlot=True):
         fig = self._plot_base(self.part_src_nbi, yLabel=r'$S_r[#/m^3s]$', title="Radial sources", edge=edge)
-        fig.scatter(self.rhor, self.izn_rate, color="green", s=MARKERSIZE)
+        fig.scatter(self.rhor, self.izn_rate, color="green", s=self._markerSize)
         if logPlot:
             fig.set_yscale("log")
 
@@ -488,24 +474,29 @@ class RadialTransport(PlotBase):
         return fig
 
     def plot_Q_sources(self, edge=True, logPlot=False):
-        fig = self._plot_base(self.en_src_nbi_i, yLabel=r'$Q_r[W/m^3]$', title="Radial sources", edge=edge)
-        fig.scatter(self.rhor, self.cxcool, color="green", s=MARKERSIZE)
-        fig.scatter(self.rhor, abs(self.qie), color="black", s=MARKERSIZE)
+        fig = self._plot_base(self.en_src_nbi_i_kept, yLabel=r'$Q_r[W/m^3]$', title="", edge=edge)
+        fig.scatter(self.rhor, self.cxcool, color="green", s=self._markerSize)
+        fig.scatter(self.rhor, abs(self.qie), color="black", s=self._markerSize)
         if logPlot:
             fig.set_yscale("log")
         plt.show()
-        fig.legend([r"$Q_{nbi}$", r"$Q_{cxcool}$", r"$|Q_{ie}|$"])
+        fig.legend([r"$Q_{nbi}$", r"$Q_{cxcool}$", r"$|Q_{ie}|$"], prop={'size': 30}, markerscale=1.5)
         return fig
 
-    def plot_Chi_i_comp(self, edge=True):
+    def plot_Chi_i_comp(self, edge=True, marker=False):
         fig = self._plot_base(self.chi.i.chi1, yLabel=r'$\chi_{r,i}$', title="", edge=edge)
-        fig.scatter(self.rhor, self.chi.i.chi2, color="blue", s=MARKERSIZE)
-        fig.scatter(self.rhor, self.chi.i.chi3, color="green", s=MARKERSIZE)
-        fig.scatter(self.rhor, self.chi.i.chi4, color="purple", s=MARKERSIZE)
+        if marker:
+            fig.scatter(self.rhor, self.chi.i.chi2, color="blue", s=self._markerSize, marker="x")
+            fig.scatter(self.rhor, self.chi.i.chi3, color="green", s=self._markerSize, marker="o", facecolors="None")
+            fig.scatter(self.rhor, self.chi.i.chi4, color="purple", s=self._markerSize, marker="^")
+        else:
+            fig.scatter(self.rhor, self.chi.i.chi2, color="blue", s=self._markerSize)
+            fig.scatter(self.rhor, self.chi.i.chi3, color="green", s=self._markerSize)
+            fig.scatter(self.rhor, self.chi.i.chi4, color="purple", s=self._markerSize)
         fig.legend([r"$q^{cond} = q^{tot}$",
                     r"$q^{cond} = q^{tot}-q^{conv}$",
                     r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}$",
-                    r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}-q^{visc}$"],  prop={'size': 20}, markerscale=2.5)
+                    r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}-q^{visc}$"],  prop={'size': 20}, markerscale=1.5)
         return fig
 
     def plot_D(self, edge=True):

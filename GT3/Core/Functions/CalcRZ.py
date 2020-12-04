@@ -8,7 +8,7 @@ from shapely.geometry import Point, LineString
 from GT3.Core.Functions.DrawCoreLine import draw_core_line
 
 
-def calc_RZ(core, rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
+def calc_RZ(rho, theta, theta_xpt, pts, psi_data, psi_norm, lines):
     # get parameters that depend on both rho and theta
 
     sep_pts = np.asarray(lines.sep_closed.coords)

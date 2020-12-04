@@ -6,9 +6,8 @@ from scipy.interpolate import UnivariateSpline
 from scipy.interpolate import griddata
 
 
-def calc_grad(rho, quant, psi, R, Z, psi_data):
-    rho_vals = rho[:,0]
-    psi_vals = psi[:,0]
+def calc_grad(quant, psi, R, Z):
+    psi_vals = psi.psi_norm[:,0]
     vals = quant[:,0]
 
 
@@ -26,9 +25,6 @@ def calc_grad(rho, quant, psi, R, Z, psi_data):
             psivals_mi.append(psi_vals[i])
             vals_mi.append(vals[i])
 
-    psivals_mi = np.asarray(psivals_mi)
-    vals_mi = np.asarray(vals_mi)
-
 
     # calculate values as function of psi and get psi derivative function
     #psi_fit = UnivariateSpline(psivals_mi, vals_mi, k=3, s=0)
@@ -36,12 +32,12 @@ def calc_grad(rho, quant, psi, R, Z, psi_data):
     d_dpsi_fit = psi_fit.derivative()
 
     # get value of dval_dpsi on the main computational grid
-    dval_dpsi = d_dpsi_fit(psi)
+    dval_dpsi = d_dpsi_fit(psi.psi)
 
     # calculate dpsi_norm_dr everywhere on the main computational grid
-    dpsi_dr = griddata(np.column_stack((psi_data.R.flatten(),
-                                        psi_data.Z.flatten())),
-                       psi_data.dpsidr.flatten(),
+    dpsi_dr = griddata(np.column_stack((psi.psi_data.R.flatten(),
+                                        psi.psi_data.Z.flatten())),
+                       psi.psi_data.dpsidr.flatten(),
                        (R,Z),
                        method='linear')
 

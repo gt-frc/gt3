@@ -17,7 +17,7 @@ m_c = 12 / constants.N_A / 1E3  # in kg
 
 def calc_Qe_diff_method(r, a, en_src_nbi_e, cool_rate, Qie):
     en_src_nbi_eint = UnivariateSpline(r, en_src_nbi_e, k=3, s=0)
-    cool_rateint = UnivariateSpline(r, cool_rate, k=3, s=0)
+    cool_rateint = UnivariateSpline(r, cool_rate.val, k=3, s=0)
     Qie_int = UnivariateSpline(r, Qie, k=3, s=0)
 
     def f(t, flux, Qie, Q_e_nbi, cool_rate):
@@ -157,4 +157,4 @@ def calc_qie(n, T, ion_species='D'):
     qie = n.e * (zi * e**2)**2 * m_e * coul_log * (1 - Ti / T.e.J) / \
           (2*pi * eps_0**2 * np.sqrt(2*pi*m_e*T.e.J) * mi * (1 + 4*sqrt(pi)/3 * (3*m_e*Ti/(2*mi*T.e.J))**1.5))
 
-    return qie * n.i #multiply this shit by density
+    return qie * n.i.val  #multiply this shit by density

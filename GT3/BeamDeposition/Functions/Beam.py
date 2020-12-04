@@ -160,12 +160,12 @@ class Beam:
             old_result = config.beamResult
             try:
 
-                self.angle_1 = UnivariateSpline(old_result[6], old_result[7], k=3, s=0)
-                self.angle_2 = UnivariateSpline(old_result[6], old_result[8], k=3, s=0)
-                self.angle_3 = UnivariateSpline(old_result[6], old_result[9], k=3, s=0)
-                self.Hofrho = self.DepositionProfiles(UnivariateSpline(old_result[6], old_result[10], k=3, s=0),
-                                                  UnivariateSpline(old_result[6], old_result[11], k=3, s=0),
-                                                  UnivariateSpline(old_result[6], old_result[12], k=3, s=0))
+                self.angle_1 = UnivariateSpline(old_result[6], old_result[10], k=3, s=0)
+                self.angle_2 = UnivariateSpline(old_result[6], old_result[11], k=3, s=0)
+                self.angle_3 = UnivariateSpline(old_result[6], old_result[12], k=3, s=0)
+                self.Hofrho = self.DepositionProfiles(UnivariateSpline(old_result[6], old_result[7], k=3, s=0),
+                                                  UnivariateSpline(old_result[6], old_result[8], k=3, s=0),
+                                                  UnivariateSpline(old_result[6], old_result[9], k=3, s=0))
                 self.shine = old_result[13]
                 self.Hofr = self.calc_Hofr(self.Hofrho, self.DepositionProfiles)
                 """The normalized H(r) function on [0., a]"""
@@ -310,8 +310,6 @@ class Beam:
             self.M_orb_D1 = np.zeros(len(self.rho))
             self.M_orb_D2 = np.zeros(len(self.rho))
             self.M_orb_D3 = np.zeros(len(self.rho))
-
-
 
 
     def calc_part_sources(self, IOLSplit):

@@ -28,7 +28,7 @@ def calc_svcx_st(T):
 
     Ti_vals2d, Tn_vals2d = np.meshgrid(Ti_vals, Tn_vals)
 
-    Ti_mod = np.where(T.i.ev > 1E3, 1E3 * e, T.i.ev * e)
+    Ti_mod = np.where(T.i.ev.val > 1E3, 1E3 * e, T.i.ev * e)
     Tn_mod = np.zeros(Ti_mod.shape) + 2.0 * e
 
     sv_cx = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())),
@@ -64,7 +64,7 @@ def calc_svel_st(T):
 
     Ti_vals2d, Tn_vals2d = np.meshgrid(Ti_vals, Tn_vals)
 
-    Ti_mod = np.where(T.i.ev > 1E3, 1E3 * e, T.i.ev * e)
+    Ti_mod = np.where(T.i.ev.val > 1E3, 1E3 * e, T.i.ev * e)
     Tn_mod = np.zeros(Ti_mod.shape) + 2.0 * e
 
     sv_el = griddata(np.column_stack((Ti_vals2d.flatten(), Tn_vals2d.flatten())),
@@ -155,8 +155,8 @@ def calc_svfus(T, mode='dd'):
     Ti_range = np.logspace(-1, 2, 1000)  # values in kev
     sigv_fus_range = sigv(Ti_range, mode=mode)  # in m^3/s
     sigv_fus_interp = UnivariateSpline(Ti_range * 1.0E3 * e, sigv_fus_range, s=0)  # converted to Joules
-    sv_fus = sigv_fus_interp(T.i.J)
-    dsv_fus_dT = sigv_fus_interp.derivative()(T.i.J)
+    sv_fus = sigv_fus_interp(T.i.J.val)
+    dsv_fus_dT = sigv_fus_interp.derivative()(T.i.J.val)
 
     return sv_fus, dsv_fus_dT
 
@@ -174,8 +174,8 @@ def calc_svion_st(T):
     T_vals_range = np.logspace(-1, 5, 1000) * e  # in joules
     interp2 = UnivariateSpline(T_vals_range, sigv_vals_range, s=0)
 
-    sv_ion = interp2(T.i.J)
-    dsv_ion_dT = interp2.derivative()(T.i.J)
+    sv_ion = interp2(T.i.J.val)
+    dsv_ion_dT = interp2.derivative()(T.i.J.val)
 
     return sv_ion, dsv_ion_dT
 

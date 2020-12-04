@@ -23,7 +23,7 @@ def calc_vtor_d_pert(vtor_C_total, vtor_C_intrin, vtor_D_intrin, mom_src_ext, z,
 
     nu_drag_approx = (mbal_rhs_D + mbal_rhs_C) / ((n.i * m_d + n.C * m_c) * vtor_C_total + n.i * m_d * del_v0)
 
-    del_v1 = (mbal_rhs_D - n.i * m_d * nu_drag_approx * vtor_C_total) / (n.i * m_d * (nu_c_DC + nu_drag_approx))
+    del_v1 = (mbal_rhs_D - n.i.val * m_d * nu_drag_approx * vtor_C_total) / (n.i.val * m_d * (nu_c_DC + nu_drag_approx))
 
     vtorDPert = vtor_C_total + del_v1
     return vtorDPert

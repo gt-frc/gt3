@@ -2,7 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+from deprecation import deprecated
 
+
+@deprecated(deprecated_in="0.0.3", removed_in="0.0.4", details="NBI-related calculations are now performed in the NBI module")
 def calc_torque(beam, fforb, index=False):
     """ Calculates torque from a neutral beam (or beam component)
 

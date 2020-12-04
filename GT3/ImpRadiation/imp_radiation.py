@@ -14,6 +14,7 @@ import os
 import re
 import sys
 import pickle
+from GT3 import Core
 
 
 class ImpRad:
@@ -30,6 +31,11 @@ class ImpRad:
     """
 
     def __init__(self, z=None, core=None):
+        """
+
+        :param z:
+        :param core: Core
+        """
         sys.dont_write_bytecode = True
 
         # list of impurity names and pickled impurity interpolation object filenames, if they exist. Will be used later.
@@ -49,13 +55,24 @@ class ImpRad:
                   'If you would like a specific z only, then instantiate ImpRad as a standalone instance and'
                   'pass z, but not a core instance.""")
         if core is not None:
-            for z in [6, 4, 74, 10, 18, 36]:  # list of all z elements in core. Update this list as necessary.
+            update_dict = {4: core.Lz.update_Be,
+                           6: core.Lz.update_C,
+                           74: core.Lz.update_W,
+                           10: core.Lz.update_Ne,
+                           18: core.Lz.update_Ar,
+                           36: core.Lz.update_Kr}
+            for z in update_dict.keys():  # list of all z elements in core. Update this list as necessary.
                 try:  # before running adpak, try to find a pickled interpolator somewhere in the main directory.
                     Lz, dLzdT = self.find_interp(z, imp_names)
                 except:
                     print('Pickled interpolater not found for {}. Running adpak.'.format(imp_names[z]))
                     Lz, dLzdT = self.run_adpak(z, imp_names)
-                core.update_Lz_data(z, Lz, dLzdT)
+                update_dict[z](core.n, core.T, Lz, dLzdT)
+            cool_rate = core.n.e * core.n.C * np.nan_to_num(core.Lz.C.s) + core.n.e * core.n.C * np.nan_to_num(
+                core.Lz.C.t)
+            core.cool_rate.update(cool_rate)
+
+
 
         elif z is not None:
             try:  # before running adpak, try to find a pickled interpolator somewhere in the main directory.
@@ -426,36 +443,3 @@ if __name__ == '__main__':
     W_74 = ImpRad(z=74)
 
 
-    def element_plot(inst, element):
-        # specify density and temperature parameters at which you want to
-        # evaluate Lz, dLzdT, etc. and convert to dict and namedtuple
-        Te_kev = np.logspace(-3, 2, 100)
-        Tn = np.full(Te_kev.shape, 1E-3)
-
-        # prepare figure
-        # fig = plt.figure(figsize=(6, 4))
-        # ax1 = fig.add_subplot(1, 1, 1)
-        # ax1.set_title('{} $L_z$ as a Function of Temperature'.format(element))
-        # ax1.set_xlabel(r'Electron Temperature ($keV$)')
-        # ax1.set_ylabel(r'$L_z$ ($W*m^3$)')
-        #
-        # nf = np.full(Tn.shape, 1E-7)
-        # ax1.loglog(Te_kev, inst.Lz(np.log10(Tn), np.log10(nf), np.log10(Te_kev)))
-
-        # for i,v in enumerate(np.logspace(-5,-1,5)):
-        # nf = np.full(Tn.shape, v)
-        # if i==0:
-        # ax1.loglog(Te_kev, inst.Lz(np.log10(0.002), np.log10(nf), np.log10(Te_kev)))
-        # clean up and show plot
-        # plt.tight_layout()
-        # fig.savefig('/home/max/Documents/{}_Lz.png'.format(element))
-        # plt.show()
-        # return Te_kev, inst.Lz(np.log10(0.002), np.log10(nf), np.log10(Te_kev))
-
-    # element_plot(He_2,'Helium')
-    # element_plot(C_6,'Carbon')
-    # element_plot(Ne_10,'Neon')
-    # element_plot(Ar_18,'Argon')
-    # element_plot(Kr_36,'Krypton')
-    # element_plot(Xe_54,'Xenon')
-    # element_plot(W_74,'Tungsten')

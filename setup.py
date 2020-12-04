@@ -19,7 +19,7 @@ deps = ['matplotlib',
 
 setuptools.setup(
     name="GT3",
-    version="0.0.3",
+    version=open("gt3/_version.py").readlines()[-1].split()[-1].strip("\"'"),
     author="Maxwell D. Hill, Jonathan J. Roveto, Nicholas Piper",
     install_requires=deps,
     include_package_data=True,

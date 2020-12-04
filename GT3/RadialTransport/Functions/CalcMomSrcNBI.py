@@ -4,7 +4,9 @@
 import numpy as np
 from GT3.RadialTransport.Functions.CalcTorque import calc_torque
 from math import cos
+from deprecation import deprecated
 
+@deprecated(deprecated_in="0.0.3", removed_in="0.0.4", details="NBI-related calculations are now performed in the NBI module")
 def calc_mom_src_nbi(beam,  n, z_eff, R0_a, fforb):
     """Calculates toroidal momentum input from a neutral beam (or beam component)
 

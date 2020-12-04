@@ -9,6 +9,14 @@ MARKERSIZE = 10
 
 class PlotBase:
 
+    def __init__(self):
+        super(PlotBase, self).__init__()
+        self._markerSize = MARKERSIZE
+        self._markers = False
+
+    def set_marker_size(self, s):
+        self._markerSize = s
+
     def set_plot_rho1d(self, rho1d):
         self._plot_rho1d = rho1d
         return self
@@ -20,7 +28,7 @@ class PlotBase:
     def set_plot_wall(self, wall):
         self._wall_line = wall
 
-    def _plot_base(self, val, xLabel=r'$\rho$', yLabel="Value", title="Title", color='red', edge=False):
+    def _plot_base(self, val, xLabel=r'$\rho$', yLabel="Value", title="Title", color='red', edge=False, show=True, line=False):
         plot = plt.figure()
         fig = plot.add_subplot(111)
         fig.set_xlabel(xLabel, fontsize=30)
@@ -30,8 +38,12 @@ class PlotBase:
         fig.set_title(title)
         if edge:
             fig.set_xlim(0.85, 1.0)
-        fig.scatter(self._plot_rho1d, val, color=color, s=MARKERSIZE)
-        plt.show()
+        if line:
+            fig.plot(self._plot_rho1d, val, color=color)
+        else:
+            fig.scatter(self._plot_rho1d, val, color=color, s=self._markerSize)
+        if show:
+            plt.show()
         return fig
 
     def _plot_with_wall(self):
@@ -78,18 +90,18 @@ class PlotBase:
 
     def _shapely_obj_plot_hanlder(self, obj, ax):
         if isinstance(obj, Point):
-            ax.scatter(obj.x, obj.y, color='red', marker='o', s=MARKERSIZE)
+            ax.scatter(obj.x, obj.y, color='red', marker='o', s=self._markerSize)
             return ax
         if isinstance(obj, MultiPoint):
             for p in obj:
-                ax.scatter(p.x, p.y, color='red', marker='o', s=MARKERSIZE)
+                ax.scatter(p.x, p.y, color='red', marker='o', s=self._markerSize)
             return ax
         if isinstance(obj, Path):
             ls = LineString(obj.vertices)
-            ax.plot(*ls.xy, color='red', marker='o', s=MARKERSIZE)
+            ax.plot(*ls.xy, color='red', marker='o', s=self._markerSize)
             return ax
         if isinstance(obj, LineString):
-            ax.plot(*obj.xy, color='red', marker='o', s=MARKERSIZE)
+            ax.plot(*obj.xy, color='red', marker='o', s=self._markerSize)
             return ax
 
     def _unknown_data_plot_helper(self, obj, ax):
@@ -107,7 +119,7 @@ class PlotBase:
         # Does it have an xy property?
 
         try:
-            ax.plot(*obj.xy, s=MARKERSIZE)
+            ax.plot(*obj.xy, s=self._markerSize)
             return ax
         except:
             pass
@@ -154,6 +166,18 @@ class PlotBase:
 
         print("Could not plot given data")
 
+    def plot_contours_with_wall(self, obj, res=50):
+        if not hasattr(self, "_wall_line"):
+            print("Wall Linestring has not been instantiated yet.")
+            return
+        ax = self._plot_with_wall()
+        try:
+            ax.contour(self.R, self.Z, obj, levels=res)
+            return ax
+        except:
+            print("Could not plot contours")
+            return
+
     def plot_add_scatter(self, fig, val, color="blue"):
-        fig.scatter(self._plot_rho1d, val, color=color, s=MARKERSIZE)
+        fig.scatter(self._plot_rho1d, val, color=color, s=self._markerSize)
         return fig

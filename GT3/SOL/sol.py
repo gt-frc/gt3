@@ -144,10 +144,10 @@ class Sol:
 
         # calculate dni/dpsi and dTi/dpsi at the seperatrix
         # TODO: include both deuterium and tritium here
-        ni_psi_fit = UnivariateSpline(core.rho2psi(core.rho[:, 0]), core.n.i[:, 0], k=3, s=2.0)
-        ne_psi_fit = UnivariateSpline(core.rho2psi(core.rho[:, 0]), core.n.e[:, 0], k=3, s=2.0)
-        Ti_psi_fit = UnivariateSpline(core.rho2psi(core.rho[:, 0]), core.T.i.kev[:, 0], k=3, s=2.0)
-        Te_psi_fit = UnivariateSpline(core.rho2psi(core.rho[:, 0]), core.T.e.kev[:, 0], k=3, s=2.0)
+        ni_psi_fit = UnivariateSpline(core.psi.rho2psi(core.rho[:, 0]), core.n.i[:, 0], k=3, s=2.0)
+        ne_psi_fit = UnivariateSpline(core.psi.rho2psi(core.rho[:, 0]), core.n.e[:, 0], k=3, s=2.0)
+        Ti_psi_fit = UnivariateSpline(core.psi.rho2psi(core.rho[:, 0]), core.T.i.kev[:, 0], k=3, s=2.0)
+        Te_psi_fit = UnivariateSpline(core.psi.rho2psi(core.rho[:, 0]), core.T.e.kev[:, 0], k=3, s=2.0)
         dni_dpsi_sep = ni_psi_fit.derivative()(sep_flx_surf)
         dTi_dpsi_sep = Ti_psi_fit.derivative()(sep_flx_surf)
 
