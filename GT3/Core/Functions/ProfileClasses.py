@@ -306,10 +306,20 @@ class TwoDProfile(PlotBase, BaseMath):
     def __doc__(self):
         return self._docs
 
+
     @property
     def L(self):
-        L = -1.0 * self.val / self.derivative()
-        self._L = TwoDProfile(self._psi, L, self.R, self.Z, wall=self.wall)
+        """
+        Returns the gradient scale length of the the value. Currently, we get the FSA and broadcast, but this
+        is not accurate and needs to be done properly.
+
+        @TODO: Correctly implement
+        :rtype: TwoDProfile
+        """
+        L = np.broadcast_to(self.fsa.L.val, (self.rho.shape[1], len(self.fsa.L.val))).T
+        self.L = L
+        # L = -1.0 * self.val / self.derivative()
+        # self._L = TwoDProfile(self._psi, L, self.R, self.Z, wall=self.wall)
         return self._L
 
     @L.getter
@@ -317,8 +327,10 @@ class TwoDProfile(PlotBase, BaseMath):
         try:
             return self._L
         except:
-            L = -1.0 * self.val / self.derivative()
-            self._L = TwoDProfile(self._psi, L, self.R, self.Z, wall=self.wall)
+            L = np.broadcast_to(self.fsa.L.val, (self.rho.shape[1], len(self.fsa.L.val))).T
+            self.L = L
+            # L = -1.0 * self.val / self.derivative()
+            # self._L = TwoDProfile(self._psi, L, self.R, self.Z, wall=self.wall)
             return self._L
 
     def set_raw_data(self, raw):
