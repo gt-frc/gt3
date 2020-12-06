@@ -317,7 +317,7 @@ class TwoDProfile(PlotBase, BaseMath):
         :rtype: TwoDProfile
         """
         L = np.broadcast_to(self.fsa.L.val, (self.rho.shape[1], len(self.fsa.L.val))).T
-        self.L = L
+        self.L = TwoDProfile(self._psi, L, self.R, self.Z)
         # L = -1.0 * self.val / self.derivative()
         # self._L = TwoDProfile(self._psi, L, self.R, self.Z, wall=self.wall)
         return self._L
@@ -328,7 +328,7 @@ class TwoDProfile(PlotBase, BaseMath):
             return self._L
         except:
             L = np.broadcast_to(self.fsa.L.val, (self.rho.shape[1], len(self.fsa.L.val))).T
-            self.L = L
+            self.L = TwoDProfile(self._psi, L, self.R, self.Z)
             # L = -1.0 * self.val / self.derivative()
             # self._L = TwoDProfile(self._psi, L, self.R, self.Z, wall=self.wall)
             return self._L
