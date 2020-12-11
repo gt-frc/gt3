@@ -4,6 +4,7 @@ import unittest
 import GT3
 from tests.ShotBase import *
 from matplotlib.axes._axes import Axes
+from matplotlib.pyplot import Figure
 
 
 class CommonFunctions(object):
@@ -91,7 +92,7 @@ class PlotCoreTest(DoubleNullTest):
             fig = plotter(edge=True)
         else:
             fig = plotter()
-        self.assertIsInstance(fig, Axes)
+        self.assertIsInstance(fig, (Figure, Axes))
         self.plt.close(fig.get_figure())
 
     def test_plot_core(self):
@@ -99,8 +100,8 @@ class PlotCoreTest(DoubleNullTest):
         Plot all plots in the Core module
         """
 
-        plot_vars = [self.plasma.core.n.i.plot_fsa,
-                     self.plasma.core.n.e.plot_fsa,
+        plot_vars = [self.plasma.core.n.i.fsa.plot,
+                     self.plasma.core.n.e.fsa.plot,
                      self.plasma.core.n.n.s.plot2D,
                      self.plasma.core.n.n.t.plot2D,
                      self.plasma.core.n.n.tot.plot2D,

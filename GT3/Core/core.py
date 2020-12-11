@@ -515,7 +515,7 @@ class Core(PlotBase.PlotBase):
         except (AttributeError, TypeError):
             vtorC = np.zeros(self.rho.shape)
 
-        self.v = VectorialProfiles(self.psi, self.R, self.Z, self.wall_line, ProfileType=TwoDProfile,
+        self.v = VectorialProfiles(self.psi, self.R, self.Z, wall=self.wall_line, ProfileType=TwoDProfile,
                                    pol_D=vpolD,
                                    tor_D=vtorD,
                                    pol_C=vpolC,

@@ -10,17 +10,15 @@ Created on Tue Mar 20 08:58:46 2018
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-from GT3 import Core, BeamDeposition
+from math import exp
 from collections import namedtuple
 from scipy.interpolate import UnivariateSpline, interp1d
-from GT3.RadialTransport.Functions.CorePatch import corePatch
+
 from GT3.RadialTransport.Functions.CalcReturnCur import calc_return_cur
 from GT3.RadialTransport.Functions.CalcNu import calc_nu_j_k, calc_nu_drag, calc_nustar
 from GT3.RadialTransport.Functions.CalcMbalRHS import calc_mbal_rhs
 from GT3.RadialTransport.Functions.CalcT90 import calc_t90
-from GT3.RadialTransport.Functions.CalcQ import calc_Qe_diff_method, calc_qie, calc_Qe_int_method, calc_Qi_int_method, \
-    calc_Qi_diff_method
-from GT3.RadialTransport.Functions.CalcGamma import calc_gamma_diff_method, calc_gamma_int_method
+from GT3.RadialTransport.Functions.CalcQ import calc_qie
 from GT3.RadialTransport.Functions.CalcIntrinRot import calc_intrin_rot
 from GT3.RadialTransport.Functions.CalcVTorDPert import calc_vtor_d_pert
 from GT3.RadialTransport.Functions.CalcErMomBal import calc_Er_mom_bal
@@ -214,11 +212,10 @@ class RadialTransport(PlotBase):
         self.part_src_nbi_kept = nbi.combined_beam_src_dens_kept.Snbi
 
         # Piper changes: Changed names of particle and heat flux so it's easier to tell what method is used.
-        gamma_diff_D = calc_gamma_diff_method(r, core.a, self.part_src_nbi, self.part_src_nbi_lost, self.izn_rate, core.dVdrho,
-                                              iol_adjusted=iolFlag,
-                                              F_orb=F_orb_d, neutFlag=neutFlag)  # Differential Cylindrical Method
-        gamma_int_D = calc_gamma_int_method(r, self.part_src_nbi_tot, self.part_src_nbi_lost, self.izn_rate, iol_adjusted=iolFlag,
-                                            F_orb=F_orb_d, neutFlag=neutFlag)  # Integral Cylindrical Method
+        gamma_diff_D = self._calc_gamma_diff_method(r, core.dVdrho, iol_adjusted=iolFlag, F_orb=F_orb_d,
+                                                    neutFlag=neutFlag)  # Differential Cylindrical Method
+        gamma_int_D = self._calc_gamma_int_method(r, iol_adjusted=iolFlag, F_orb=F_orb_d,
+                                                  neutFlag=neutFlag)  # Integral Cylindrical Method
 
         self.gamma = Flux(core,
                           D_diff=gamma_diff_D,
@@ -361,19 +358,19 @@ class RadialTransport(PlotBase):
         ################################################################################################################
 
         self.en_src_nbi_e = OneDProfile(core.psi, self.en_src_nbi_i_kept, core.R, core.Z)
-        self.cxcool = calc_cxcool(core, n, T)
-        self.qie = calc_qie(n, T, ion_species='D')
+        self.cxcool = OneDProfile(core.psi, calc_cxcool(core, n, T), core.R, core.Z)
+        self.qie = OneDProfile(core.psi, calc_qie(n, T, ion_species='D'), core.R, core.Z)
 
         # calculate radial heat flux. Piper changes: Separated heat flux equations into differential and integral cylindrical methods.
-        Qi_diff = calc_Qi_diff_method(r, core.a, self.cxcool, self.qie, self.en_src_nbi_i_tot,
-                                           self.en_src_nbi_i_lost, core.dVdrho, iol_adjusted=iolFlag,
-                                           E_orb=E_orb_d)  # previously called qheat. Differential Method.
+        Qi_diff = self._calc_Qi_diff_method(r, core.a, self.cxcool, self.qie, self.en_src_nbi_i_tot,
+                                            self.en_src_nbi_i_lost, core.dVdrho,
+                                            E_orb=E_orb_d)  # previously called qheat. Differential Method.
 
-        Qi_int = calc_Qi_int_method(r, n, T, self.qie, self.en_src_nbi_i_kept, self.cool_rate, iol_adjusted=iolFlag,
-                                                   E_orb=E_orb_d)  # Integral method.
-        Qe_diff = calc_Qe_diff_method(r, core.a, self.en_src_nbi_e, self.cool_rate, calc_qie(n, T))  # Differential Method.
+        Qi_int = self._calc_Qi_int_method(r, self.qie, self.en_src_nbi_i_kept, self.cool_rate,
+                                          E_orb=E_orb_d)  # Integral method.
+        Qe_diff = self._calc_Qe_diff_method(r, core.a, self.en_src_nbi_e, self.cool_rate, calc_qie(n, T))  # Differential Method.
 
-        Qe_int = calc_Qe_int_method(r, n, T, self.en_src_nbi_e, self.cool_rate)  # Integral method.
+        Qe_int = self._calc_Qe_int_method(r, n, T, self.en_src_nbi_e, self.cool_rate)  # Integral method.
 
         self.Q = Flux(core, label=r"$Q_r",
                       D_int=Qi_int,
@@ -406,6 +403,214 @@ class RadialTransport(PlotBase):
 
         self.D_i = m_d * T.i.J * (self.nu_c_j_k * (1. - ch_d / ch_c) + self.nu_drag_D) / ((ch_d * core.B.pol.fsa)**2)
 
+    def _calc_gamma_diff_method(self, r, dVdrho, iol_adjusted=False, F_orb=None, neutFlag=True, verbose=False):
+        a = self.core.a
+        dVdr = UnivariateSpline(r, dVdrho(r / a) / a, k=2, s=0)
+        dF_orb = UnivariateSpline(r, F_orb, k=3, s=0).derivative()
+        izn_rateint = UnivariateSpline(r, self.izn_rate.val, k=2, s=0)
+        part_src_nbi_totint = UnivariateSpline(r, self.part_src_nbi_tot.val, k=2, s=0)
+        part_src_nbi_lostint = UnivariateSpline(r, self.part_src_nbi_lost.val, k=2, s=0)
+        iolPeak = np.where(dF_orb(r) == dF_orb(r).max())
+
+        def f(t, gamma, sion, snbi, snbi_loss, dFdr, iolFlag, peak):
+            if neutFlag:
+                # if t/a >= 0.95:
+                # S = snbi(t) + sion(t)
+                # else:
+                S = snbi(t)
+            else:
+                S = snbi(t)
+            # Physically, if the IOL peak has occured, everything radially outward should be dFdr = 0.0 since F(r)
+            # should equal 0.5 until r=1.0.66
+            dFdrval = dFdr(t)
+            if t >= peak:
+                dFdrval = 0.0
+            if iolFlag:
+                return S - snbi_loss(t) - gamma * (dFdrval + 1) / (t + 0.003)
+            else:
+                return S - gamma * (1 / (t + 0.003))
+
+        from scipy.integrate import ode
+
+        gamma = ode(f).set_integrator('vode', with_jacobian=False)
+        gamma.set_initial_value(0., 0.).set_f_params(izn_rateint, part_src_nbi_totint, part_src_nbi_lostint, dF_orb,
+                                                     iol_adjusted, r[iolPeak])
+        dt = a / len(r)
+        x, y = [], []
+        while gamma.successful() and gamma.t < a:
+            x.append(gamma.t + dt)
+            y.append(gamma.integrate(gamma.t + dt))
+        # gamma = UnivariateSpline(x, y, k=3, s=0)
+        gamma = interp1d(x, np.array([float(b) for b in y]), kind="linear", fill_value="extrapolate")
+
+        if verbose:
+            plot = plt.figure()
+            fig1 = plot.add_subplot(311)
+            fig2 = plot.add_subplot(312)
+            fig3 = plot.add_subplot(313)
+
+            fig1.scatter(r, izn_rateint(r), color="green")
+            fig1.scatter(r, part_src_nbi_totint(r), color="red")
+            fig1.scatter(r, part_src_nbi_lostint(r), color="black")
+            fig1.legend([r"$S_{ion}$", r"$S_{nbi,tot}$", r"$S_{nbi,lost}$"])
+            fig1.set_xlim(0.85 * a, a)
+
+            fig2.scatter(r, dF_orb(r), color="red")
+            fig2.set_xlim(0.85 * a, a)
+
+            fig3.scatter(r, gamma(r))
+            fig3.set_xlim(0.85 * a, a)
+            plt.show()
+
+            return fig1, fig2, fig3
+
+        return gamma(r)
+
+    def _calc_gamma_int_method(self, r, iol_adjusted=False, F_orb=None, neutFlag=True):
+        # Piper Changes: Added cylindrical integral method as a separate function. This will be set to a separate variable in the main code.
+        gamma = np.zeros(r.shape)
+
+        if not neutFlag:
+            izn_rate = [0.] * len(self.izn_rate.val)
+        else:
+            izn_rate = self.izn_rate
+
+        # Boundary condition at magnetic axis. Needs to be in units of ions/m^3.
+        # Only has the second term, since it's the center value. Also uses delta_r of the next point to avoid indexing into a non-existant location.
+        # If not adjusted for IOL, part_src_nbi_lost = 0 anyway, so no need for an IOL check.
+        gamma[0] = (self.part_src_nbi_tot[0] - 2 * self.part_src_nbi_lost[0] + izn_rate[0]) * (r[1] - r[0])
+        gamma[1] = gamma[0] + (self.part_src_nbi_tot[1] - 2 * self.part_src_nbi_lost[1] + izn_rate[1]) * (r[1] - r[0])
+
+        # You'll  prolly want to change this since it uses a dreaded for loop.
+        for n in range(2, len(r)):  # Pretty sure len() is still valid for multidimensional arrays.
+            # The 2*part_src_nbi_lost is the factor of 2 in the fast IOL.
+            if iol_adjusted:
+                # Imported the exp() function for the thermal IOL attenuation.
+                gamma[n] = (r[n - 1] / r[n]) * gamma[n - 1] * exp(-2 * (F_orb[n] - F_orb[n - 1])) + (
+                            self.part_src_nbi_tot[n] - 2. * self.part_src_nbi_lost[n] + izn_rate[n]) * (r[n] - r[n - 1])
+            else:
+                gamma[n] = (r[n - 1] / r[n]) * gamma[n - 1] + (self.part_src_nbi_tot[n] + izn_rate[n]) * (r[n] - r[n - 1])
+
+        return gamma
+
+    def _calc_Qe_diff_method(self, r, a, en_src_nbi_e, cool_rate, Qie):
+        en_src_nbi_eint = UnivariateSpline(r, en_src_nbi_e, k=3, s=0)
+        cool_rateint = UnivariateSpline(r, cool_rate.val, k=3, s=0)
+        Qie_int = UnivariateSpline(r, Qie, k=3, s=0)
+
+        def f(t, flux, Qie, Q_e_nbi, cool_rate):
+            S = Q_e_nbi(t) - Qie(t) - cool_rate(t)
+            return S - flux * (1 / (t + 0.003))
+
+        from scipy.integrate import ode
+
+        flux = ode(f).set_integrator('vode', with_jacobian=False)
+        flux.set_initial_value(0., 0.).set_f_params(Qie_int, en_src_nbi_eint, cool_rateint)
+
+        dt = a / len(r)
+        x, y = [], []
+        while flux.successful() and flux.t < a:
+            x.append(flux.t + dt)
+            y.append(flux.integrate(flux.t + dt))
+        flux = UnivariateSpline(x, y, k=3, s=0)
+
+        # print "Total volume in Qi_diff calc: " + str(UnivariateSpline(r, dVdr(r), k=3, s=0).integral(0., a))
+        # print "Total nbi ion energy: " + str(UnivariateSpline(r, (en_src_nbi_keptint(r) + en_src_nbi_lostint(r)) * dVdr(r), k=3, s=0).integral(0., 1.)/(1E6))+" MW"
+        return flux(r)
+
+    def _calc_Qe_int_method(self, r, n, T, en_src_nbi_e_tot, cool_rate):  # Piper Changes: Same as Qi changes.
+
+        Qe = np.zeros(r.shape)
+        qie = calc_qie(n, T, ion_species='D')
+
+        Qe[0] = (en_src_nbi_e_tot[0] - qie[0] - cool_rate[0]) * (r[1] - r[0])
+        Qe[1] = Qe[0] + (en_src_nbi_e_tot[1] - qie[1] - cool_rate[1]) * (r[1] - r[0])
+
+        # Integral cylindrical form of the energy balance equation.
+        # Identical in form to the continuity equation, but different source term.
+        for n in range(2, len(r)):
+            Qe[n] = (r[n - 1] / r[n]) * Qe[n - 1] + (en_src_nbi_e_tot[n] - qie[n] - cool_rate[n]) * (r[n] - r[n - 1])
+
+        return Qe
+
+    def _calc_Qi_diff_method(self, r, a, cxcool, Qie, en_src_nbi_tot, en_src_nbi_lost, dVdrho, iol_adjusted=False, E_orb=None,
+                             verbose=False):
+        dE_orb = UnivariateSpline(r, E_orb, k=3, s=0).derivative()
+        en_src_nbi_totint = UnivariateSpline(r, en_src_nbi_tot, k=3, s=0)
+        en_src_nbi_lostint = UnivariateSpline(r, en_src_nbi_lost, k=3, s=0)
+        Qie_int = UnivariateSpline(r, Qie, k=3, s=0)
+        cxcoolint = UnivariateSpline(r, cxcool, k=3, s=0)
+        iolPeak = np.where(dE_orb(r) == dE_orb(r).max())
+
+        def f(t, flux, cxcool, Qie, Q_i_nbi, Qnbi_loss, dEdr, iolFlag, peak):
+            S = Q_i_nbi(t) - cxcool(t) + Qie(t)
+            # Physically, if the IOL peak has occured, everything radially outward should be dFdr = 0.0 since F(r)
+            # should equal 0.5 until r=1.0.66
+            dEdrval = dEdr(t)
+            if t >= peak:
+                dEdrval = 0.0
+            if iolFlag:
+                return S - Qnbi_loss(t) - (flux * (dEdrval + 1) / (t + 0.003))
+            else:
+                return S - (flux * (dEdr(t) + 1) / (t + 0.003))
+
+        from scipy.integrate import ode
+
+        flux = ode(f).set_integrator('vode', with_jacobian=False)
+        flux.set_initial_value(0., 0.).set_f_params(cxcoolint, Qie_int, en_src_nbi_totint, en_src_nbi_lostint, dE_orb,
+                                                    iol_adjusted, r[iolPeak])
+        dt = a / len(r)
+        x, y = [], []
+        while flux.successful() and flux.t < a:
+            x.append(flux.t + dt)
+            y.append(flux.integrate(flux.t + dt))
+        flux = UnivariateSpline(x, y, k=3, s=0)
+
+        if verbose:
+            plot = plt.figure()
+            fig1 = plot.add_subplot(311)
+            fig2 = plot.add_subplot(312)
+            fig3 = plot.add_subplot(313)
+
+            fig1.scatter(r, Qie_int(r), color="green")
+            fig1.scatter(r, cxcoolint(r), color="yellow")
+            fig1.scatter(r, en_src_nbi_totint(r), color="red")
+            fig1.scatter(r, en_src_nbi_lostint(r), color="black")
+            fig1.legend([r"$Q_{ie}$", r"$Q_{cx}$", r"$Q_{nbi,kept}$", r"$Q_{nbi,lost}$"])
+            fig1.set_xlim(0.85 * a, a)
+
+            fig2.scatter(r, dE_orb(r), color="red")
+            fig2.set_xlim(0.85 * a, a)
+
+            fig3.scatter(r, flux(r))
+            fig3.set_xlim(0.85 * a, a)
+            plt.show()
+
+        return flux(r)
+
+    def _calc_Qi_int_method(self, r, qie, en_src_nbi_i_kept, cool_rate, iol_adjusted=False, E_orb=None):  # formerly qheat
+
+        Qi = np.zeros(r.shape)
+
+        # Boundary condition at the magnetic axis.
+        # Only has the second term, since it's the center value. Also uses delta_r of the next point.
+        # If not adjusted for IOL, en_src_nbi_kept = en_src_nbi_tot, so no need for an IOL check.
+        Qi[0] = (en_src_nbi_i_kept[0] - cool_rate[0] + qie[0]) * (r[1] - r[0])
+        Qi[1] = Qi[0] + (en_src_nbi_i_kept[1] - cool_rate[1] + qie[1]) * (r[1] - r[0])
+
+        # Integral cylindrical form of the energy balance equation.
+        # Identical in form to the particle continuity equation, but different source term.
+        for n in range(2, len(r)):
+            if iol_adjusted:
+                # Imported the exp() function for the thermal IOL attenuation.
+                Qi[n] = (r[n - 1] / r[n]) * Qi[n - 1] * exp(-(E_orb[n] - E_orb[n - 1])) + (
+                        en_src_nbi_i_kept[n] - cool_rate[n] + qie[n]) * (r[n] - r[n - 1])
+            else:
+                Qi[n] = (r[n - 1] / r[n]) * Qi[n - 1] + (en_src_nbi_i_kept[n] - cool_rate[n] - qie[n]) * (
+                            r[n] - r[n - 1])
+
+        return Qi
+
     def plot_chi_terms(self, edge=True):
 
         fig = self._plot_base(self.conv25, title="", yLabel="q[W/m^2]", edge=edge)
@@ -418,29 +623,9 @@ class RadialTransport(PlotBase):
 
 
     def plot_gamma_diff_calc(self):
-        calc_gamma_diff_method(self.rhor * self.core.a,
-                               self.core.a,
-                               self.part_src_nbi,
-                               self.part_src_nbi_lost,
-                               self.izn_rate,
-                               self.core.dVdrho,
-                               iol_adjusted=self.iolFlag,
-                               F_orb=self.iol.forb_d_therm_1D,
-                               verbose=True)
+        self._calc_gamma_diff_method(self.rhor * self.core.a, self.core.dVdrho, iol_adjusted=self.iolFlag,
+                                     F_orb=self.iol.forb_d_therm_1D, verbose=True)
 
-
-
-    def plot_q_diff_calc(self):
-        calc_Qi_diff_method(self.rhor * self.core.a,
-                            self.core.a,
-                            self.cxcool,
-                            self.qie,
-                            self.en_src_nbi_i_tot,
-                            self.en_src_nbi_i_lost,
-                            self.core.dVdrho,
-                            iol_adjusted=self.iolFlag,
-                            E_orb=self.iol.eorb_d_therm_1D,
-                            verbose=True)
 
     def plot_nu_jk(self, edge=True):
         return self._plot_base(self.nu_c_j_k, yLabel=r'$\nu_{j,k}$', title="Ion-Impurity Collision frequency", edge=edge)
@@ -476,7 +661,7 @@ class RadialTransport(PlotBase):
     def plot_Q_sources(self, edge=True, logPlot=False):
         fig = self._plot_base(self.en_src_nbi_i_kept, yLabel=r'$Q_r[W/m^3]$', title="", edge=edge)
         fig.scatter(self.rhor, self.cxcool, color="green", s=self._markerSize)
-        fig.scatter(self.rhor, abs(self.qie), color="black", s=self._markerSize)
+        fig.scatter(self.rhor, abs(self.qie.val), color="black", s=self._markerSize)
         if logPlot:
             fig.set_yscale("log")
         plt.show()
