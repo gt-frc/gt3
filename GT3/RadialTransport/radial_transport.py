@@ -212,7 +212,7 @@ class RadialTransport(PlotBase):
         self.part_src_nbi_kept = nbi.combined_beam_src_dens_kept.Snbi
 
         # Piper changes: Changed names of particle and heat flux so it's easier to tell what method is used.
-        gamma_diff_D = self._calc_gamma_diff_method(r, core.dVdrho, iol_adjusted=iolFlag, F_orb=F_orb_d,
+        gamma_diff_D = self._calc_gamma_diff_method(r, iol_adjusted=iolFlag, F_orb=F_orb_d,
                                                     neutFlag=neutFlag)  # Differential Cylindrical Method
         gamma_int_D = self._calc_gamma_int_method(r, iol_adjusted=iolFlag, F_orb=F_orb_d,
                                                   neutFlag=neutFlag)  # Integral Cylindrical Method
@@ -362,15 +362,12 @@ class RadialTransport(PlotBase):
         self.qie = OneDProfile(core.psi, calc_qie(n, T, ion_species='D'), core.R, core.Z)
 
         # calculate radial heat flux. Piper changes: Separated heat flux equations into differential and integral cylindrical methods.
-        Qi_diff = self._calc_Qi_diff_method(r, core.a, self.cxcool, self.qie, self.en_src_nbi_i_tot,
-                                            self.en_src_nbi_i_lost, core.dVdrho,
-                                            E_orb=E_orb_d)  # previously called qheat. Differential Method.
+        Qi_diff = self._calc_Qi_diff_method(E_orb=E_orb_d)  # previously called qheat. Differential Method.
 
-        Qi_int = self._calc_Qi_int_method(r, self.qie, self.en_src_nbi_i_kept, self.cool_rate,
-                                          E_orb=E_orb_d)  # Integral method.
-        Qe_diff = self._calc_Qe_diff_method(r, core.a, self.en_src_nbi_e, self.cool_rate, calc_qie(n, T))  # Differential Method.
+        Qi_int = self._calc_Qi_int_method(E_orb=E_orb_d)  # Integral method.
+        Qe_diff = self._calc_Qe_diff_method(self.cool_rate, calc_qie(n, T))  # Differential Method.
 
-        Qe_int = self._calc_Qe_int_method(r, n, T, self.en_src_nbi_e, self.cool_rate)  # Integral method.
+        Qe_int = self._calc_Qe_int_method()  # Integral method.
 
         self.Q = Flux(core, label=r"$Q_r",
                       D_int=Qi_int,
@@ -403,9 +400,8 @@ class RadialTransport(PlotBase):
 
         self.D_i = m_d * T.i.J * (self.nu_c_j_k * (1. - ch_d / ch_c) + self.nu_drag_D) / ((ch_d * core.B.pol.fsa)**2)
 
-    def _calc_gamma_diff_method(self, r, dVdrho, iol_adjusted=False, F_orb=None, neutFlag=True, verbose=False):
+    def _calc_gamma_diff_method(self, r, iol_adjusted=False, F_orb=None, neutFlag=True, verbose=False):
         a = self.core.a
-        dVdr = UnivariateSpline(r, dVdrho(r / a) / a, k=2, s=0)
         dF_orb = UnivariateSpline(r, F_orb, k=3, s=0).derivative()
         izn_rateint = UnivariateSpline(r, self.izn_rate.val, k=2, s=0)
         part_src_nbi_totint = UnivariateSpline(r, self.part_src_nbi_tot.val, k=2, s=0)
@@ -493,7 +489,10 @@ class RadialTransport(PlotBase):
 
         return gamma
 
-    def _calc_Qe_diff_method(self, r, a, en_src_nbi_e, cool_rate, Qie):
+    def _calc_Qe_diff_method(self, cool_rate, Qie):
+        a = self.core.a
+        r = self.rhor * a
+        en_src_nbi_e = self.en_src_nbi_e
         en_src_nbi_eint = UnivariateSpline(r, en_src_nbi_e, k=3, s=0)
         cool_rateint = UnivariateSpline(r, cool_rate.val, k=3, s=0)
         Qie_int = UnivariateSpline(r, Qie, k=3, s=0)
@@ -518,8 +517,12 @@ class RadialTransport(PlotBase):
         # print "Total nbi ion energy: " + str(UnivariateSpline(r, (en_src_nbi_keptint(r) + en_src_nbi_lostint(r)) * dVdr(r), k=3, s=0).integral(0., 1.)/(1E6))+" MW"
         return flux(r)
 
-    def _calc_Qe_int_method(self, r, n, T, en_src_nbi_e_tot, cool_rate):  # Piper Changes: Same as Qi changes.
-
+    def _calc_Qe_int_method(self):  # Piper Changes: Same as Qi changes.
+        r = self.rhor * self.core.a
+        n = self._n
+        T = self._T
+        cool_rate = self.cool_rate
+        en_src_nbi_e_tot = self.en_src_nbi_e
         Qe = np.zeros(r.shape)
         qie = calc_qie(n, T, ion_species='D')
 
@@ -533,8 +536,13 @@ class RadialTransport(PlotBase):
 
         return Qe
 
-    def _calc_Qi_diff_method(self, r, a, cxcool, Qie, en_src_nbi_tot, en_src_nbi_lost, dVdrho, iol_adjusted=False, E_orb=None,
-                             verbose=False):
+    def _calc_Qi_diff_method(self, iol_adjusted=False, E_orb=None, verbose=False):
+        a = self.core.a
+        r = self.rhor * a
+        en_src_nbi_tot = self.en_src_nbi_i_tot
+        en_src_nbi_lost = self.en_src_nbi_i_lost
+        Qie = self.qie
+        cxcool = self.cxcool
         dE_orb = UnivariateSpline(r, E_orb, k=3, s=0).derivative()
         en_src_nbi_totint = UnivariateSpline(r, en_src_nbi_tot, k=3, s=0)
         en_src_nbi_lostint = UnivariateSpline(r, en_src_nbi_lost, k=3, s=0)
@@ -588,8 +596,11 @@ class RadialTransport(PlotBase):
 
         return flux(r)
 
-    def _calc_Qi_int_method(self, r, qie, en_src_nbi_i_kept, cool_rate, iol_adjusted=False, E_orb=None):  # formerly qheat
-
+    def _calc_Qi_int_method(self, iol_adjusted=False, E_orb=None):  # formerly qheat
+        r = self.rhor * self.core.a
+        en_src_nbi_i_kept = self.en_src_nbi_i_kept
+        cool_rate = self.cool_rate
+        qie = self.qie
         Qi = np.zeros(r.shape)
 
         # Boundary condition at the magnetic axis.
@@ -623,8 +634,8 @@ class RadialTransport(PlotBase):
 
 
     def plot_gamma_diff_calc(self):
-        self._calc_gamma_diff_method(self.rhor * self.core.a, self.core.dVdrho, iol_adjusted=self.iolFlag,
-                                     F_orb=self.iol.forb_d_therm_1D, verbose=True)
+        self._calc_gamma_diff_method(self.rhor * self.core.a, iol_adjusted=self.iolFlag, F_orb=self.iol.forb_d_therm_1D,
+                                     verbose=True)
 
 
     def plot_nu_jk(self, edge=True):
