@@ -891,12 +891,12 @@ class Flux(PlotBase, BaseMath):
         e_diff = kwargs.get("e_diff")
         self._core = core
 
-        self.D = DiffIntSplit(OneDProfile(core.psi, D_int, core.R, core.Z),
-                              OneDProfile(core.psi, D_diff, core.R, core.Z))
-        self.C = DiffIntSplit(OneDProfile(core.psi, C_int, core.R, core.Z),
-                              OneDProfile(core.psi, C_diff, core.R, core.Z))
-        self.e = DiffIntSplit(OneDProfile(core.psi, e_int, core.R, core.Z),
-                              OneDProfile(core.psi, e_diff, core.R, core.Z))
+        self.D = DiffIntSplit(OneDProfile(core.psi, D_diff, core.R, core.Z),
+                              OneDProfile(core.psi, D_int, core.R, core.Z))
+        self.C = DiffIntSplit(OneDProfile(core.psi, C_diff, core.R, core.Z),
+                              OneDProfile(core.psi, C_int, core.R, core.Z))
+        self.e = DiffIntSplit(OneDProfile(core.psi, e_diff, core.R, core.Z),
+                              OneDProfile(core.psi, e_int, core.R, core.Z))
 
     def plot_D(self):
         fig = self._plot_base(self.D.diff.val, yLabel=self.label, edge=True, title="")

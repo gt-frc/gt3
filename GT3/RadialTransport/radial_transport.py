@@ -362,9 +362,9 @@ class RadialTransport(PlotBase):
         self.qie = OneDProfile(core.psi, calc_qie(n, T, ion_species='D'), core.R, core.Z)
 
         # calculate radial heat flux. Piper changes: Separated heat flux equations into differential and integral cylindrical methods.
-        Qi_diff = self._calc_Qi_diff_method(E_orb=E_orb_d)  # previously called qheat. Differential Method.
+        Qi_diff = self._calc_Qi_diff_method(iol_adjusted=iolFlag, E_orb=E_orb_d)  # previously called qheat. Differential Method.
 
-        Qi_int = self._calc_Qi_int_method(E_orb=E_orb_d)  # Integral method.
+        Qi_int = self._calc_Qi_int_method(iol_adjusted=iolFlag, E_orb=E_orb_d)  # Integral method.
         Qe_diff = self._calc_Qe_diff_method(self.cool_rate, calc_qie(n, T))  # Differential Method.
 
         Qe_int = self._calc_Qe_int_method()  # Integral method.
