@@ -22,5 +22,5 @@ def calc_nu_j_k(m_j, m_k, z_j, z_k, T_j, n_k):
     return nu_j_k
 
 def calc_nustar(nu90, q, R0_a, vpol):
-    nustar = nu90 * abs(q) * R0_a / np.abs(vpol)
+    nustar = nu90 * abs(q.val) * R0_a / np.abs(vpol)
     return nustar

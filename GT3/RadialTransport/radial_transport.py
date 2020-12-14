@@ -57,40 +57,6 @@ class RadTransPressureProfiles(PressureProfiles):
         super().__init__(core.psi, core.R, core.Z, ProfileType=OneDProfile, *args, **kwargs)
 
 
-def viscCalc(data, core):
-    """
-
-    :type core: Core
-    :type data: RadialTransport
-    """
-    fp = core.B.pol.fsa / core.B.tor.fsa
-    ni = core.n.i.fsa
-    Ti = core.T.i.J.fsa
-    q = core.q[:, 0]
-    R0 = core.R0_a
-    vth = data.vpol_D[0]
-    vtor = data.vtor_D_total
-    vpol = data.vpol_D
-    eps = core.a / core.R0_a
-    nustar = data.nustar[0]
-    geom = (eps ** (-3./2.) * nustar) / ((1 + eps ** (-3. / 2.) * nustar) * (1 + nustar))
-    vtorS = 0.1
-    vpolS = 0.1
-    #eta0 = [a * m_d * b * c * core.R0_a * f1 for a, b, c in zip(n.i, vth, core.q[:, 0])]
-    eta0 = ni * m_d * vth * q * R0 * geom
-    #eta4 = [a * m_d * c * ch_d / (ch_d * abs(b)) for a, b, c in zip(n.i, core.B_t_fsa, T.i.ev)]
-    eta4 = ni * m_d * Ti / (ch_d * abs(core.B.tor.fsa.val))
-    vrad = data.gamma.D.diff / ni
-
-    # a = vtor    b = fp   c = eta0
-    # d = vrad    f = vthet g = eta 4
-
-    #return [a * (b * c * d - .5 * g * (4.0 * a + f)) - .5 * f * (c * d + g * (a + .5 * f)) for a, b, c, d, f, g in
-    #        zip(data.vtor_D_total, fp, eta0, vrad, data.vpol_D, eta4)]
-
-    res = vtor * vtorS * (eta0 * fp * vrad - eta4 * (2. * vtor + .5 * vpol))
-    res = res - 0.5 * vpol * vpolS * (eta0 * vrad + eta4 * (vtor + .5 * vpol))
-    return res / R0
 
 def calc_chi_e(Qe, gamma_diff_D, gamma_C, n, T):
     gameltemp = 1.0 * gamma_diff_D + 6.0 * gamma_C   #OHHHH gamma electron!!! HA HA HA HA WE DON'T KNOW WHAT THE FUCK GAMMA_C IS
@@ -275,6 +241,13 @@ class RadialTransport(PlotBase):
                                                  B_p,
                                                  self.gamma.D.int,
                                                  self.gamma.C.int)  # Piper Changes: Uses integral cylindrical gamma
+            self.core.v.D.tor.update_from_1D(self.vtor_D_total)
+
+            # Broadcast to 2D before replacing
+            vtor_D_prep = np.broadcast_to(self.vtor_D_total, (self.core.rho.shape[1], len(self.vtor_D_total))).T
+
+            # Update TwoDProfile
+            self.core.v.update_D(tor = vtor_D_prep)
             # Piper changes: added a message to let the user know the D velocity was calculated.
             print('Deuterium toroidal velocity calculated from perturbation theory.')
         else:
@@ -293,6 +266,13 @@ class RadialTransport(PlotBase):
             self.vpol_D = self.vpol_C / 0.4
             print('could not calculate deuterium poloidal rotation')
             pass
+
+        # Update core velocities
+        # Broadcast to 2D before replacing
+        vpol_D_prep = np.broadcast_to(self.vpol_D, (self.core.rho.shape[1], len(self.vpol_D))).T
+
+        # Update TwoDProfile
+        self.core.v.update_D(pol=vpol_D_prep)
 
         # Nick Changes: TEMPORARY - Calculate Er using pressure gradient vs. scale length.
         self.Er_calc_D, self.Er_pres_term_D, self.Er_vxb_term_D = calc_Er_mom_bal(n.i, e * z_d, p.i.derivative(),
@@ -322,7 +302,7 @@ class RadialTransport(PlotBase):
 
         self.nu_drag_D = calc_nu_drag(n.i, m_d, self.vtor_D_total, self.vtor_C_total, mbal_rhs_D, nu_c_DC)
         self.nu_drag_C = calc_nu_drag(n.i, m_d, self.vtor_D_total, self.vtor_C_total, mbal_rhs_C, nu_c_CD)
-        self.nustar = calc_nustar(self.nu_c_j_j, core.q[:, 0], core.R0_a, self.vpol_D)
+        self.nustar = calc_nustar(self.nu_c_j_j, core.q.fsa, core.R0_a, self.vpol_D)
 
         ##############################################################
         # Pinch Velocity
@@ -377,7 +357,7 @@ class RadialTransport(PlotBase):
 
         conv15 = UnivariateSpline(core.r[:, 0], 3. * .5 * ch_d * self.gamma.D.diff * T.i.ev, k=3, s=0)(core.r[:, 0])
         conv25 = UnivariateSpline(core.r[:, 0], 5. * .5 * ch_d * self.gamma.D.diff * T.i.ev, k=3, s=0)(core.r[:, 0])
-        hvisc = viscCalc(self, core)
+        hvisc = self._calc_visc_heat()
 
 
         heatin = UnivariateSpline(core.r[:, 0],
@@ -621,6 +601,41 @@ class RadialTransport(PlotBase):
                             r[n] - r[n - 1])
 
         return Qi
+
+    def _calc_visc_heat(self):
+        """
+
+        :type core: Core
+        :type self: RadialTransport
+        """
+        fp = self.core.B.pol.fsa / self.core.B.tor.fsa
+        ni = self._n.i
+        Ti = self._T.i.J
+        q = self.core.q.fsa
+        R0 = self.core.R0_a
+        vth = np.abs(self.core.v.D.tot.fsa)
+        vtor = np.abs(self.core.v.D.tor.fsa)
+        vpol = np.abs(self.core.v.D.pol.fsa)
+        eps = self.core.a / self.core.R0_a
+        nustar = self.nustar
+        geom = (eps ** (-3. / 2.) * nustar) / ((1 + eps ** (-3. / 2.) * nustar) * (1 + nustar))
+        vtorS = 0.1
+        vpolS = 0.1
+        # eta0 = [a * m_d * b * c * core.R0_a * f1 for a, b, c in zip(n.i, vth, core.q[:, 0])]
+        eta0 = ni * m_d * vpol * q * R0 * geom
+        # eta4 = [a * m_d * c * ch_d / (ch_d * abs(b)) for a, b, c in zip(n.i, core.B_t_fsa, T.i.ev)]
+        eta4 = ni * m_d * Ti / (ch_d * abs(self.core.B.tor.fsa.val))
+        vrad = OneDProfile(self.core.psi, self.gamma.D.diff / ni, self.core.r, self.core.Z)
+
+        # a = vtor    b = fp   c = eta0
+        # d = vrad    f = vthet g = eta 4
+
+        # return [a * (b * c * d - .5 * g * (4.0 * a + f)) - .5 * f * (c * d + g * (a + .5 * f)) for a, b, c, d, f, g in
+        #        zip(data.vtor_D_total, fp, eta0, vrad, data.vpol_D, eta4)]
+
+        res = vtor * vtorS * (eta0 * fp * vrad - eta4 * (2. * vtor + .5 * vpol))
+        res = res - 0.5 * vpol * vpolS * (eta0 * vrad + eta4 * (vtor + .5 * vpol))
+        return res / R0
 
     def plot_chi_terms(self, edge=True):
 

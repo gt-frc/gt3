@@ -28,7 +28,8 @@ class PlotBase:
     def set_plot_wall(self, wall):
         self._wall_line = wall
 
-    def _plot_base(self, val, xLabel=r'$\rho$', yLabel="Value", title="Title", color='red', edge=False, show=True, line=False):
+    def _plot_base(self, val, xLabel=r'$\rho$', yLabel="Value", title="Title", color='red', edge=False, show=True,
+                   line=False, **kwargs):
         plot = plt.figure()
         fig = plot.add_subplot(111)
         fig.set_xlabel(xLabel, fontsize=30)
@@ -36,6 +37,9 @@ class PlotBase:
         plt.xticks(fontsize=20)
         plt.yticks(fontsize=20)
         fig.set_title(title)
+        if kwargs.get("logPlot"):
+            fig.set_yscale("log")
+            val = np.abs(val)
         if edge:
             fig.set_xlim(0.85, 1.0)
         if line:

@@ -173,9 +173,9 @@ class OneDProfile(PlotBase, BaseMath):
     def __doc__(self):
         return self._docs
 
-    def plot(self, edge=True, color="red"):
+    def plot(self, edge=True, color="red", **kwargs):
         return self._plot_base(self.val, xLabel=self.xLabel, yLabel=self.yLabel,
-                               title=self.plotTitle, color=color, edge=edge)
+                               title=self.plotTitle, color=color, edge=edge, **kwargs)
 
     @property
     def L(self):
@@ -246,7 +246,7 @@ class OneDProfile(PlotBase, BaseMath):
             raise (str(err))
         return self._raw_rho, self._raw_data
 
-    def plot_raw_data(self, fsa=True, edge=False):
+    def plot_raw_data(self, fsa=True, edge=False, **kwargs):
         """
         Plots the experimental data vs. the flux-surface-averaged or [:, 0] data for comparison.
         Set fsa to False to plot the [:, 0] data instead.
@@ -261,10 +261,10 @@ class OneDProfile(PlotBase, BaseMath):
             raise err
         if fsa:
             fig = self._plot_base(self.fsa, xLabel=self.xLabel, yLabel=self.yLabel, edge=edge, line=True)
-            fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize)
+            fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize, **kwargs)
         else:
             fig = self._plot_base(self.to1D(), xLabel=self.xLabel, yLabel=self.yLabel, edge=edge, line=True)
-            fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize)
+            fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize, **kwargs)
         return fig
 
 
@@ -341,7 +341,7 @@ class TwoDProfile(PlotBase, BaseMath):
             raise (str(err))
         return self._raw_rho, self._raw_data
 
-    def plot_raw_data(self, fsa=True, edge=False):
+    def plot_raw_data(self, fsa=True, edge=False, **kwargs):
         """
         Plots the experimental data vs. the flux-surface-averaged or [:, 0] data for comparison.
         Set fsa to False to plot the [:, 0] data instead.
@@ -356,10 +356,10 @@ class TwoDProfile(PlotBase, BaseMath):
             raise err
         if fsa:
             fig = self._plot_base(self.fsa, xLabel=self.xLabel, yLabel=self.yLabel, edge=edge, line=True)
-            fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize)
+            fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize, **kwargs)
         else:
             fig = self._plot_base(self.to1D(), xLabel=self.xLabel, yLabel=self.yLabel, edge=edge, line=True)
-            fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize)
+            fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize, **kwargs)
         return fig
 
     def set_wall(self, wall):
@@ -375,9 +375,9 @@ class TwoDProfile(PlotBase, BaseMath):
         else:
             print("Wall not defined. ")
 
-    def plot_fsa(self, color='red', edge=True):
+    def plot_fsa(self, color='red', edge=True, **kwargs):
         """Returns the flux-surface-averaged values plotted"""
-        return self._plot_base(self.fsa, xLabel=self.xLabel, yLabel=self.yLabel, color=color, edge=edge)
+        return self._plot_base(self.fsa, xLabel=self.xLabel, yLabel=self.yLabel, color=color, edge=edge, **kwargs)
 
     def to1D(self, l=0):
         """Returns the [:, l] array on np.array's that are broadcast originally. Normally, l=0"""
@@ -408,9 +408,13 @@ class TwoDProfile(PlotBase, BaseMath):
         return not np.all(self.val == 0)
 
     def update(self, val):
+
+        self.val = val
+
+    def update_from_1D(self, val):
         if hasattr(self, "_derivative"):
             del self._derivative
-            self.val = val
+        self.val = np.broadcast_to(val, (self.rho.shape[1], len(val))).T
 
     @L.setter
     def L(self, value):
@@ -493,16 +497,16 @@ class TemperatureProfiles(PlotBase):
     def plot_with_wall(self, obj=None):
         pass
 
-    def plot(self, e=True, C=True, edge=True):
-        fig = self._plot_base(self.i.kev.fsa, yLabel=r"$T[keV]$", edge=edge, title="Temperature Profiles")
+    def plot(self, e=True, C=True, edge=True, **kwargs):
+        fig = self._plot_base(self.i.kev.fsa, yLabel=r"$T[keV]$", edge=edge, title="Temperature Profiles", **kwargs)
         legend = [r"$T_i$"]
         if e:
             if self.e:
-                fig.scatter(self._plot_rho1d, self.e.kev.fsa, color="blue", s=self._markerSize)
+                fig.scatter(self._plot_rho1d, self.e.kev.fsa, color="blue", s=self._markerSize, **kwargs)
                 legend.append(r"$T_e$")
         if C:
             if self.C:
-                fig.scatter(self._plot_rho1d, self.C.kev.fsa, color="green", s=self._markerSize)
+                fig.scatter(self._plot_rho1d, self.C.kev.fsa, color="green", s=self._markerSize, **kwargs)
                 legend.append(r"$T_C$")
         if len(legend) >1:
             fig.legend(legend)
@@ -716,8 +720,8 @@ class ImpurityProfiles(PlotBase, BaseMath):
         pass
 
 
-    def plot(self, e=True, C=True, edge=True):
-        fig = self._plot_base(self.i.fsa, yLabel="r$n[#/m^{-3}]$", edge=edge)
+    def plot(self, e=True, C=True, edge=True, **kwargs):
+        fig = self._plot_base(self.i.fsa, yLabel="r$n[#/m^{-3}]$", edge=edge, **kwargs)
         legend = [r"$n_i$"]
         if e:
             if self.e:
@@ -755,8 +759,8 @@ class PressureProfiles(PlotBase):
     def plot_with_wall(self, obj=None):
         pass
 
-    def plot1D(self, e=True, C=True, edge=True):
-        fig = self._plot_base(self.i.fsa, yLabel="r$P[Pa]$", edge=edge)
+    def plot1D(self, e=True, C=True, edge=True, **kwargs):
+        fig = self._plot_base(self.i.fsa, yLabel="r$P[Pa]$", edge=edge, **kwargs)
         legend = [r"$p_i$"]
         if e:
             if self.e:
@@ -846,21 +850,85 @@ class VectorialProfiles:
         :param kwargs:
         """
         super().__init__()
-        PoloidalToroidalSplit = namedtuple("PoloidalToroidalSplit", "pol tor")
-
+        self._psi = psi
+        self._R = R
+        self._Z = Z
+        self._wall = wall
         self._profileType = ProfileType
+        self._set_vals(**kwargs)
+
+
+    def update_D(self, pol=False, tor=False):
+        if not np.any(pol) and not np.any(tor):
+            return self
+        if np.any(pol) and np.any(tor):
+            self._set_vals(tor_D=tor, pol_D=pol)
+            return self
+        if not np.any(pol) and np.any(tor):
+            self._set_vals(tor_D=tor, pol_D=self.i.pol.val)
+            return self
+        if np.any(pol) and not np.any(tor):
+            self._set_vals(tor_D=self.i.tor.val, pol_D=pol)
+            return self
+
+    def update_e(self, pol=False, tor=False):
+        if not np.any(pol) and not np.any(tor):
+            return self
+        if np.any(pol) and np.any(tor):
+            self._set_vals(tor_e=tor, pol_e=pol)
+            return self
+        if not np.any(pol) and np.any(tor):
+            self._set_vals(tor_e=tor, pol_e=self.e.pol.val)
+            return self
+        if np.any(pol) and not np.any(tor):
+            self._set_vals(tor_e=self.e.tor.val, pol_e=pol)
+            return self
+
+    def update_C(self, pol=False, tor=False):
+        if not np.any(pol) and not np.any(tor):
+            return self
+        if np.any(pol) and np.any(tor):
+            self._set_vals(tor_C=tor, pol_C=pol)
+            return self
+        if not np.any(pol) and np.any(tor):
+            self._set_vals(tor_C=tor, pol_C=self.C.pol.val)
+            return self
+        if np.any(pol) and not np.any(tor):
+            self._set_vals(tor_C=self.C.tor.val, pol_C=pol)
+            return self
+
+
+
+
+
+    def _set_vals(self, **kwargs):
+        PoloidalToroidalSplit = namedtuple("PoloidalToroidalSplit", "pol tor tot")
+
         if 'tor_D' in kwargs or 'pol_D' in kwargs:
-            self.i = PoloidalToroidalSplit(self._profileType(psi, kwargs.get('pol_D'), R, Z, units=r"m/s", wall=wall),
-                                           self._profileType(psi, kwargs.get('tor_D'), R, Z, units=r"m/s", wall=wall))
+            if 'tor_D' in kwargs and 'pol_D' in kwargs:
+                self.i = PoloidalToroidalSplit(self._profileType(self._psi, kwargs.get('pol_D'), self._R, self._Z,
+                                                                 units=r"m/s", wall=self._wall),
+                                               self._profileType(self._psi, kwargs.get('tor_D'), self._R, self._Z,
+                                                                 units=r"m/s", wall=self._wall),
+                                               self._profileType(self._psi, kwargs.get('tor_D')**2 + kwargs.get('pol_D'),
+                                                                 self._R, self._Z, units=r"m/s", wall=self._wall))
             self.D = self.i
 
         if 'tor_C' in kwargs or 'pol_C' in kwargs:
-            self.C = PoloidalToroidalSplit(self._profileType(psi, kwargs.get('pol_C'), R, Z, units=r"m/s", wall=wall),
-                                           self._profileType(psi, kwargs.get('tor_C'), R, Z, units=r"m/s", wall=wall))
+            self.C = PoloidalToroidalSplit(self._profileType(self._psi, kwargs.get('pol_C'), self._R, self._Z,
+                                                             units=r"m/s", wall=self._wall),
+                                           self._profileType(self._psi, kwargs.get('tor_C'), self._R, self._Z,
+                                                             units=r"m/s", wall=self._wall),
+                                           self._profileType(self._psi, kwargs.get('tor_C')**2 + kwargs.get('pol_C'),
+                                                             self._R, self._Z, units=r"m/s", wall=self._wall))
 
         if 'tor_e' in kwargs or 'pol_e' in kwargs:
-            self.e = PoloidalToroidalSplit(self._profileType(psi, kwargs.get('pol_e'), R, Z, units=r"m/s", wall=wall),
-                                           self._profileType(psi, kwargs.get('tor_e'), R, Z, units=r"m/s", wall=wall))
+            self.e = PoloidalToroidalSplit(self._profileType(self._psi, kwargs.get('pol_e'), self._R, self._Z,
+                                                             units=r"m/s", wall=self._wall),
+                                           self._profileType(self._psi, kwargs.get('tor_e'), self._R, self._Z,
+                                                             units=r"m/s", wall=self._wall),
+                                           self._profileType(self._psi, kwargs.get('tor_e')**2 + kwargs.get('pol_e'),
+                                                             self._R, self._Z, units=r"m/s", wall=self._wall))
 
 class VectorialBase(PlotBase, BaseMath):
 
@@ -898,24 +966,24 @@ class Flux(PlotBase, BaseMath):
         self.e = DiffIntSplit(OneDProfile(core.psi, e_diff, core.R, core.Z),
                               OneDProfile(core.psi, e_int, core.R, core.Z))
 
-    def plot_D(self):
-        fig = self._plot_base(self.D.diff.val, yLabel=self.label, edge=True, title="")
+    def plot_D(self, **kwargs):
+        fig = self._plot_base(self.D.diff.val, yLabel=self.label, edge=True, title="", **kwargs)
         fig.scatter(self._plot_rho1d, self.D.int.val, color="green")
         legend = [r"integral",
                   r"differential"]
         fig.legend(legend)
         return fig
 
-    def plot_C(self):
-        fig = self._plot_base(self.C.diff.val, yLabel=r"$\Gamma$", edge=True, title="")
+    def plot_C(self, **kwargs):
+        fig = self._plot_base(self.C.diff.val, yLabel=r"$\Gamma$", edge=True, title="", **kwargs)
         fig.scatter(self._plot_rho1d, self.C.int.val, color="green")
         legend = [r"$\Gamma^{int}$",
                   r"$\Gamma^{diff}$"]
         fig.legend(legend)
         return fig
 
-    def plot_e(self):
-        fig = self._plot_base(self.e.diff.val, yLabel=self.label, edge=True, title="")
+    def plot_e(self, **kwargs):
+        fig = self._plot_base(self.e.diff.val, yLabel=self.label, edge=True, title="", **kwargs)
         fig.scatter(self._plot_rho1d, self.e.int.val, color="green")
         legend = [r"integral",
                   r"differential"]
