@@ -178,7 +178,7 @@ class RadialTransport(PlotBase):
         self.part_src_nbi_kept = nbi.combined_beam_src_dens_kept.Snbi
 
         # Piper changes: Changed names of particle and heat flux so it's easier to tell what method is used.
-        gamma_diff_D = self._calc_gamma_diff_method(r, iol_adjusted=iolFlag, F_orb=F_orb_d,
+        gamma_diff_D = self._calc_gamma_diff_method(iol_adjusted=iolFlag, F_orb=F_orb_d,
                                                     neutFlag=neutFlag)  # Differential Cylindrical Method
         gamma_int_D = self._calc_gamma_int_method(r, iol_adjusted=iolFlag, F_orb=F_orb_d,
                                                   neutFlag=neutFlag)  # Integral Cylindrical Method
@@ -380,8 +380,9 @@ class RadialTransport(PlotBase):
 
         self.D_i = m_d * T.i.J * (self.nu_c_j_k * (1. - ch_d / ch_c) + self.nu_drag_D) / ((ch_d * core.B.pol.fsa)**2)
 
-    def _calc_gamma_diff_method(self, r, iol_adjusted=False, F_orb=None, neutFlag=True, verbose=False):
+    def _calc_gamma_diff_method(self, iol_adjusted=False, F_orb=None, neutFlag=True, verbose=False, *args, **kwargs):
         a = self.core.a
+        r = self.rhor * self.core.a
         dF_orb = UnivariateSpline(r, F_orb, k=3, s=0).derivative()
         izn_rateint = UnivariateSpline(r, self.izn_rate.val, k=2, s=0)
         part_src_nbi_totint = UnivariateSpline(r, self.part_src_nbi_tot.val, k=2, s=0)
@@ -393,7 +394,8 @@ class RadialTransport(PlotBase):
                 # if t/a >= 0.95:
                 # S = snbi(t) + sion(t)
                 # else:
-                S = snbi(t)
+                # S = snbi(t)
+                S = snbi(t) + sion(t)
             else:
                 S = snbi(t)
             # Physically, if the IOL peak has occured, everything radially outward should be dFdr = 0.0 since F(r)
@@ -439,6 +441,27 @@ class RadialTransport(PlotBase):
             plt.show()
 
             return fig1, fig2, fig3
+
+        if kwargs.get("splineVerify"):
+            plot1 = plt.figure()
+            #plot1.set_title("Spline fit verification")
+            fig1 = plot1.add_subplot(411)
+            fig2 = plot1.add_subplot(412)
+            fig3 = plot1.add_subplot(413)
+            fig4 = plot1.add_subplot(414)
+
+            fig1.scatter(r, self.izn_rate.val, color="red", marker="x")
+            fig1.plot(r, izn_rateint(r))
+            fig1.set_title("izn_rate")
+            fig2.scatter(r, self.part_src_nbi_tot.val, color="red", marker="x")
+            fig2.plot(r, part_src_nbi_totint(r))
+            fig2.set_title("nbi_tot")
+            fig3.scatter(r, self.part_src_nbi_lost.val, color="red", marker="x")
+            fig3.plot(r, part_src_nbi_lostint(r))
+            fig3.set_title("nbi_list")
+            fig4.scatter(x, y, color="red", marker="x")
+            fig4.plot(r, gamma(r))
+            fig4.set_title("gamma")
 
         return gamma(r)
 
@@ -516,7 +539,7 @@ class RadialTransport(PlotBase):
 
         return Qe
 
-    def _calc_Qi_diff_method(self, iol_adjusted=False, E_orb=None, verbose=False):
+    def _calc_Qi_diff_method(self, iol_adjusted=False, E_orb=None, verbose=False, *args, **kwargs):
         a = self.core.a
         r = self.rhor * a
         en_src_nbi_tot = self.en_src_nbi_i_tot
@@ -573,6 +596,31 @@ class RadialTransport(PlotBase):
             fig3.scatter(r, flux(r))
             fig3.set_xlim(0.85 * a, a)
             plt.show()
+
+        if kwargs.get("splineVerify"):
+            plot1 = plt.figure()
+            #plot1.set_title("Spline fit verification")
+            fig1 = plot1.add_subplot(321)
+            fig2 = plot1.add_subplot(322)
+            fig3 = plot1.add_subplot(323)
+            fig4 = plot1.add_subplot(324)
+            fig5 = plot1.add_subplot(325)
+
+            fig1.scatter(r, en_src_nbi_tot, color="red", marker="x")
+            fig1.plot(r, en_src_nbi_totint(r))
+            fig1.set_title("nbi_src_tot")
+            fig2.scatter(r, en_src_nbi_lost, color="red", marker="x")
+            fig2.plot(r, en_src_nbi_lostint(r))
+            fig2.set_title("nbi_src_lost")
+            fig3.scatter(r, Qie, color="red", marker="x")
+            fig3.plot(r, Qie_int(r))
+            fig3.set_title("Qie")
+            fig4.scatter(r, cxcool, color="red", marker="x")
+            fig4.plot(r, cxcoolint(r))
+            fig4.set_title("CX cooling")
+            fig5.scatter(x, y, color="red", marker="x")
+            fig5.plot(r, flux(r))
+            fig5.set_title("flux")
 
         return flux(r)
 
@@ -649,8 +697,7 @@ class RadialTransport(PlotBase):
 
 
     def plot_gamma_diff_calc(self):
-        self._calc_gamma_diff_method(self.rhor * self.core.a, iol_adjusted=self.iolFlag, F_orb=self.iol.forb_d_therm_1D,
-                                     verbose=True)
+        self._calc_gamma_diff_method(iol_adjusted=self.iolFlag, F_orb=self.iol.forb_d_therm_1D, verbose=True)
 
 
     def plot_nu_jk(self, edge=True):

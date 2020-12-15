@@ -408,13 +408,14 @@ class TwoDProfile(PlotBase, BaseMath):
         return not np.all(self.val == 0)
 
     def update(self, val):
-
         self.val = val
+        self.fsa = OneDProfile(self._psi, calc_fsa(self.val, self.R, self.Z), self.R, self.Z)
 
     def update_from_1D(self, val):
         if hasattr(self, "_derivative"):
             del self._derivative
         self.val = np.broadcast_to(val, (self.rho.shape[1], len(val))).T
+        self.fsa = OneDProfile(self._psi, calc_fsa(self.val, self.R, self.Z), self.R, self.Z)
 
     @L.setter
     def L(self, value):
@@ -604,14 +605,14 @@ class LzTwoDProfile(TwoDProfile):
 
     def update_Lz(self, Lz, T: TemperatureProfiles, n: DensityProfiles):
         if self.slow:
-            self.val = Lz(np.log10(T.n.s.kev.val),
+            self.update(Lz(np.log10(T.n.s.kev.val),
                           np.log10(n.n.s.val / n.e.val),
-                          np.log10(T.e.kev.val))
+                          np.log10(T.e.kev.val)))
 
         else:
-            self.val = Lz(np.log10(T.n.t.kev.val),
+            self.update(Lz(np.log10(T.n.t.kev.val),
                         np.log10(n.n.t / n.e.val),
-                        np.log10(T.e.kev.val))
+                        np.log10(T.e.kev.val)))
         try:
             del self._derivative
         except AttributeError:
@@ -620,13 +621,13 @@ class LzTwoDProfile(TwoDProfile):
 
     def update_ddT(self, LzddT, T: TemperatureProfiles, n: DensityProfiles):
         if self.slow:
-            self.ddT = LzddT(np.log10(T.n.s.kev.val),
+            self.update(LzddT(np.log10(T.n.s.kev.val),
                              np.log10(n.n.s.val / n.e.val),
-                             np.log10(T.e.kev.val))
+                             np.log10(T.e.kev.val)))
         else:
-            self.ddT = LzddT(np.log10(T.n.t.kev.val),
+            self.update(LzddT(np.log10(T.n.t.kev.val),
                              np.log10(n.n.t.val / n.e.val),
-                             np.log10(T.e.kev.val))
+                             np.log10(T.e.kev.val)))
         return self.ddT
 
 
@@ -896,10 +897,6 @@ class VectorialProfiles:
         if np.any(pol) and not np.any(tor):
             self._set_vals(tor_C=self.C.tor.val, pol_C=pol)
             return self
-
-
-
-
 
     def _set_vals(self, **kwargs):
         PoloidalToroidalSplit = namedtuple("PoloidalToroidalSplit", "pol tor tot")
