@@ -650,7 +650,7 @@ class RadialTransport(PlotBase):
 
         return Qi
 
-    def _calc_visc_heat(self):
+    def _calc_visc_heat(self, vtorS=0.1, vpolS=0.1):
         """
 
         :type core: Core
@@ -661,14 +661,11 @@ class RadialTransport(PlotBase):
         Ti = self._T.i.J
         q = self.core.q.fsa
         R0 = self.core.R0_a
-        vth = np.abs(self.core.v.D.tot.fsa)
-        vtor = np.abs(self.core.v.D.tor.fsa)
-        vpol = np.abs(self.core.v.D.pol.fsa)
+        vtor = self.core.v.D.tor.fsa
+        vpol = self.core.v.D.pol.fsa
         eps = self.core.a / self.core.R0_a
         nustar = self.nustar
         geom = (eps ** (-3. / 2.) * nustar) / ((1 + eps ** (-3. / 2.) * nustar) * (1 + nustar))
-        vtorS = 0.1
-        vpolS = 0.1
         # eta0 = [a * m_d * b * c * core.R0_a * f1 for a, b, c in zip(n.i, vth, core.q[:, 0])]
         eta0 = ni * m_d * vpol * q * R0 * geom
         # eta4 = [a * m_d * c * ch_d / (ch_d * abs(b)) for a, b, c in zip(n.i, core.B_t_fsa, T.i.ev)]
