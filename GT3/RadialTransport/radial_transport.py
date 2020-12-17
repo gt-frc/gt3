@@ -355,14 +355,10 @@ class RadialTransport(PlotBase):
                       e_int=Qe_int,
                       e_diff=Qe_diff)
 
-        conv15 = UnivariateSpline(core.r[:, 0], 3. * .5 * ch_d * self.gamma.D.diff * T.i.ev, k=3, s=0)(core.r[:, 0])
-        conv25 = UnivariateSpline(core.r[:, 0], 5. * .5 * ch_d * self.gamma.D.diff * T.i.ev, k=3, s=0)(core.r[:, 0])
+        conv15 = 3. * .5 * ch_d * self.gamma.D.diff * T.i.ev
+        conv25 = 5. * .5 * ch_d * self.gamma.D.diff * T.i.ev
         hvisc = self._calc_visc_heat()
-
-
-        heatin = UnivariateSpline(core.r[:, 0],
-                                       .5 * self.gamma.D.diff * m_d * (self.vtor_D_total ** 2 + self.vpol_D ** 2), k=3,
-                                       s=0)(core.r[:, 0])  # TODO: Provide logic that uses vtor_D_intrin/fluid depending on IOL Switch, currently too small to matter
+        heatin = .5 * self.gamma.D.diff * m_d * (self.vtor_D_total ** 2 + self.vpol_D ** 2) # TODO: Provide logic that uses vtor_D_intrin/fluid depending on IOL Switch, currently too small to matter
 
         self.conv15 = OneDProfile(self.core.psi, conv15, self.core.R, self.core.Z)
         self.conv25 = OneDProfile(self.core.psi, conv25, self.core.R, self.core.Z)
@@ -374,11 +370,15 @@ class RadialTransport(PlotBase):
                 (self.Q.D.diff) * T.i.J.L / (n.i * T.i.ev * ch_d),
                 (self.Q.D.diff - self.conv25) * T.i.kev.L / (n.i * T.i.ev * ch_d),
                 (self.Q.D.diff - self.conv25 - self.heatin) * T.i.J.L / (n.i * T.i.ev * ch_d),
-                (self.Q.D.diff - self.conv25 - self.heatin - self.heatvisc) * T.i.J.L / (n.i * T.i.ev * ch_d)
+                self._calc_chi_i_visc()
             ), calc_chi_e(self.Q.e.diff, self.gamma.D.diff, self.gamma.C.diff, n, T)
         )
 
         self.D_i = m_d * T.i.J * (self.nu_c_j_k * (1. - ch_d / ch_c) + self.nu_drag_D) / ((ch_d * core.B.pol.fsa)**2)
+
+    def _calc_chi_i_visc(self, vtorS=0.1, vpolS=0.1):
+        heatvis = OneDProfile(self.core.psi, self._calc_visc_heat(vtorS, vpolS), self.core.R, self.core.Z)
+        return (self.Q.D.diff - self.conv25 - self.heatin - heatvis) * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d)
 
     def _calc_gamma_diff_method(self, iol_adjusted=False, F_orb=None, neutFlag=True, verbose=False, *args, **kwargs):
         a = self.core.a
