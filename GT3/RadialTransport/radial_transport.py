@@ -563,7 +563,7 @@ class RadialTransport(PlotBase):
             if iolFlag:
                 return S - Qnbi_loss(t) - (flux * (dEdrval + 1) / (t + 0.003))
             else:
-                return S - (flux * (dEdr(t) + 1) / (t + 0.003))
+                return S - (flux * (1) / (t + 0.003))
 
         from scipy.integrate import ode
 
