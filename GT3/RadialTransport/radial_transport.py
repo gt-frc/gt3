@@ -663,11 +663,12 @@ class RadialTransport(PlotBase):
         R0 = self.core.R0_a
         vtor = self.core.v.D.tor.fsa
         vpol = self.core.v.D.pol.fsa
+        vth = self.core.v.D.tot.fsa
         eps = self.core.a / self.core.R0_a
         nustar = self.nustar
         geom = (eps ** (-3. / 2.) * nustar) / ((1 + eps ** (-3. / 2.) * nustar) * (1 + nustar))
         # eta0 = [a * m_d * b * c * core.R0_a * f1 for a, b, c in zip(n.i, vth, core.q[:, 0])]
-        eta0 = ni * m_d * vpol * q * R0 * geom
+        eta0 = ni * m_d * vth * q * R0 * geom
         # eta4 = [a * m_d * c * ch_d / (ch_d * abs(b)) for a, b, c in zip(n.i, core.B_t_fsa, T.i.ev)]
         eta4 = ni * m_d * Ti / (ch_d * abs(self.core.B.tor.fsa.val))
         vrad = OneDProfile(self.core.psi, self.gamma.D.diff / ni, self.core.r, self.core.Z)

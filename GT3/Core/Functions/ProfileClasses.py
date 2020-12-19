@@ -907,7 +907,8 @@ class VectorialProfiles:
                                                                  units=r"m/s", wall=self._wall),
                                                self._profileType(self._psi, kwargs.get('tor_D'), self._R, self._Z,
                                                                  units=r"m/s", wall=self._wall),
-                                               self._profileType(self._psi, kwargs.get('tor_D')**2 + kwargs.get('pol_D'),
+                                               self._profileType(self._psi,
+                                                                 np.sqrt(kwargs.get('tor_D')**2 + kwargs.get('pol_D')**2),
                                                                  self._R, self._Z, units=r"m/s", wall=self._wall))
             self.D = self.i
 
@@ -916,7 +917,7 @@ class VectorialProfiles:
                                                              units=r"m/s", wall=self._wall),
                                            self._profileType(self._psi, kwargs.get('tor_C'), self._R, self._Z,
                                                              units=r"m/s", wall=self._wall),
-                                           self._profileType(self._psi, kwargs.get('tor_C')**2 + kwargs.get('pol_C'),
+                                           self._profileType(self._psi, np.sqrt(kwargs.get('tor_C')**2 + kwargs.get('pol_C')**2),
                                                              self._R, self._Z, units=r"m/s", wall=self._wall))
 
         if 'tor_e' in kwargs or 'pol_e' in kwargs:
@@ -924,7 +925,7 @@ class VectorialProfiles:
                                                              units=r"m/s", wall=self._wall),
                                            self._profileType(self._psi, kwargs.get('tor_e'), self._R, self._Z,
                                                              units=r"m/s", wall=self._wall),
-                                           self._profileType(self._psi, kwargs.get('tor_e')**2 + kwargs.get('pol_e'),
+                                           self._profileType(self._psi, np.sqrt(kwargs.get('tor_e')**2 + kwargs.get('pol_e')**2),
                                                              self._R, self._Z, units=r"m/s", wall=self._wall))
 
 class VectorialBase(PlotBase, BaseMath):
