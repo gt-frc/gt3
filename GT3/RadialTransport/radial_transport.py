@@ -231,7 +231,7 @@ class RadialTransport(PlotBase):
 
         # Piper Changes: Changed core.v_1D.tor.C.any() to core.v_1D.tor.D.any(). Carbon velocity should be a given.
         if not core.v.i.tor.isNonZero():  # if array is all zeros, then no input. Use perturbation theory.
-            self.vtor_D_total = calc_vtor_d_pert(self.vtor_C_total,
+            vtor_D_total = calc_vtor_d_pert(self.vtor_C_total,
                                                  self.vtor_C_intrin,
                                                  self.vtor_D_intrin,
                                                  self.mom_src_tor_D_tot,
@@ -241,15 +241,16 @@ class RadialTransport(PlotBase):
                                                  B_p,
                                                  self.gamma.D.int,
                                                  self.gamma.C.int)  # Piper Changes: Uses integral cylindrical gamma
-            self.core.v.D.tor.update_from_1D(self.vtor_D_total)
+            self.core.v.D.tor.update_from_1D(vtor_D_total)
 
             # Broadcast to 2D before replacing
-            vtor_D_prep = np.broadcast_to(self.vtor_D_total, (self.core.rho.shape[1], len(self.vtor_D_total))).T
+            vtor_D_prep = np.broadcast_to(vtor_D_total, (self.core.rho.shape[1], len(vtor_D_total))).T
 
             # Update TwoDProfile
             self.core.v.update_D(tor = vtor_D_prep)
             # Piper changes: added a message to let the user know the D velocity was calculated.
             print('Deuterium toroidal velocity calculated from perturbation theory.')
+            self.vtor_D_total = OneDProfile(core.psi, vtor_D_total, core.R, core.Z)
         else:
             # Piper Changes: For some reason this used to set D velocity to C velocity,
             # which overwrote the input D velocity.
@@ -663,7 +664,7 @@ class RadialTransport(PlotBase):
         R0 = self.core.R0_a
         vtor = self.core.v.D.tor.fsa
         vpol = self.core.v.D.pol.fsa
-        vth = self.core.v.D.tot.fsa
+        vth = self.corD.tot.fsa
         eps = self.core.a / self.core.R0_a
         nustar = self.nustar
         geom = (eps ** (-3. / 2.) * nustar) / ((1 + eps ** (-3. / 2.) * nustar) * (1 + nustar))
