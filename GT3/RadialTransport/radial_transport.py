@@ -261,10 +261,13 @@ class RadialTransport(PlotBase):
         # calculate carbon and deuterium poloidal rotation
         try:
             self.vpol_C = core.v.C.pol.fsa
-            self.vpol_D, self.vpol_D_assum, self.vpol_D_alt = calc_vpol(Er, self.vtor_D_total, p, T, n, z_d, B_t, B_p,
+            vpol_D, vpol_D_assum, vpol_D_alt = calc_vpol(Er, self.vtor_D_total, p, T, n, z_d, B_t, B_p,
                                                                         self.vtor_C_total, self.vpol_C, z_c)
+            self.vpol_D = OneDProfile(self.core.psi, vpol_D, self.core.R, self.core.Z)
+            self.vpol_D_assum = vpol_D_assum
+            self.vpol_D_alt = vpol_D_alt
         except:
-            self.vpol_D = self.vpol_C / 0.4
+            self.vpol_D = OneDProfile(self.core.psi, self.vpol_C.val / 0.4, self.core.R, self.core.Z)
             print('could not calculate deuterium poloidal rotation')
             pass
 
@@ -375,7 +378,8 @@ class RadialTransport(PlotBase):
             ), calc_chi_e(self.Q.e.diff, self.gamma.D.diff, self.gamma.C.diff, n, T)
         )
 
-        self.D_i = m_d * T.i.J * (self.nu_c_j_k * (1. - ch_d / ch_c) + self.nu_drag_D) / ((ch_d * core.B.pol.fsa)**2)
+        D_i = m_d * T.i.J * (self.nu_c_j_k * (1. - ch_d / ch_c) + self.nu_drag_D) / ((ch_d * core.B.pol.fsa)**2)
+        self.D_i = OneDProfile(self.core.psi, D_i, self.core.R, self.core.Z)
 
     def _calc_chi_i_visc(self, vtorS=0.1, vpolS=0.1):
         heatvis = OneDProfile(self.core.psi, self._calc_visc_heat(vtorS, vpolS), self.core.R, self.core.Z)
@@ -664,7 +668,7 @@ class RadialTransport(PlotBase):
         R0 = self.core.R0_a
         vtor = self.core.v.D.tor.fsa
         vpol = self.core.v.D.pol.fsa
-        vth = self.corD.tot.fsa
+        vth = self.core.v.D.tot.fsa
         eps = self.core.a / self.core.R0_a
         nustar = self.nustar
         geom = (eps ** (-3. / 2.) * nustar) / ((1 + eps ** (-3. / 2.) * nustar) * (1 + nustar))
