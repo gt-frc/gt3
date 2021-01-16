@@ -1,0 +1,86 @@
+[
+  {
+    "Beam ID" : "15L",
+    "ebeam": 80,
+    "abeam": 2,
+    "alphain": 0.6475,
+    "pbeam": 0.0,
+    "rtang": 0.921,
+    "coI" : true
+  },
+  {
+    "Beam ID" : "15R",
+    "ebeam": 80,
+    "abeam": 2,
+    "alphain": 0.6475,
+    "pbeam": 0.0,
+    "rtang": 0.921,
+    "coI" : false
+  },
+  {
+    "Beam ID" : "30L",
+    "ebeam": 70,
+    "abeam": 2,
+    "alphain": 0.6475,
+    "pbeam": 0.0,
+    "rtang": 0.921,
+    "coI" : true
+  },
+  {"Beam ID" : "30R",
+     "ebeam": 70,
+     "abeam": 2,
+     "alphain": 0.6475,
+     "pbeam": 0.0,
+     "rtang": 0.721,
+     "coI" : true
+  },
+    {"Beam ID" : "150L",
+     "ebeam": 36.594,
+     "abeam": 2,
+     "alphain": 0.6475,
+     "pbeam": 0.828,
+     "rtang": 1.18,
+     "coI" : true
+  },
+    {"Beam ID" : "150R",
+     "ebeam": 70,
+     "abeam": 2,
+     "alphain": 0.6475,
+     "pbeam": 0.0,
+     "rtang": 0.721,
+     "coI" : true
+  },
+    {"Beam ID" : "210L",
+     "ebeam": 70,
+     "abeam": 2,
+     "alphain": 0.6475,
+     "pbeam": 0.0,
+     "rtang": 0.721,
+     "coI" : true
+  },
+    {"Beam ID" : "210R",
+     "ebeam": 37.219,
+     "abeam": 2,
+     "alphain": 0.6475,
+     "pbeam": 0.765,
+     "rtang": 1.14,
+     "coI" : true
+  },
+    {"Beam ID" : "330L",
+     "ebeam": 37.219,
+     "abeam": 2,
+     "alphain": 0.6475,
+     "pbeam": 0.0,
+     "rtang": 1.14,
+     "coI" : true
+  },
+  {
+    "Beam ID": "330R",
+    "ebeam": 54.061,
+    "abeam": 2,
+    "alphain": 0.6475,
+    "pbeam": 0.593,
+    "rtang": 0.721,
+    "coI": true
+  }
+]

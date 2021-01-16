@@ -1,0 +1,117 @@
+# Shot 144977.3000
+###################################################################################
+#
+#  GT3 config file for Shot 144977.3000. GT3 uses the ConfigParser module to parse
+#  these data, with headers given in [Brackets].
+#
+###################################################################################
+
+###################################################################################
+#
+#  1D Profiles
+#
+#  These profiles are given as 2-column rho, val data
+#
+#  Temperature data are given in keV.
+#  Density data are given in their full value (e.g., 3.2E+19)
+#  Rotational velocities are in m/s
+#  Radial electric field is in kV
+#
+###################################################################################
+
+[1DProfiles]
+
+ne_file = inputs/144977_3000/gt3_144977_3000_ne2.dat
+nD_file = inputs/144977_3000/gt3_144977_3000_ne2.dat
+Te_file = inputs/144977_3000/gt3_144977_3000_Te.dat
+Ti_file = inputs/144977_3000/gt3_144977_3000_Ti.dat
+er_file = inputs/144977_3000/gt3_144977_3000_er.dat
+fracz_file = inputs/144977_3000/gt3_144977_3000_fracz.dat
+vpolC_file = inputs/144977_3000/gt3_144977_3000_vpolC.dat
+vtorC_file = inputs/144977_3000/gt3_144977_3000_vtorC.dat
+beams_json      = inputs/144977_3000/gt3_144977_3000_beams.json
+beams_out_json  = inputs/144977_3000/gt3_144977_3000_beamOut.json
+neutfile_loc    = inputs/144977_3000/gt3_144977_3000_neutsOut.json
+
+###################################################################################
+#
+#  2D Profiles
+#
+#  These profiles are given as 3-column R, Z, val data.
+#
+###################################################################################
+
+[2DProfiles]
+
+psirz_file = inputs/144977_3000/gt3_144977_3000_psirz.dat
+
+###################################################################################
+#
+#  Wall
+#
+#  Wall data is given as (R,Z) points that are ultimately fed into a
+#  Shapely.LineString
+###################################################################################
+
+[Wall]
+
+wall_file = inputs/machine/gt3_diiid_wall.dat
+
+###################################################################################
+#
+#  Plasma
+#
+#  These 0-D data are related to the actual plasma characteristics.
+#
+#  The toroidal magnetic field is in Tesla
+#  R_loss is the approximate number of particles leaving the LCFS via IOL but that
+#      ultimately return to the plasma.
+#  The PFR values are limits on how low of temperatures and densities we'll allow
+#      in the PFR.
+#
+###################################################################################
+
+[Plasma]
+
+BT0 = 2.11
+R_loss = 0.5
+pfr_ni_val = 1.0E14
+pfr_ne_val = 1.0E14
+pfr_Ti_val = 0.002
+pfr_Te_val = 0.002
+
+###################################################################################
+#
+#  Meshing parameters
+#
+#  These parameters define the meshing used by various GT3 modules. You can leave
+#  these alone if you don't know what you're doing.
+#
+###################################################################################
+
+[Mesh]
+
+thetapts_approx = 30
+rhopts = 201
+edge_rho = 0.8
+rhopts_edge = 100
+rhopts_core = 10
+sollines_psi_max = 1.07
+num_sollines = 6
+xi_ib_pts = 10
+xi_ob_pts = 10
+core_pol_pts = 30
+numcos = 8
+
+###################################################################################
+#
+#  Misc
+#
+#  Miscellaneous switches.
+#
+#
+###################################################################################
+
+[Misc]
+verbose = 1
+d3d_iter = 1
