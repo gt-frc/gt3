@@ -3,7 +3,8 @@
 
 import numpy as np
 from scipy.interpolate import griddata,  interp1d
-from shapely.geometry import Point, LineString
+from shapely.geometry import Point
+from GT3.utilities.GT3LineString import GT3LineString
 
 
 def calc_rho2psi_interp(pts, psi_data, sep_val):
@@ -11,7 +12,7 @@ def calc_rho2psi_interp(pts, psi_data, sep_val):
 
     ptsRZ = np.zeros((len(rho_vals), 2))
 
-    obmp_line = LineString([Point(pts.axis.mag), Point(pts.obmp)])
+    obmp_line = GT3LineString([Point(pts.axis.mag), Point(pts.obmp)])
     for i, rho in enumerate(rho_vals):
         ptsRZ[i] = np.asarray(obmp_line.interpolate(rho, normalized=True).coords)
 
@@ -19,6 +20,9 @@ def calc_rho2psi_interp(pts, psi_data, sep_val):
                         psi_data.psi.flatten(),
                         ptsRZ,
                         method='cubic')
+    if psi_vals[0] > psi_vals[-1]:
+        print("Psi values are decreasing in Psi calculation. Flipping")
+        psi_vals = np.flip(psi_vals)
 
     psinorm_vals = griddata(np.column_stack((psi_data.R.flatten(), psi_data.Z.flatten())),
                             psi_data.psi_norm.flatten(),

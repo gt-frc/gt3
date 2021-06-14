@@ -58,11 +58,17 @@ class Core(PlotBase.PlotBase):
     """The V(rho) interpolator"""
     psinorm2vol = None  # type: UnivariateSpline
     """The V(psi) interpolator on [0., 1.]"""
+    num_xpt = None
 
-    def __init__(self, inp):
+    def __init__(self, inp, *args, **kwargs):
         # Hold the input as a class attribute for use in functions
 
         super().__init__()
+        if kwargs.get("debug"):
+            self.debug = True
+        else:
+            self.debug = False
+
         self.inp = inp
         self.wall_line = inp.wall_line
         self.sep_val = inp.sep_val
@@ -74,7 +80,8 @@ class Core(PlotBase.PlotBase):
         self._set_psiData(inp)
 
         # calculate some important points and lines
-        self.pts, self.lines = calc_pts_lines(self.psi_data, self.xpt, self.wall_line, self.mag_axis, self.sep_val, core=self)
+        self.pts, self.lines = calc_pts_lines(self.psi_data, self.xpt, self.wall_line, self.mag_axis, self.sep_val, self._norm_xpt,
+                                              debug=self.debug, core=self)
 
 
 
@@ -449,9 +456,13 @@ class Core(PlotBase.PlotBase):
             raw_psi = inp.psirz_exp[:, 2].reshape(-1, psi_shape)  # type: np.ndarray
 
         xpt_l, xpt_u, mag_axis = find_xpt_mag_axis(self, raw_psi_R, raw_psi_Z, raw_psi)
+        if self.debug:
+            print("Lower X-Point:" + str(xpt_l))
+            print("Upper X-Point:" + str(xpt_u))
         self.xpt = [xpt_l, xpt_u]
         self.mag_axis = mag_axis
-        raw_psi_norm = calc_psi_norm(raw_psi_R, raw_psi_Z, raw_psi, self.xpt, mag_axis)
+        raw_psi_norm, self._norm_xpt, self.num_xpt = calc_psi_norm(raw_psi_R, raw_psi_Z, raw_psi, self.xpt, mag_axis, debug=self.debug)
+
 
         raw_dpsidR = np.abs(np.gradient(raw_psi_norm, raw_psi_R[0, :], axis=1))
         raw_1_R_dpsidR = raw_dpsidR / raw_psi_R
@@ -501,19 +512,38 @@ class Core(PlotBase.PlotBase):
         try:
             vpolD = UnivariateSpline(inp.vpolD_data[:, 0], inp.vpolD_data[:, 1], k=3, s=0)(self.rho)
         except (AttributeError, TypeError):
-            vpolD = np.zeros(self.rho.shape)
+            # Check if frequencies are given instead
+            try:
+                vpolD = UnivariateSpline(inp.omegDpol_data[:, 0], inp.omegDpol_data[:, 1] * self.R[:, 0], k=3, s=0)(self.rho)
+            except (AttributeError, TypeError):
+                vpolD = np.zeros(self.rho.shape)
+
         try:
             vpolC = UnivariateSpline(inp.vpolC_data[:, 0], inp.vpolC_data[:, 1], k=3, s=0)(self.rho)
         except (AttributeError, TypeError):
-            vpolC = np.zeros(self.rho.shape)
+            # Check if frequencies are given instead
+            try:
+                vpolC = UnivariateSpline(inp.omegCpol_data[:, 0], inp.omegCpol_data[:, 1] * self.R[:, 0], k=3, s=0)(self.rho)
+            except (AttributeError, TypeError):
+                vpolC = np.zeros(self.rho.shape)
+
         try:
             vtorD = UnivariateSpline(inp.vtorD_data[:, 0], inp.vtorD_data[:, 1], k=3, s=0)(self.rho)
         except (AttributeError, TypeError):
-            vtorD = np.zeros(self.rho.shape)
+            # Check if frequencies are given instead
+            try:
+                vtorD = UnivariateSpline(inp.omegDtor_data[:, 0], inp.omegDtor_data[:, 1] * self.R[:, 0], k=3, s=0)(self.rho)
+            except (AttributeError, TypeError):
+                vtorD = np.zeros(self.rho.shape)
+
         try:
             vtorC = UnivariateSpline(inp.vtorC_data[:, 0], inp.vtorC_data[:, 1], k=3, s=0)(self.rho)
         except (AttributeError, TypeError):
-            vtorC = np.zeros(self.rho.shape)
+            # Check if frequencies are given instead
+            try:
+                vtorC = UnivariateSpline(inp.omegCtor_data[:, 0], inp.omegCtor_data[:, 1] * self.R[:, 0], k=3, s=0)(self.rho)
+            except (AttributeError, TypeError):
+                vtorC = np.zeros(self.rho.shape)
 
         self.v = VectorialProfiles(self.psi, self.R, self.Z, wall=self.wall_line, ProfileType=TwoDProfile,
                                    pol_D=vpolD,
@@ -580,3 +610,10 @@ class Core(PlotBase.PlotBase):
         # self.cool_rate_fsa = np.array(map(lambda x: self.cool_rate_fsa[-1] * x ** 10, self.r[:, 0] / self.a))
         # self.dn_dr_fsa = np.array(map(lambda x: self.dn_dr_fsa[-1] * x ** 10, self.r[:, 0] / self.a))
 
+    def num_xpts(self):
+        if self.num_xpt == 1:
+            return 1
+        elif self.num_xpt == 2:
+            return 2
+        else:
+            raise Exception("0 or >2 Xpoints found")

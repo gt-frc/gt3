@@ -2,18 +2,25 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from shapely.geometry import Point, LineString, LinearRing
+from shapely.geometry import Point, LineString, LinearRing, MultiPoint
+from shapely.ops import nearest_points, split, snap
 from GT3.Core.Functions.Cut import cut
+from GT3.utilities.GT3LineString import GT3LineString
 from collections import namedtuple
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
+from GT3.utilities.PlotBase import PlotBase
 
 
-def calc_pts_lines(psi_data, xpt, wall, mag_axis, sep_val, core=None):
+def calc_pts_lines(psi_data, xpt, wall, mag_axis, sep_val, norm_xpt, debug=False):
 
     """
     Calculates points and lines for the flux surfaces
 
+    :param debug: Activate debugging function and plots
+    :type debug: bool
     :param psi_data:
     :type psi_data: psi
     :param xpt:
@@ -33,8 +40,10 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis, sep_val, core=None):
         # We have manually overridden the separatrix to exclude the X-points and SOL. We're only able to get a few
         # parameters. We will assume only 1 contour will have this value
         contours = plt.contour(psi_data.R[0], psi_data.Z[:, 0], psi_data.psi_norm, [sep_val]).collections[0].get_paths()
+        if debug:
+            _plot_contours(contours)
         for contour in contours:
-            ls = LineString(contour.vertices)
+            ls = GT3LineString(contour.vertices)
             if wall.convex_hull.contains(ls):
                 ibmp = [ls.bounds[0], mag_axis[1]]
                 obmp = [ls.bounds[2], mag_axis[1]]
@@ -58,35 +67,50 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis, sep_val, core=None):
         # contour worth caring about in the rest of the calculation.
 
         temp_contours = plt.contour(psi_data.R[0], psi_data.Z[:, 0], psi_data.psi_norm, [sep_val]).collections[0].get_paths()
+        if debug:
+            _plot_contours(temp_contours, title="X-point contours")
         if len(temp_contours) == 1:
-            ls = LineString(temp_contours.vertices)
+            ls = GT3LineString(temp_contours.vertices)
             if ls.convex_hull.contains(Point(xpt[0])):
                 # The upper X-point will define our separatrix
-                xpt = xpt[0]
+                xpt_sep = xpt[0]
             elif ls.convex_hull.contains(Point(xpt[1])):
                 # The lower X-point will define our separatrix
-                xpt = xpt[1]
+                xpt_sep = xpt[1]
             else:
                 raise Exception("There are 2 x-points, but neither are on the separatrix as found in CalcPtsLines.")
         else:
             for path in temp_contours:
-                ls = LineString(path.vertices)
+                ls = GT3LineString(path.vertices, wall=wall)
+                if debug:
+                    _plot_contours(ls)
                 if ls.convex_hull.contains(Point(xpt[0])):
-                    # The upper X-point will define our separatrix
-                    xpt = xpt[0]
-                    contours_paths = path
+                    # The lower X-point will define our separatrix
+                    xpt_sep = xpt[0]
+                    xpt_temp = xpt_sep
+                    if ls.contains(xpt_sep):
+                        contours_paths = path
+                    else:
+                        print("FUck")
                     break
                 elif ls.convex_hull.contains(Point(xpt[1])):
-                    # The lower X-point will define our separatrix
-                    xpt = xpt[1]
+                    # The upper X-point will define our separatrix
+                    xpt_sep = xpt[1]
+                    xpt_temp = xpt_sep
                     contours_paths = path
                     break
     else:
         # Grab the actual x-point
+        if debug:
+            _plot_contours(contours_paths)
         if xpt[0] is not None:
             xpt_temp = xpt[0]
         else:
             xpt_temp = xpt[1]
+
+    # This line might render code above unnecessary?
+
+    xpt_temp = norm_xpt
 
     # create lines for seperatrix and divertor legs of seperatrix
 
@@ -100,7 +124,7 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis, sep_val, core=None):
     for contour in contours:
         dist = np.sqrt((contour[:, 0] - xpt_temp[0])**2 + (contour[:, 1] - xpt_temp[1])**2)
         # TODO: Put this distance in the input file or make distance selection smarter
-        contour[dist < 0.1] = xpt_temp
+        contour[dist < 0.03] = xpt_temp
         contour_new.append(contour[np.where((contour != np.roll(contour, -1, axis=0)).all(axis=1))])
 
     # if there is only one contour, then it's drawing one continuous line from ib strike point to ob strike point
@@ -110,11 +134,29 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis, sep_val, core=None):
         contour = contour_new[0]
 
         # make sure the line goes from inboard to outboard
+
         if contour[-1, 0] < contour[0, 0]:
-            contour = np.flipud(contour_new)[0]
+            contour = np.flipud(contour)
 
         xpt_loc = np.where((contour == xpt_temp).all(axis=1))[0]
-        ib = np.flipud(contour[:xpt_loc[0]+1])
+        _plot_contours(GT3LineString(contour), title="LCFS Contour")
+        try:
+            ib = np.flipud(contour[:xpt_loc[0]+1])
+        except IndexError:
+            # The separatrix did not converge to the x-point. We should cut and project 2 times to create the LCFS.
+            raise Exception("The separatrix does not include the x-point.")
+            ls = GT3LineString(contour)
+            pt = Point(xpt_temp)
+            nearest = nearest_points(ls, pt)[0]
+            cuts = split(ls, nearest)
+            temp_ls = GT3LineString(cuts[0].coords[:]+pt.coords[:]+cuts[1].coords[:])
+            _plot_contours(temp_ls, title="Temporary LS from cuts")
+
+        if len(xpt_loc) == 1:
+            second_point = _find_ob(contour, xpt_sep)
+            xpt_loc = np.append(xpt_loc, second_point)
+            # raise Exception("Only 1 xpoint index found. Should be 2. Fix me")
+
         lcfs = contour[xpt_loc[0]:xpt_loc[1]]
         ob = contour[xpt_loc[1]:]
 
@@ -122,7 +164,7 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis, sep_val, core=None):
         for contour in contour_new:
             # determine if contour is seperatrix, divertor legs, a main ib2ob line, or something else
             contour = np.array(contour)
-            if not LineString(contour).intersects(wall) and wall.convex_hull.contains(LineString(contour)):
+            if not GT3LineString(contour).intersects(wall) and wall.convex_hull.contains(GT3LineString(contour)):
                 lcfs = contour
                 continue
             # Meaningless noise lines will not pass near the x-point, so check that first to elliminate them
@@ -133,7 +175,7 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis, sep_val, core=None):
                 # only one contour.
 
                 # count number of intersections with the wall
-                wall_ints = len(LineString(contour).intersection(wall))
+                wall_ints = len(GT3LineString(contour).intersection(wall))
 
                 if wall_ints >= 2 and np.amax(contour[:, 1]) > mag_axis[1]:
                     # then we probably have an ib2ob line. Treat the same way as above
@@ -164,12 +206,12 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis, sep_val, core=None):
                     ib = np.flipud(contour[:xpt_loc+1])
 
     # create lcfs lines
-    lcfs_line = LineString(lcfs)
+    lcfs_line = GT3LineString(lcfs)
     lcfs_line_closed = LinearRing(lcfs)
 
     # create ib and ob linestrings and truncate at the wall
-    ib_line = LineString(ib)
-    ob_line = LineString(ob)
+    ib_line = GT3LineString(ib)
+    ob_line = GT3LineString(ob)
 
     ib_strike = ib_line.intersection(wall)
     ob_strike = ob_line.intersection(wall)
@@ -178,7 +220,7 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis, sep_val, core=None):
     ob_line_cut = cut(ob_line, ob_line.project(ob_strike, normalized=True))[0]
 
     entire_sep = np.vstack((np.flipud(ib), lcfs[1:], ob))
-    entire_sep_line = LineString(entire_sep)
+    entire_sep_line = GT3LineString(entire_sep)
 
     # create points object
     obmp_pt = lcfs[np.argmax(lcfs, axis=0)[0]]
@@ -214,3 +256,48 @@ def calc_pts_lines(psi_data, xpt, wall, mag_axis, sep_val, core=None):
         entire_sep_line)
 
     return pts, lines
+
+def _plot_contours(contours, title="No Title"):
+    colors = ['r', 'g','b','darkgreen']
+    fig = plt.figure()
+    plt.ion()
+
+    try:
+        contours.__iter__
+        num = len(contours)
+        if len(contours) == 1:
+            fig, ax = plt.subplots(ncols=num, sharex=True, sharey=True)
+            for n, c in enumerate(contours):
+                contourPlotter = PlotBase()
+                contourPlotter.set_default_color(colors[n])
+                ax.set_title(title)
+                contourPlotter._unknown_data_plot_helper(c, ax)
+        else :
+
+            fig, ax = plt.subplots(ncols=num, sharex=True, sharey=True)
+            for n,c in enumerate(contours):
+                contourPlotter = PlotBase()
+                contourPlotter.set_default_color(colors[n])
+                ax[n].set_title(title)
+                contourPlotter._unknown_data_plot_helper(c, ax[n])
+    except AttributeError:
+        ax = fig.add_subplot(111)
+        ax.set_title(title)
+        contourPlotter = PlotBase()
+        contourPlotter._unknown_data_plot_helper(contours, ax)
+    plt.show()
+
+def _find_ob(contour, xpt):
+    xpt_Pt = Point(xpt)
+    dist = 10
+    res_pt = None
+    for coord in contour:
+        if coord[0] > xpt[0]:
+            if Point(coord).distance(xpt_Pt) < dist:
+                res_pt = coord
+                dist = Point(coord).distance(xpt_Pt)
+
+    if not res_pt.all():
+        raise Exception("Failed to find the second splice point for separatrix splicing.")
+    else:
+        return np.where((contour==res_pt).all(axis=1))[0][0]

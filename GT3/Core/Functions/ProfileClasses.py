@@ -651,6 +651,19 @@ class Psi(PlotBase):
         self.psi_norm = self.rho2psinorm(self.rho)
 
 
+    def _plot_exp_psi_raw(self, res=50):
+        try:
+            ax = self._plot_with_wall()
+        except:
+            ax = self._plot_without_wall()
+        try:
+            cs = ax.contour(self.psi_data.R, self.psi_data.Z, self.psi_data.psi, res)
+            plt.clabel(cs, inline=1, fontsize=10)
+            return cs
+        except NameError:
+            print("Psi not defined")
+            pass
+
     def plot_exp_psi(self, res=50):
         try:
             ax = self._plot_with_wall()
@@ -900,6 +913,11 @@ class VectorialProfiles:
 
     def _set_vals(self, **kwargs):
         PoloidalToroidalSplit = namedtuple("PoloidalToroidalSplit", "pol tor tot")
+
+        # TODO: What if only one value is present?
+
+        # TODO: The polD, torD, etc. attributes are introduced in instance construction but never set. This can cause
+        # confusion.
 
         if 'tor_D' in kwargs or 'pol_D' in kwargs:
             if 'tor_D' in kwargs and 'pol_D' in kwargs:

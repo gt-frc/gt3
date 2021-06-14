@@ -7,7 +7,6 @@ Created on Sat Aug  5 16:10:25 2017
 """
 import os
 import sys
-import re
 import matplotlib.pyplot as plt
 import numpy as np
 from GT3.utilities.PlotBase import PlotBase
@@ -82,12 +81,12 @@ class ReadInfile:
             filename = parser.get(section, name)
             filepath = os.path.join(os.getcwd(), filename)
             return np.genfromtxt(filepath, comments='#')
-        except configparser.NoOptionError:
+        except configparser.NoOptionError as e:
             print("%s not found" % name)
-            return
-        except IOError:
+            return e
+        except IOError as e:
             print("%s not found" % name)
-            return
+            return e
 
     def read_vars(self, infile):
         """
@@ -154,10 +153,20 @@ class ReadInfile:
         self.Ti_data = self._profile_loader(config, '1DProfiles', 'Ti_file')
         self.TC_data = self._profile_loader(config, '1DProfiles', 'TC_file')
         self.frac_C_data = self._profile_loader(config, '1DProfiles', 'frac_C_file')
+
         self.vpolC_data = self._profile_loader(config, '1DProfiles', 'vpolC_file')
         self.vtorC_data = self._profile_loader(config, '1DProfiles', 'vtorC_file')
         self.vpolD_data = self._profile_loader(config, '1DProfiles', 'vpolD_file')
         self.vtorD_data = self._profile_loader(config, '1DProfiles', 'vtorD_file')
+
+        if isinstance(self.vpolD_data, IOError):
+            self.omegDpol_data = self._profile_loader(config, '1DProfiles', 'omegDpol_fle')
+        if isinstance(self.vtorD_data, IOError):
+            self.omegDtor_data = self._profile_loader(config, '1DProfiles', 'omegDpol_fle')
+        if isinstance(self.vpolC_data, IOError):
+            self.omegCpol_data = self._profile_loader(config, '1DProfiles', 'omegCpol_fle')
+        if isinstance(self.vtorC_data, IOError):
+            self.omegCtor_data = self._profile_loader(config, '1DProfiles', 'omegCpol_fle')
 
         self.psirz_exp = self._profile_loader(config, '2DProfiles', 'psirz_file')
         self.wall_exp = self._profile_loader(config, 'Wall', 'wall_file')

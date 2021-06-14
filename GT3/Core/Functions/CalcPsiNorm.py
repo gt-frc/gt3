@@ -4,7 +4,7 @@
 import numpy as np
 from scipy.interpolate import griddata
 
-def calc_psi_norm(R, Z, psi, xpt, axis_mag):
+def calc_psi_norm(R, Z, psi, xpt, axis_mag, **kwargs):
     # normalize psi
     # psi_interp = Rbf(R, Z, psi)
     # psi_min = psi_interp(axis_mag[0], axis_mag[1])
@@ -37,9 +37,22 @@ def calc_psi_norm(R, Z, psi, xpt, axis_mag):
     psi_shifted_xpt = [psi_shifted_xpt_l, psi_shifted_xpt_u]
     if xpt[1] is None:
         psi_norm = psi_shifted / np.average(psi_shifted_xpt_l)
+        num_xpts = 1
+        norm_xpt = xpt[0]
+        if kwargs.get("debug"):
+            print("DEBUG: 1 XPT - psi normalized to lower X-point  " + str(xpt[0]))
     elif xpt[0] is None:
+        num_xpts = 1
+        norm_xpt = xpt[1]
+        if kwargs.get("debug"):
+            print("DEBUG: 1 XPT - psi normalized to upper X-point:  " + str(xpt[1]))
         psi_norm = psi_shifted / np.average(psi_shifted_xpt_u)
     else:
-        psi_norm = psi_shifted / np.average(psi_shifted_xpt)
+        num_xpts = 2
+        norm_xpt = xpt[1]
+        if kwargs.get("debug"):
+            print("DEBUG: 2 XPT -  psi normalized to upper X-point: " + str(xpt[1]))
+        # psi_norm = psi_shifted / np.average(psi_shifted_xpt)
+        psi_norm = psi_shifted / np.average(psi_shifted_xpt_u)
 
-    return psi_norm
+    return psi_norm, norm_xpt, num_xpts

@@ -22,6 +22,8 @@ except ModuleNotFoundError:
 
 class gt3:
 
+    debug=False
+
     def __init__(self, inputFile=None, preparedInput = None, mode="coreonly", **kwargs):
         sys.dont_write_bytecode = True
         # Create shotlabel as an attribute of plasma class
@@ -29,6 +31,7 @@ class gt3:
             iolFlag = kwargs['iolFlag']
         else:
             iolFlag = True
+
         if "neutFlag" in kwargs:
             neutFlag = kwargs['neutFlag']
         else:
@@ -37,13 +40,15 @@ class gt3:
             verbose = kwargs['verbose']
         else:
             verbose = False
+        if kwargs.get("debug"):
+            self.debug = True
         if inputFile:
             self.inputFile = inputFile
         if preparedInput:
             self.inp = preparedInput
         else:
             self.inp = ReadInfile(self.inputFile)
-        self.core = Core(self.inp)
+        self.core = Core(self.inp, debug=self.debug)
         self.iolFlag = iolFlag
         self.neutFlag = neutFlag
         self.verbose = verbose
@@ -183,7 +188,7 @@ class gt3:
         self.mar = Marfe(self.inp, self.core)
         return self
 
-    def run_radial_transport(self, nbiReRun=False, ntrlReRun=False):
+    def run_radial_transport(self, nbiReRun=False, ntrlReRun=False, debug=False):
         try:
             self.iol
         except AttributeError:
@@ -201,11 +206,12 @@ class gt3:
             print ("Impurity radiation module not run. Running now...")
             self.imp = ImpRad(z=6, core=self.core)
 
-        try:
-            self.ntrl
-        except AttributeError:
-            print ("Neutrals module not run. Running now...")
-            self.run_neutrals(reRun=ntrlReRun)
+        if self.neutFlag:
+            try:
+                self.ntrl
+            except AttributeError:
+                print ("Neutrals module not run. Running now...")
+                self.run_neutrals(reRun=ntrlReRun)
 
 
         self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag)

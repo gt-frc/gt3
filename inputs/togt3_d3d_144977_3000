@@ -22,7 +22,7 @@
 [1DProfiles]
 
 ne_file = inputs/144977_3000/gt3_144977_3000_ne2.dat
-nD_file = inputs/144977_3000/gt3_144977_3000_ne2.dat
+nD_file = inputs/144977_3000/gt3_144977_3000_ni.dat
 Te_file = inputs/144977_3000/gt3_144977_3000_Te.dat
 Ti_file = inputs/144977_3000/gt3_144977_3000_Ti.dat
 er_file = inputs/144977_3000/gt3_144977_3000_er.dat
