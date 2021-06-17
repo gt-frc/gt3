@@ -4,16 +4,21 @@
 import numpy as np
 from collections import namedtuple
 from GT3.Core.Functions.DrawCoreLine import draw_core_line
+from GT3.Psi import Psi
 
 
 def calc_kappa_elong(psi_data, sep_pts):
+    """
+
+    :type psi_data: Psi
+    """
     # get kappa and elongation from the psi_norm=0.95 flux surface
-    fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, 0.95, sep_pts)
+    fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm_exp, 0.95, sep_pts)
     elong_a = (fs_pts.top[1] - fs_pts.bot[1]) / (fs_pts.out[0] - fs_pts.inn[0])
     tri_a = (fs_pts.axis[0] - fs_pts.top[0]) / (fs_pts.out[0] - fs_pts.axis[0])
 
     # get kappa and elongation near the magnetic axis
-    fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm, 0.05, sep_pts)
+    fs_line, fs_pts = draw_core_line(psi_data.R, psi_data.Z, psi_data.psi_norm_exp, 0.05, sep_pts)
 
     # a small number isn't guaranteed to find a contour. If one is not found,
     # start near zero increase psi_norm until we find one

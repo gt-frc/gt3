@@ -4,7 +4,6 @@ from GT3.utilities.PlotBase import PlotBase
 from scipy.interpolate import UnivariateSpline, interp1d, griddata
 from GT3.Core.Functions.CalcFSA import calc_fsa
 from GT3.Core.Functions.CalcGrad import calc_grad
-from GT3.Core.Functions.CalcRho2PsiInterp import calc_rho2psi_interp
 from shapely.geometry import LineString
 from numpy import ndarray, array
 import numpy as np
@@ -271,6 +270,10 @@ class OneDProfile(PlotBase, BaseMath):
 class TwoDProfile(PlotBase, BaseMath):
 
     def __init__(self, psi, val, R, Z, wall=None, docs="", units="", plotTitle="", xLabel=r"$\rho$", yLabel="", raw=None):
+        """
+
+        :type psi: Psi
+        """
         super(TwoDProfile, self).__init__()
         self.rho = psi.rho
         self._psi = psi
@@ -631,50 +634,7 @@ class LzTwoDProfile(TwoDProfile):
         return self.ddT
 
 
-class Psi(PlotBase):
-    psi = None
-    psi_norm = None
 
-    def __init__(self, pts, psi_data, sep_val, rho, a):
-        super().__init__()
-        self.psi_data = psi_data
-        self.rho = rho
-        self.a = a
-        interp_fns = calc_rho2psi_interp(pts, psi_data, sep_val)
-        self.rho2psi = interp_fns[0]  # type: interp1d
-        self.rho2psinorm = interp_fns[1]  # type: interp1d
-        self.psi2rho = interp_fns[2]  # type: interp1d
-        self.psi2psinorm = interp_fns[3]  # type: interp1d
-        self.psinorm2rho = interp_fns[4]  # type: interp1d
-        self.psinorm2psi = interp_fns[5]  # type: interp1d
-        self.psi = self.rho2psi(self.rho)
-        self.psi_norm = self.rho2psinorm(self.rho)
-
-
-    def _plot_exp_psi_raw(self, res=50):
-        try:
-            ax = self._plot_with_wall()
-        except:
-            ax = self._plot_without_wall()
-        try:
-            cs = ax.contour(self.psi_data.R, self.psi_data.Z, self.psi_data.psi, res)
-            plt.clabel(cs, inline=1, fontsize=10)
-            return cs
-        except NameError:
-            print("Psi not defined")
-            pass
-
-    def plot_exp_psi(self, res=50):
-        try:
-            ax = self._plot_with_wall()
-        except:
-            return
-        try:
-            ax.contour(self.R, self.Z, self.psi.psi, res)
-            return ax
-        except NameError:
-            print("Psi not defined")
-            pass
 
 
 class ImpurityProfiles(PlotBase, BaseMath):

@@ -31,7 +31,7 @@ class Sol:
         pass
 
     def calc_sol_lines(self, inp, core):
-        c = QuadContourGenerator.from_rectilinear(core.psi_data.R[0], core.psi_data.Z[:, 0], core.psi_data.psi_norm)
+        c = QuadContourGenerator.from_rectilinear(core.psi.R[0], core.psi.Z[:, 0], core.psi.psi_norm)
         self.sol_lines = []
         self.sol_lines_cut = []
 
@@ -152,12 +152,12 @@ class Sol:
         dTi_dpsi_sep = Ti_psi_fit.derivative()(sep_flx_surf)
 
         # calculate dpsidr everywhere (technically, we're calculating |dpsi/dr|. We don't care about the direction.
-        dpsidR = np.abs(np.gradient(core.psi_data.psi_norm, core.psi_data.R[0, :], axis=1))
-        dpsidZ = np.abs(np.gradient(core.psi_data.psi_norm, core.psi_data.Z[:, 0], axis=0))
+        dpsidR = np.abs(np.gradient(core.psi.psi_norm, core.psi.R[0, :], axis=1))
+        dpsidZ = np.abs(np.gradient(core.psi.psi_norm, core.psi.Z[:, 0], axis=0))
 
         dpsidr = dpsidR + dpsidZ
 
-        dpsidr_sep = griddata(np.column_stack((core.psi_data.R.flatten(), core.psi_data.Z.flatten())),
+        dpsidr_sep = griddata(np.column_stack((core.psi.R.flatten(), core.psi.Z.flatten())),
                               dpsidr.flatten(),
                               np.asarray(core.lines.sep.coords),
                               method='linear')
