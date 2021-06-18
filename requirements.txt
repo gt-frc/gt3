@@ -50,7 +50,7 @@ prompt-toolkit==1.0.15
 protobuf==3.6.1
 pycairo==1.16.2
 pycosat==0.6.3
-Pygments==2.3.1
+Pygments==2.7.4
 PyGObject==3.34.0
 pygpgme==0.3
 PyMySQL==0.9.3
