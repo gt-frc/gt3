@@ -1,0 +1,146 @@
+{
+    "15L": {
+        "beamWidth": 0.06,
+        "rtang": 1.146,
+        "gaussR": 0.0885,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 70.0,
+        "beamP": 0.0
+    },
+    "15R": {
+        "beamWidth": 0.06,
+        "rtang": 1.146,
+        "gaussR": 0.0885,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 80.0,
+        "beamP": 0.0
+    },
+    "30LT": {
+        "beamWidth": 0.06,
+        "rtang": 1.146,
+        "gaussR": 0.0885,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 80.0,
+        "beamP": 0.0
+    },
+    "30RT": {
+        "beamWidth": 0.06,
+        "rtang": 0.762,
+        "gaussR": 0.0885,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 80.0,
+        "beamP": 0.0
+    },
+    "15LTUP": {
+        "beamWidth": 0.05,
+        "rtang": 1.17914,
+        "gaussR": 0.14335,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 70.0,
+        "beamP": 0.828
+    },
+    "15LTMU": {
+        "beamWidth": 0.05,
+        "rtang": 1.17914,
+        "gaussR": 0.14335,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 80.0,
+        "beamP": 0.0
+    },
+    "15LTML": {
+        "beamWidth": 0.05,
+        "rtang": 1.17914,
+        "gaussR": 0.14335,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 80,
+        "beamP": 0.0
+    },
+    "15LTLO": {
+        "beamWidth": 0.05,
+        "rtang": 1.17914,
+        "gaussR": 0.14335,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 80,
+        "beamP": 0.0
+    },
+    "15RTUP": {
+        "beamWidth": 0.05,
+        "rtang": 0.725919,
+        "gaussR": 0.14335,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 80,
+        "beamP": 0.0
+    },
+    "15RTMU": {
+        "beamWidth": 0.05,
+        "rtang": 0.725919,
+        "gaussR": 0.14335,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 80,
+        "beamP": 0.0
+    },
+    "15RTML": {
+        "beamWidth": 0.05,
+        "rtang": 0.725919,
+        "gaussR": 0.14335,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 80,
+        "beamP": 0.0
+    },
+    "15RTLO": {
+        "beamWidth": 0.05,
+        "rtang": 0.725919,
+        "gaussR": 0.14335,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 80.0,
+        "beamP": 0.0
+    },
+    "21LT": {
+        "beamWidth": 0.05,
+        "rtang": 0.762,
+        "gaussR": 0.14335,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 80,
+        "beamP": 0.0
+    },
+    "21RT": {
+        "beamWidth": 0.06,
+        "rtang": 1.146,
+        "gaussR": 0.0885,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 70.0,
+        "beamP": 0.765
+    },
+    "33LT": {
+        "beamWidth": 0.06,
+        "rtang": 1.146,
+        "gaussR": 0.0885,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 70.0,
+        "beamP": 0.0
+    },
+    "33RT": {
+        "beamWidth": 0.06,
+        "rtang": 0.721,
+        "gaussR": 0.0885,
+        "cocurrent": true,
+        "beamA": 2.0,
+        "beamE": 54.061,
+        "beamP": 0.0
+    }
+}

@@ -82,6 +82,8 @@ celerybeat-schedule
 # dotenv
 .env
 
+.idea
+
 # virtualenv
 .venv
 venv/
@@ -99,3 +101,14 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# Logs
+
+logs/
+
+# Input files
+/inputs/
+/neutSensitivity.py
+
+# Any backup files
+*.bak

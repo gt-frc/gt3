@@ -1,0 +1,5 @@
+include GT3/TestBase/TestBaseProfiles
+include GT3/TestBase/TestBaseProfiles/*
+exclude GT3/TestBase/TestBaseProfiles/*out*
+include GT3/Lz_interpolators
+include GT3/Lz_interpolators/*
