@@ -121,17 +121,41 @@ class Psi(PlotBase):
     def get_outboard_strike(self):
         return self.ob_strike
 
-    def get_inboard_div_line_short(self):
-        return self.ib_line_cut
+    def get_inboard_div_line_short(self, xpt=True):
+        if xpt:
+            return self.ib_line_cut
+        else:
+            return self._remove_xpts(self.ib_line_cut)
 
-    def get_inboard_div_line_full(self):
-        return self.ib_line
+    def get_inboard_div_line_full(self, xpt=True):
+        if xpt:
+            return self.ib_line
+        else:
+            return self._remove_xpts(self.ib_line)
 
-    def get_outboard_div_line_short(self):
-        return self.ob_line_cut
+    def get_outboard_div_line_short(self, xpt=True):
+        if xpt:
+            return self.ob_line_cut
+        else:
+            return self._remove_xpts(self.ob_line_cut)
 
-    def get_outboard_div_line_full(self):
-        return self.ob_line
+    def get_outboard_div_line_full(self, xpt=True):
+        if xpt:
+            return self.ob_line
+        else:
+            return self._remove_xpts(self.ob_line)
+
+    def _remove_xpts(self, ls):
+        if self.xpt[0] is not None:
+            if np.all(np.array(ls.coords[0]) == self.xpt[0]):
+                return GT3LineString(ls.coords[1:])
+            if np.all(np.array(ls.coords[-1]) == self.xpt[0]):
+                return GT3LineString(ls.coords[:-1])
+        if self.xpt[1] is not None:
+            if np.all(np.array(ls.coords[0]) == self.xpt[1]):
+                return GT3LineString(ls.coords[1:])
+            if np.all(np.array(ls.coords[-1]) == self.xpt[1]):
+                return GT3LineString(ls.coords[:-1])
 
     def get_lcfs(self):
         return self.lcfs_line
@@ -272,18 +296,18 @@ class Psi(PlotBase):
             num_xpts = 1
             norm_xpt = self.xpt[0]
             if kwargs.get("debug"):
-                print("DEBUG: 1 XPT - psi normalized to lower X-point  " + str(xpt[0]))
+                print("DEBUG: 1 XPT - psi normalized to lower X-point  " + str(self.xpt[0]))
         elif self.xpt[0] is None:
             num_xpts = 1
             norm_xpt = self.xpt[1]
             if kwargs.get("debug"):
-                print("DEBUG: 1 XPT - psi normalized to upper X-point:  " + str(xpt[1]))
+                print("DEBUG: 1 XPT - psi normalized to upper X-point:  " + str(self.xpt[1]))
             psi_norm = psi_shifted / np.average(psi_shifted_xpt_u)
         else:
             num_xpts = 2
             norm_xpt = self.xpt[1]
             if kwargs.get("debug"):
-                print("DEBUG: 2 XPT -  psi normalized to upper X-point: " + str(xpt[1]))
+                print("DEBUG: 2 XPT -  psi normalized to upper X-point: " + str(self.xpt[1]))
             # psi_norm = psi_shifted / np.average(psi_shifted_xpt)
             psi_norm = psi_shifted / np.average(psi_shifted_xpt_u)
 
@@ -305,7 +329,6 @@ class Psi(PlotBase):
         :return:
         :rtype: object
         """
-
 
         xpt = self.xpt
         wall = self.wall
@@ -343,7 +366,7 @@ class Psi(PlotBase):
                     self.lcfs_line_closed = ls
                     self.entire_sep = ls
             raise Exception("Could not find an LCFS with overwritten sep_val")
-        #We find the potential sepatartrix lines first
+        # We find the potential sepatartrix lines first
         contours_paths = plt.contour(self.R[0], self.Z[:, 0], self.psi_norm_exp, [sep_val]).collections[0].get_paths()
 
         if xpt[0] is not None and xpt[1] is not None:
@@ -352,7 +375,8 @@ class Psi(PlotBase):
             # an x-point and have IB/OB strike points. We'll overwrite contours_paths to say that this is the only
             # contour worth caring about in the rest of the calculation.
 
-            temp_contours = plt.contour(self.R[0], self.Z[:, 0], self.psi_norm_exp, [sep_val]).collections[0].get_paths()
+            temp_contours = plt.contour(self.R[0], self.Z[:, 0], self.psi_norm_exp, [sep_val]).collections[
+                0].get_paths()
             if len(temp_contours) == 1:
                 ls = GT3LineString(temp_contours.vertices)
                 if ls.convex_hull.contains(Point(xpt[0])):
@@ -394,7 +418,7 @@ class Psi(PlotBase):
 
         # create lines for seperatrix and divertor legs of seperatrix
 
-        #Convert back to arrays since I don't want to deal with changing everything to shapely since this already works
+        # Convert back to arrays since I don't want to deal with changing everything to shapely since this already works
         if isinstance(contours_paths, Path):
             contours = [contours_paths.vertices]
         else:
@@ -402,7 +426,7 @@ class Psi(PlotBase):
         # Replace points in the vic. of the xpt with the xpt
         contour_new = []
         for contour in contours:
-            dist = np.sqrt((contour[:, 0] - xpt_temp[0])**2 + (contour[:, 1] - xpt_temp[1])**2)
+            dist = np.sqrt((contour[:, 0] - xpt_temp[0]) ** 2 + (contour[:, 1] - xpt_temp[1]) ** 2)
             # TODO: Put this distance in the input file or make distance selection smarter
             contour[dist < 0.03] = xpt_temp
             contour_new.append(contour[np.where((contour != np.roll(contour, -1, axis=0)).all(axis=1))])
@@ -420,7 +444,7 @@ class Psi(PlotBase):
 
             xpt_loc = np.where((contour == xpt_temp).all(axis=1))[0]
             try:
-                ib = np.flipud(contour[:xpt_loc[0]+1])
+                ib = np.flipud(contour[:xpt_loc[0] + 1])
             except IndexError:
                 # The separatrix did not converge to the x-point. We should cut and project 2 times to create the LCFS.
                 raise Exception("The separatrix does not include the x-point.")
@@ -428,7 +452,7 @@ class Psi(PlotBase):
                 pt = Point(xpt_temp)
                 nearest = nearest_points(ls, pt)[0]
                 cuts = split(ls, nearest)
-                temp_ls = GT3LineString(cuts[0].coords[:]+pt.coords[:]+cuts[1].coords[:])
+                temp_ls = GT3LineString(cuts[0].coords[:] + pt.coords[:] + cuts[1].coords[:])
                 _plot_contours(temp_ls, title="Temporary LS from cuts")
 
             if len(xpt_loc) == 1:
@@ -444,6 +468,8 @@ class Psi(PlotBase):
                 # determine if contour is seperatrix, divertor legs, a main ib2ob line, or something else
                 contour = np.array(contour)
                 if not GT3LineString(contour).intersects(wall) and wall.convex_hull.contains(GT3LineString(contour)):
+                    # Found the Seperatrix
+
                     lcfs = contour
                     continue
                 # Meaningless noise lines will not pass near the x-point, so check that first to elliminate them
@@ -455,13 +481,22 @@ class Psi(PlotBase):
 
                     # count number of intersections with the wall
                     wall_ints = len(GT3LineString(contour).intersection(wall))
+                    contour_ls = GT3LineString(contour)
 
-                    if wall_ints >= 2 and np.amax(contour[:, 1]) > mag_axis[1]:
+                    if wall_ints >= 2 \
+                            and np.amax(contour[:, 1]) > mag_axis[1]\
+                            and not (contour >= mag_axis).all() \
+                            and contour_ls.convex_hull.contains(Point(mag_axis)):
+
+                        # This could be a wall-limited LCFS.
+                        # TODO: Check and eliminate
+
                         # then we probably have an ib2ob line. Treat the same way as above
+                        # We also are testing to make sure we don't have an upper null
 
                         # make sure the line goes from inboard to outboard
                         if contour[-1, 0] < contour[0, 0]:
-                            contour = np.flipud(contour_new)
+                            contour = np.flipud(contour)
 
                         xpt_loc = np.where((contour == xpt_temp).all(axis=1))[0]
 
@@ -482,7 +517,7 @@ class Psi(PlotBase):
                         # create ib and ob divertor legs, each starting at the x-point
                         xpt_loc = np.where((contour == xpt_temp).all(axis=1))[0][0]
                         ob = contour[xpt_loc:]
-                        ib = np.flipud(contour[:xpt_loc+1])
+                        ib = np.flipud(contour[:xpt_loc + 1])
 
         # create lcfs lines
         lcfs_line = GT3LineString(lcfs)
@@ -522,6 +557,20 @@ class Psi(PlotBase):
         self.lcfs_line = lcfs_line
         self.lcfs_line_closed = lcfs_line_closed
         self.entire_sep = entire_sep_line
+
+        # Create separatrix that is cut at the wall
+
+        ib_line_cut_nox = self.get_inboard_div_line_short(xpt=False)
+        ob_line_cut_nox = self.get_outboard_div_line_short(xpt=False)
+
+        entire_sep_cut = np.vstack((
+            np.array([ib_line_cut_nox.coords.xy[0], ib_line_cut_nox.coords.xy[1]]).T,
+            lcfs[1:],
+            np.array([ob_line_cut_nox.coords.xy[0], ob_line_cut_nox.coords.xy[1]]).T
+        ))
+        entire_sep_cut_line = GT3LineString(entire_sep_cut)
+
+        self.entire_sep_cut = entire_sep_cut_line
 
     def _calc_rho2psi_interp(self):
         rho_vals = np.linspace(0, self.sep_val, 100)

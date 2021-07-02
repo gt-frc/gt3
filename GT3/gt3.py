@@ -17,8 +17,6 @@ try:
     from GT3.Neutrals import Neutrals
 except ImportError:
     pass
-except ModuleNotFoundError:
-    pass
 
 class gt3:
 
@@ -58,8 +56,6 @@ class gt3:
         try:
             import neutpy
             self.neutpyLoaded = True
-        except ModuleNotFoundError:
-            self.neutpyLoaded = False
         except ImportError:
             self.neutpyLoaded = False
 

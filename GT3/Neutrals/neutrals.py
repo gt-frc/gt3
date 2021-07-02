@@ -16,10 +16,12 @@ from GT3.Core.Processors import NumpyEncoder
 class Neutrals:
 
     def __init__(self, inp, core, cpus=False):
+
         try:
             from neutpy import neutrals
         except ModuleNotFoundError:
-            raise ModuleNotFoundError("Neutpy is not installed or could not be loaded. Neutrals data will be unavailable.")
+            raise ModuleNotFoundError(
+                "Neutpy is not installed or could not be loaded. Neutrals data will be unavailable.")
 
         if abs(1.0 - core.sep_val) > .0001:
             print("The separatrix value has been overwritten. Cannot run Neutrals calculation")

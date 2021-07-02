@@ -112,3 +112,4 @@ logs/
 
 # Any backup files
 *.bak
+.pypirc
