@@ -30,7 +30,7 @@ class ImpRad:
         frac_abun
     """
 
-    def __init__(self, z=None, core=None):
+    def __init__(self, z=None, core=None, neutFlag=True):
         """
 
         :param z:
@@ -70,7 +70,8 @@ class ImpRad:
                 update_dict[z](core.n, core.T, Lz, dLzdT)
             cool_rate = core.n.e * core.n.C * np.nan_to_num(core.Lz.C.s) + core.n.e * core.n.C * np.nan_to_num(
                 core.Lz.C.t)
-            core.cool_rate.update(cool_rate)
+            if neutFlag:
+                core.cool_rate.update(cool_rate)
 
 
 

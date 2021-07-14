@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.interpolate import interp2d, Rbf
 from shapely.geometry import LineString, Point, MultiPoint
 from matplotlib import Path
 
@@ -221,7 +222,7 @@ class PlotBase:
             return
         ax = self._plot_with_wall()
         try:
-            ax.contour(self._R, self.Z, obj, levels=res)
+            ax.contour(self.R, self.Z, obj, levels=res)
             return ax
         except:
             print("Could not plot contours")
@@ -232,3 +233,39 @@ class PlotBase:
             color = self._defColor
         fig.scatter(self._plot_rho1d, val, color=color, s=self._markerSize)
         return fig
+
+class PlotBaseWithHeatMap(PlotBase):
+    def __init__(self):
+        super(PlotBaseWithHeatMap, self).__init__()
+
+    def _plot_HM(self, x, y, z, aspect=1, cmap=plt.cm.rainbow, *args, **kwargs):
+        # x, y, z = self._remove_duplicates_HM(x,y,z)
+        xi, yi = np.linspace(x.min(), x.max(), 100), np.linspace(y.min(), y.max(), 100)
+        xi, yi = np.meshgrid(xi, yi)
+        # interp = interp2d(x, y, z)
+        if kwargs.get("no_RBF"):
+            interp = interp2d(x, y, z)
+        else:
+            try:
+                interp = Rbf(x, y, z)
+            except np.linalg.LinAlgError:
+                interp = interp2d(x, y, z)
+
+        zi = interp(xi[0], yi[:, 0])
+        if kwargs.get("logScale"):
+            zi[zi == 0] = 0.00001
+            zi = np.log10(z)
+        fig, ax = plt.subplots(figsize=(6, 6))
+        hm = ax.imshow(zi, interpolation='nearest', cmap=cmap, extent=[x.min(), x.max(), y.max(), y.min()])
+        ax.set_aspect(aspect)
+        return fig, hm
+
+    def plot_HM(self, **kwargs):
+        self._plot_HM_with_wall(self.R, self.Z, self.val, **kwargs)
+
+    def _plot_HM_with_wall(self, R, Z, val, *args, **kwargs):
+
+        fig, ax = self._plot_HM(R, Z, val, **kwargs)
+        fig.colorbar(ax)
+        ax.axes.plot(np.asarray(self._wall_line.xy).T[:, 0], np.asarray(self._wall_line.xy).T[:, 1], color='black', lw=1.5)
+        return ax

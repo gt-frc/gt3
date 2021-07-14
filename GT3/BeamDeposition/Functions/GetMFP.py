@@ -34,7 +34,7 @@ def get_mfp(ne, beamE, Te, beamA, Zeff, rho):
     result = np.array([(1. / (ne_spline(x) * sig_eff_spline(x))) * 1E-2 for x in rho])
 
     if not (result > 0).all():
-        raise ValueError.message("Negative MFP encountered")
+        raise ValueError("Negative MFP encountered")
     else:
         return UnivariateSpline(rho, result, k=3, s=2)
 
@@ -65,7 +65,7 @@ def sigeff(ne, beamE, Te, beamA, Zeff, rho):
 
 
     expTerm = np.exp(S1(ne, beamE, Te, beamA, rho)) / (beamE / beamA)
-    rest = (1 + (Zeff - 1) * SC(ne, beamE, Te, beamA)) * 1E-16
+    rest = (1. + (Zeff - 1.) * SC(ne, beamE, Te, beamA)) * 1E-16
     fun = expTerm * rest
     return UnivariateSpline(rho, fun)
 
@@ -133,23 +133,57 @@ def SC(ne, E, Te, beamA):
     # TODO: Get improved coefficients since Mandrekas used improved coefficients in S1
 
     BC = np.zeros((4, 2, 2))
-    BC[0, 0, 0] = -1.49E0
-    BC[0, 0, 1] = -1.54E-2
-    BC[0, 1, 0] = -1.19E-2
-    BC[0, 1, 1] = -1.50E-2
-    BC[1, 0, 0] = 5.18E-1
-    BC[1, 0, 1] = 7.18E-3
-    BC[1, 1, 0] = 2.92E-2
-    BC[1, 1, 1] = 3.66E-3
-    BC[2, 0, 0] = -3.36E-2
-    BC[2, 0, 1] = 3.41E-4
-    BC[2, 1, 0] = -1.79E-3
-    BC[2, 1, 1] = -2.14E-4
+    # BC[0, 0, 0] = -1.49E0
+    # BC[0, 0, 1] = -1.54E-2
+    # BC[0, 1, 0] = -1.19E-1
+    # BC[0, 1, 1] = -1.50E-2
+    # BC[1, 0, 0] = 5.18E-1
+    # BC[1, 0, 1] = 7.18E-3
+    # BC[1, 1, 0] = 2.92E-2
+    # BC[1, 1, 1] = 3.66E-3
+    # BC[2, 0, 0] = -3.36E-2
+    # BC[2, 0, 1] = 3.41E-4
+    # BC[2, 1, 0] = -1.79E-3
+    # BC[2, 1, 1] = -2.14E-4
+
+    # Updated coefficients from S Suzuki et al 1998 Plasma Phys. Control. Fusion40 209
+
+    # BC[0, 0, 0] = -1.54E0
+    # BC[0, 0, 1] = -8.68E-2
+    # BC[0, 1, 0] = -1.83E-1
+    # BC[0, 1, 1] = -1.53E-2
+    # BC[1, 0, 0] = 5.67E-1
+    # BC[1, 0, 1] = 3.13E-3
+    # BC[1, 1, 0] = 4.60E-2
+    # BC[1, 1, 1] = 4.21E-3
+    # BC[2, 0, 0] = -3.86E-2
+    # BC[2, 0, 1] = -1.60E-3
+    # BC[2, 1, 0] = -2.68E-3
+    # BC[2, 1, 1] = -2.41E-4
+
+    # Updated coefficients via NBEAMS from Mandrekas/Boyl
+
+    BC[0, 0, 0] = -1.89E-01
+    BC[0, 0, 1] = -3.22E-02
+    BC[0, 1, 0] = 5.43E-02
+    BC[0, 1, 1] = 3.83E-03
+    BC[1, 0, 0] = -1.41E-03
+    BC[1, 0, 1] = 8.98E-03
+    BC[1, 1, 0] = -3.34E-02
+    BC[1, 1, 1] = -1.97E-03
+    BC[2, 0, 0] = 3.10E-02
+    BC[2, 0, 1] = 7.43E-04
+    BC[2, 1, 0] = 5.08E-03
+    BC[2, 1, 1] = 1.96E-04
+    BC[3, 0, 0] = -2.54E-03
+    BC[3, 0, 1] = -4.21E-05
+    BC[3, 1, 0] = -2.20E-04
+    BC[3, 1, 1] = 8.32E-07
 
 
     result = np.zeros(len(ne))
     for rho in range(0, len(ne)):
-        for i in [0, 1, 2]:
+        for i in [0, 1, 2, 3]:
             for j in [0, 1]:
                 for k in [0, 1]:
                     result[rho] += BC[i, j, k] * (ln(E * 1.E-3/beamA)**(i)) * (ln((ne[rho] / 1E6) / 1E13))**(j)\

@@ -5,7 +5,7 @@ Created on Tue Mar 20 08:58:46 2018
 
 @author: max
 """
-
+from typing import Optional, Any
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -47,10 +47,29 @@ class RadTransTemperatureProfiles(TemperatureProfiles):
 
     def __init__(self, core: Core, *args, **kwargs):
         super().__init__(core.psi, core.R, core.Z, ProfileType=OneDProfile, *args, **kwargs)
+        if kwargs.get("i"):
+            self.i.kev.set_raw_data([self.i.kev._rho1D, kwargs.get("i").val])
+            self.i.ev.set_raw_data([self.i.kev._rho1D, kwargs.get("i")], multiplier=1000.)
+
+        if kwargs.get("e"):
+            self.e.kev.set_raw_data([self.e.kev._rho1D, kwargs.get("e").val])
+            self.e.ev.set_raw_data([self.e.kev._rho1D, kwargs.get("e")], multiplier=1000.)
+
+        if kwargs.get("C"):
+            self.C.kev.set_raw_data([self.C.kev._rho1D, kwargs.get("C").val])
+            self.C.ev.set_raw_data([self.C.kev._rho1D, kwargs.get("C")], multiplier=1000.)
 
 class RadTransDensityProfiles(DensityProfiles):
     def __init__(self, core: Core, *args, **kwargs):
         super().__init__(core.psi, core.R, core.Z, ProfileType=OneDProfile, *args, **kwargs)
+        if kwargs.get("i"):
+            self.i.set_raw_data([self.i._rho1D, kwargs.get("i").val])
+
+        if kwargs.get("e"):
+            self.e.set_raw_data([self.e._rho1D, kwargs.get("e").val])
+
+        if kwargs.get("C"):
+            self.C.set_raw_data([self.C._rho1D, kwargs.get("C").val])
 
 class RadTransPressureProfiles(PressureProfiles):
     def __init__(self, core: Core, *args, **kwargs):
@@ -84,7 +103,7 @@ def calc_pinch_velocity(ext_term, pol_term, Er_term, tor_term):
 
 class RadialTransport(PlotBase):
 
-    def __init__(self, core, iol, nbi: BeamDeposition, iolFlag=True, neutFlag=True):
+    def __init__(self, core, iol, nbi: BeamDeposition, iolFlag=True, neutFlag=True, *args, **kwargs):
         """
 
         :type nbi: BeamDeposition
@@ -117,6 +136,9 @@ class RadialTransport(PlotBase):
         self.izn_rate = core.izn_rate.tot.fsa  # TODO: Should this be a flux surface average or a flux surface total?
         self.cool_rate = core.cool_rate.fsa  # TODO: Should this be a flux surface average or a flux surface total?
 
+        if kwargs.get("atten_izn"):
+            self.izn_rate = core.izn_rate.tot.fsa.attenuate(100)
+
         n = RadTransDensityProfiles(self.core,
                                     i=self.core.n.i.fsa,
                                     e=self.core.n.e.fsa,
@@ -148,6 +170,8 @@ class RadialTransport(PlotBase):
         self._Bp = B_p
         self._Bt = B_t
         self._Er = Er
+
+        self._overwrite_with_splines(**kwargs)
 
 
         # prepare iol quantities
@@ -369,17 +393,24 @@ class RadialTransport(PlotBase):
         self.heatvisc = OneDProfile(self.core.psi, hvisc, self.core.R, self.core.Z)
         self.heatin = OneDProfile(self.core.psi, heatin, self.core.R, self.core.Z)
 
-        self.chi = namedtuple('chi', 'i e')(
-            namedtuple('i', 'chi1 chi2 chi3 chi4')(
-                (self.Q.D.diff) * T.i.J.L / (n.i * T.i.ev * ch_d),
-                (self.Q.D.diff - self.conv25) * T.i.kev.L / (n.i * T.i.ev * ch_d),
-                (self.Q.D.diff - self.conv25 - self.heatin) * T.i.J.L / (n.i * T.i.ev * ch_d),
-                self._calc_chi_i_visc()
-            ), calc_chi_e(self.Q.e.diff, self.gamma.D.diff, self.gamma.C.diff, n, T)
-        )
+        self._calc_Chi()
 
         D_i = m_d * T.i.J * (self.nu_c_j_k * (1. - ch_d / ch_c) + self.nu_drag_D) / ((ch_d * core.B.pol.fsa)**2)
         self.D_i = OneDProfile(self.core.psi, D_i, self.core.R, self.core.Z)
+
+    def _calc_Chi(self, vtorS=0.1, vpolS=0.1):
+        self.chi = namedtuple('chi', 'i e')(
+            namedtuple('i', 'chi1 chi2 chi3 chi4')(
+                (self.Q.D.diff) * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
+                (self.Q.D.diff - self.conv25) * self._T.i.kev.L / (self._n.i * self._T.i.ev * ch_d),
+                (self.Q.D.diff - self.conv25 - self.heatin) * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
+                self._calc_chi_i_visc(vtorS=vtorS, vpolS=vpolS)
+            ), calc_chi_e(self.Q.e.diff, self.gamma.D.diff, self.gamma.C.diff, self._n, self._T)
+        )
+
+    def set_chi_asymmetry(self, vtorS, vpolS):
+        self._calc_Chi(vtorS, vpolS)
+        return self
 
     def _calc_chi_i_visc(self, vtorS=0.1, vpolS=0.1):
         heatvis = OneDProfile(self.core.psi, self._calc_visc_heat(vtorS, vpolS), self.core.R, self.core.Z)
@@ -698,10 +729,8 @@ class RadialTransport(PlotBase):
         fig.legend([r"$q^{conv}$", r"$q^{heatin}$", r"$q^{visc}$", r"$q^{tot}$"])
         return fig
 
-
     def plot_gamma_diff_calc(self):
         self._calc_gamma_diff_method(iol_adjusted=self.iolFlag, F_orb=self.iol.forb_d_therm_1D, verbose=True)
-
 
     def plot_nu_jk(self, edge=True):
         return self._plot_base(self.nu_c_j_k, yLabel=r'$\nu_{j,k}$', title="Ion-Impurity Collision frequency", edge=edge)
@@ -763,3 +792,32 @@ class RadialTransport(PlotBase):
     def plot_D(self, edge=True):
         fig = self._plot_base(self.D_i, yLabel=r'$D_{r, i} [m^2/s]$', title='', edge=edge)
         return fig
+
+    def _overwrite_with_splines(self, **kwargs):
+        if kwargs.get("rtrans_override"):
+            if kwargs.get("rtrans_override").get("splines"):
+                if len(kwargs.get("rtrans_override").get("splines")) > 0:
+                    splines = kwargs.get("rtrans_override").get("splines")
+                    if splines.get('T_i'):
+                        self._T.i.kev.overwrite_with_spline()
+                        self._T.i.ev.overwrite_with_spline()
+                        self._T.i.J.overwrite_with_spline()
+                    if splines.get('T_e'):
+                        self._T.e.kev.overwrite_with_spline()
+                        self._T.e.ev.overwrite_with_spline()
+                        self._T.e.J.overwrite_with_spline()
+
+                    if splines.get('n_i'):
+                        self._n.i.overwrite_with_spline()
+                        self._n.i.overwrite_with_spline()
+                        self._n.i.overwrite_with_spline()
+
+                    if splines.get('n_e'):
+                        self._n.e.overwrite_with_spline()
+                        self._n.e.overwrite_with_spline()
+                        self._n.e.overwrite_with_spline()
+
+
+
+
+        return self

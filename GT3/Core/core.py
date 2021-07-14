@@ -24,8 +24,8 @@ from scipy.interpolate import interp1d
 from GT3.Psi import Psi
 import GT3.constants as constants
 from GT3.utilities import PlotBase
-from .Functions.ProfileClasses import SlowFastSplit, TwoDProfile, ImpurityProfiles, TemperatureProfiles,\
-    DensityProfiles, PressureProfiles, VectorialProfiles, VectorialBase
+from .Functions.ProfileClasses import SlowFastSplit, TwoDProfile, ImpurityProfiles, TemperatureProfiles, \
+    DensityProfiles, PressureProfiles, VectorialProfiles, VectorialBase, TwoDProfileWithHM
 
 e = constants.elementary_charge
 u_0 = constants.mu_0
@@ -74,7 +74,7 @@ class Core(PlotBase.PlotBase):
             print("The separatrix value is being overwritten. GT3.SOL will be omitted.")
 
         # Calculate PsiData information
-        self._set_psiData(inp)
+        self._set_psiData(inp, **kwargs)
         self.a = self.psi.a
 
 
@@ -160,9 +160,13 @@ class Core(PlotBase.PlotBase):
         """THe total volume of the plasma"""
 
         # initialize ionization rate arrays with zero
-        self.izn_rate = SlowFastSplit(TwoDProfile(self.psi, np.zeros(self.rho.shape), self.R, self.Z),
-                                      TwoDProfile(self.psi, np.zeros(self.rho.shape), self.R, self.Z),
-                                      TwoDProfile(self.psi, np.zeros(self.rho.shape), self.R, self.Z))
+        self.izn_rate = SlowFastSplit(TwoDProfileWithHM(self.psi, np.zeros(self.rho.shape), self.R, self.Z),
+                                      TwoDProfileWithHM(self.psi, np.zeros(self.rho.shape), self.R, self.Z),
+                                      TwoDProfileWithHM(self.psi, np.zeros(self.rho.shape), self.R, self.Z))
+
+        self.izn_rate.tot.set_wall(self.wall_line)
+        self.izn_rate.s.set_wall(self.wall_line)
+        self.izn_rate.t.set_wall(self.wall_line)
 
         # initialize cooling rate array with zero
         self.cool_rate = TwoDProfile(self.psi, np.zeros(self.rho.shape), self.R, self.Z, wall=self.wall_line)
@@ -426,7 +430,7 @@ class Core(PlotBase.PlotBase):
                                      nt=Tnt_kev,
                                      wall=self.wall_line, raw=raw_data)
 
-    def _set_psiData(self, inp):
+    def _set_psiData(self, inp, **kwargs):
         # this assumes that psi is given as a square array
         psi_shape = int(np.sqrt(inp.psirz_exp[:, 0].shape[0]))  # type: int
         try:
@@ -437,7 +441,7 @@ class Core(PlotBase.PlotBase):
         self.psi = Psi(inp.psirz_exp[:, 0].reshape(-1, psi_shape),
                         inp.psirz_exp[:, 1].reshape(-1, psi_shape),
                         inp.psirz_exp[:, 2].reshape(-1, psi_shape) * psi_scale,
-                        self.wall_line)
+                        self.wall_line, **kwargs)
 
 
         xpt_l = self.psi.get_xpt_lower()
@@ -477,7 +481,7 @@ class Core(PlotBase.PlotBase):
         except (AttributeError, TypeError):
             # Check if frequencies are given instead
             try:
-                vpolD = UnivariateSpline(inp.omegDpol_data[:, 0], inp.omegDpol_data[:, 1] * self.R[:, 0], k=3, s=0)(self.rho)
+                vpolD = UnivariateSpline(inp.omegDpol_data[:, 0], inp.omegDpol_data[:, 1] * self.psi.mag_axis[0], k=3, s=0)(self.rho)
             except (AttributeError, TypeError):
                 vpolD = np.zeros(self.rho.shape)
 
@@ -486,7 +490,7 @@ class Core(PlotBase.PlotBase):
         except (AttributeError, TypeError):
             # Check if frequencies are given instead
             try:
-                vpolC = UnivariateSpline(inp.omegCpol_data[:, 0], inp.omegCpol_data[:, 1] * self.R[:, 0], k=3, s=0)(self.rho)
+                vpolC = UnivariateSpline(inp.omegCpol_data[:, 0], inp.omegCpol_data[:, 1] * self.psi.mag_axis[0], k=3, s=0)(self.rho)
             except (AttributeError, TypeError):
                 vpolC = np.zeros(self.rho.shape)
 
@@ -495,7 +499,7 @@ class Core(PlotBase.PlotBase):
         except (AttributeError, TypeError):
             # Check if frequencies are given instead
             try:
-                vtorD = UnivariateSpline(inp.omegDtor_data[:, 0], inp.omegDtor_data[:, 1] * self.R[:, 0], k=3, s=0)(self.rho)
+                vtorD = UnivariateSpline(inp.omegDtor_data[:, 0], inp.omegDtor_data[:, 1] * self.psi.mag_axis[0], k=3, s=0)(self.rho)
             except (AttributeError, TypeError):
                 vtorD = np.zeros(self.rho.shape)
 
@@ -504,7 +508,7 @@ class Core(PlotBase.PlotBase):
         except (AttributeError, TypeError):
             # Check if frequencies are given instead
             try:
-                vtorC = UnivariateSpline(inp.omegCtor_data[:, 0], inp.omegCtor_data[:, 1] * self.R[:, 0], k=3, s=0)(self.rho)
+                vtorC = UnivariateSpline(inp.omegCtor_data[:, 0], inp.omegCtor_data[:, 1] * self.psi.mag_axis[0], k=3, s=0)(self.rho)
             except (AttributeError, TypeError):
                 vtorC = np.zeros(self.rho.shape)
 
@@ -536,6 +540,11 @@ class Core(PlotBase.PlotBase):
                              data.n_n_slow,
                              (self.R, self.Z),
                              method='linear')
+            if np.isnan(n_n_s).any():
+                n_n_s = griddata(np.column_stack((data.R, data.Z)), np.array(data.n_n_slow),
+                                (self.R, self.Z), method='nearest')
+                if np.isnan(n_n_s).any():
+                    raise
         except:
             n_n_s = self.n.n.s
 
@@ -544,6 +553,11 @@ class Core(PlotBase.PlotBase):
                              data.n_n_thermal,
                              (self.R, self.Z),
                              method='linear')
+            if np.isnan(n_n_t).any():
+                n_n_t = griddata(np.column_stack((data.R, data.Z)), np.array(data.n_n_thermal),
+                                  (self.R, self.Z), method='nearest')
+                if np.isnan(n_n_t).any():
+                    raise
         except:
             n_n_t = self.n.n.t
 
@@ -552,6 +566,11 @@ class Core(PlotBase.PlotBase):
                                   data.izn_rate_slow,
                                   (self.R, self.Z),
                                   method='linear')
+            if np.isnan(izn_rate_s).any():
+                izn_rate_s = griddata(np.column_stack((data.R, data.Z)), np.array(data.izn_rate_slow),
+                                     (self.R, self.Z), method='nearest')
+                if np.isnan(izn_rate_s).any():
+                    raise
         except:
             izn_rate_s = self.izn_rate.s
 
@@ -560,6 +579,11 @@ class Core(PlotBase.PlotBase):
                                   data.izn_rate_thermal,
                                   (self.R, self.Z),
                                   method='linear')
+            if np.isnan(izn_rate_t).any():
+                izn_rate_t = griddata(np.column_stack((data.R, data.Z)), np.array(data.izn_rate_thermal),
+                                  (self.R, self.Z), method='nearest')
+                if np.isnan(izn_rate_t).any():
+                    raise
         except:
             izn_rate_t = self.izn_rate.t
 

@@ -15,7 +15,7 @@ from GT3.Core.Processors import NumpyEncoder
 
 class Neutrals:
 
-    def __init__(self, inp, core, cpus=False):
+    def __init__(self, inp, core, cpus=False, *args, **kwargs):
 
         try:
             from neutpy import neutrals
@@ -53,16 +53,17 @@ class Neutrals:
                 if cpus:
                     self.npi.set_cpu_cores(cpus)
 
-                self.npi.from_gt3(core, inp)
+                self.npi.from_gt3(core, inp, **kwargs)
                 self.data = self.NeutralDataNT(self.npi.midpts[:, 0],
                                                self.npi.midpts[:, 1],
                                                self.npi.nn_s_raw,
                                                self.npi.nn_t_raw,
                                                self.npi.iznrate_s_raw,
                                                self.npi.iznrate_t_raw)
-                self._update_core()
                 # Save data
                 self._save_data()
+                self._update_core()
+
             except EnvironmentError as e:
                 print(str(e))
                 pass

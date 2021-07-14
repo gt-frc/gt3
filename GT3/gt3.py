@@ -46,7 +46,7 @@ class gt3:
             self.inp = preparedInput
         else:
             self.inp = ReadInfile(self.inputFile)
-        self.core = Core(self.inp, debug=self.debug)
+        self.core = Core(self.inp, debug=self.debug, **kwargs)
         self.iolFlag = iolFlag
         self.neutFlag = neutFlag
         self.verbose = verbose
@@ -124,9 +124,9 @@ class gt3:
             self.imp = ImpRad(z=None, core=self.core)
             self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag)
 
-    def _run_neutpy(self, reRun=False):
+    def _run_neutpy(self, reRun=False, **kwargs):
         if self.neutpyLoaded:
-            self.ntrl = Neutrals(self.inp, self.core, cpus=self.ntrl_cpu_override)
+            self.ntrl = Neutrals(self.inp, self.core, cpus=self.ntrl_cpu_override, **kwargs)
             if reRun:
                 self.ntrl.reRun(cpus=self.ntrl_cpu_override)
         else:
@@ -164,8 +164,8 @@ class gt3:
         self.imp = ImpRad(core=self.core)
         return self
 
-    def run_neutrals(self, reRun=False):
-        self._run_neutpy(reRun=reRun)
+    def run_neutrals(self, reRun=False, **kwargs):
+        self._run_neutpy(reRun=reRun, **kwargs)
         return self
 
     def override_ntrl_cpus(self, num):
@@ -184,12 +184,13 @@ class gt3:
         self.mar = Marfe(self.inp, self.core)
         return self
 
-    def run_radial_transport(self, nbiReRun=False, ntrlReRun=False, debug=False):
-        try:
-            self.iol
-        except AttributeError:
-            print ("IOL module not run. Running now...")
-            self.run_IOL()
+    def run_radial_transport(self, nbiReRun=False, ntrlReRun=False, debug=False, *args, **kwargs):
+        if self.iolFlag:
+            try:
+                self.iol
+            except AttributeError:
+                print ("IOL module not run. Running now...")
+                self.run_IOL()
         try:
             self.nbi
         except AttributeError:
@@ -200,33 +201,29 @@ class gt3:
             self.imp
         except AttributeError:
             print ("Impurity radiation module not run. Running now...")
-            self.imp = ImpRad(z=6, core=self.core)
+            self.imp = ImpRad(z=6, core=self.core, neutFlag=self.neutFlag)
 
         if self.neutFlag:
             try:
                 self.ntrl
             except AttributeError:
                 print ("Neutrals module not run. Running now...")
-                self.run_neutrals(reRun=ntrlReRun)
+                self.run_neutrals(reRun=ntrlReRun, **kwargs)
 
 
-        self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag)
+        self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag, **kwargs)
         return self
 
     def disable_IOL(self):
         self.iolFlag = False
-        print ("Re-running Radial Transport without IOL")
-        try:
-            self.rtrans
-        except:
-            self.run_radial_transport()
         return self
 
     def disable_neutrals(self):
         self.neutFlag = False
-        print ("Running Radial Transport without neutral particles")
-        try:
-            self.rtrans
-        except:
-            self.run_radial_transport()
+        self.core.izn_rate.t.set_to_zeros()
+        self.core.izn_rate.tot.set_to_zeros()
+        self.core.izn_rate.s.set_to_zeros()
+        self.core.n.n.t.set_to_zeros()
+        self.core.n.n.s.set_to_zeros()
+        self.core.n.n.tot.set_to_zeros()
         return self

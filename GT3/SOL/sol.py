@@ -31,7 +31,7 @@ class Sol:
         pass
 
     def calc_sol_lines(self, inp, core):
-        c = QuadContourGenerator.from_rectilinear(core.psi.R[0], core.psi.Z[:, 0], core.psi.psi_norm)
+        c = QuadContourGenerator.from_rectilinear(core.psi.R[0], core.psi.Z[:, 0], core.psi.psi_norm_exp)
         self.sol_lines = []
         self.sol_lines_cut = []
 

@@ -4,6 +4,13 @@
 #  GT3 config file for Shot 144977.3000. GT3 uses the ConfigParser module to parse
 #  these data, with headers given in [Brackets].
 #
+#  H-mode shots
+#
+# Good shot data.
+#
+#
+#
+#
 ###################################################################################
 
 ###################################################################################

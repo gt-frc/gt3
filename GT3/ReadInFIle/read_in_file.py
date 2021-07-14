@@ -159,14 +159,14 @@ class ReadInfile:
         self.vpolD_data = self._profile_loader(config, '1DProfiles', 'vpolD_file')
         self.vtorD_data = self._profile_loader(config, '1DProfiles', 'vtorD_file')
 
-        if isinstance(self.vpolD_data, IOError):
-            self.omegDpol_data = self._profile_loader(config, '1DProfiles', 'omegDpol_fle')
-        if isinstance(self.vtorD_data, IOError):
-            self.omegDtor_data = self._profile_loader(config, '1DProfiles', 'omegDpol_fle')
-        if isinstance(self.vpolC_data, IOError):
-            self.omegCpol_data = self._profile_loader(config, '1DProfiles', 'omegCpol_fle')
-        if isinstance(self.vtorC_data, IOError):
-            self.omegCtor_data = self._profile_loader(config, '1DProfiles', 'omegCpol_fle')
+        if isinstance(self.vpolD_data, (IOError, configparser.NoOptionError)):
+            self.omegDpol_data = self._profile_loader(config, '1DProfiles', 'omegDpol_file')
+        if isinstance(self.vtorD_data, (IOError, configparser.NoOptionError)):
+            self.omegDtor_data = self._profile_loader(config, '1DProfiles', 'omegDtor_file')
+        if isinstance(self.vpolC_data, (IOError, configparser.NoOptionError)):
+            self.omegCpol_data = self._profile_loader(config, '1DProfiles', 'omegCpol_file')
+        if isinstance(self.vtorC_data, (IOError, configparser.NoOptionError)):
+            self.omegCtor_data = self._profile_loader(config, '1DProfiles', 'omegCtor_file')
 
         self.psirz_exp = self._profile_loader(config, '2DProfiles', 'psirz_file')
         self.wall_exp = self._profile_loader(config, 'Wall', 'wall_file')

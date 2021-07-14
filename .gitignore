@@ -109,7 +109,11 @@ logs/
 # Input files
 /inputs/
 /neutSensitivity.py
+quickGT3Run.py
 
 # Any backup files
 *.bak
 .pypirc
+
+# Directory for shot runs
+/RunScripts/

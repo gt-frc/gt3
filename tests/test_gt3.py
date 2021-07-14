@@ -49,10 +49,10 @@ class NegativeTriangularityRun(NegativeTriangularityTest, CommonFunctions):
 
 class RunModificationTest(SingleLowerNullTest):
 
-    def test_sol_exists(self):
-        self.plasma.run_SOL()
-        self.assertTrue(hasattr(self.plasma, "sol"))
-        self.assertIsInstance(self.plasma.sol, GT3.Sol)
+    # def test_sol_exists(self):
+    #     self.plasma.run_SOL()
+    #     self.assertTrue(hasattr(self.plasma, "sol"))
+    #     self.assertIsInstance(self.plasma.sol, GT3.Sol)
 
     def test_iol_exists(self):
         self.plasma.run_IOL()
@@ -68,6 +68,31 @@ class RunModificationTest(SingleLowerNullTest):
         self.plasma.run_radial_transport()
         self.assertTrue(hasattr(self.plasma, "rtrans"))
         self.assertIsInstance(self.plasma.rtrans, GT3.RadialTransport)
+
+    def test_rtrans_modifiers(self):
+        try:
+            del self.plasma.rtrans
+        except:
+            pass
+        kwargs = {
+            'rtrans_override': {
+                'splines': {
+                    'T_i': True,
+                    'T_e': True,
+                    'n_i': True,
+                    'n_e': True,
+                }
+            }
+        }
+        self.plasma.run_radial_transport(**kwargs)
+        self.assertTrue(self.plasma.rtrans._T.i.kev._data_overwritten)
+        self.assertTrue(self.plasma.rtrans._T.e.kev._data_overwritten)
+        self.assertTrue(self.plasma.rtrans._T.i.ev._data_overwritten)
+        self.assertTrue(self.plasma.rtrans._T.e.ev._data_overwritten)
+        self.assertTrue(self.plasma.rtrans._n.i._data_overwritten)
+        self.assertTrue(self.plasma.rtrans._n.e._data_overwritten)
+        self.plasma.rtrans.set_chi_asymmetry(0.05, 0.05)
+
 
 
 class PlotCoreTest(DoubleNullTest):

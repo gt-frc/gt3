@@ -1,4 +1,7 @@
 #!/usr/bin/python
+from typing import Optional
+
+from numpy import ndarray
 from scipy.interpolate import griddata, interp1d
 
 from GT3.utilities.PlotBase import PlotBase
@@ -13,13 +16,24 @@ import GT3.constants as constants
 
 u_0 = constants.mu_0
 
+UPPER_XPT = "upper"
+LOWER_XPT = "lower"
+
 
 class Psi(PlotBase):
-    def __init__(self, R, Z, psi, wall, sep_val=1.0):
+    mag_axis: Optional[ndarray]
+
+    def __init__(self, R, Z, psi, wall, sep_val=1.0, *args, **kwargs):
         """
         The Psi class takes in exp R,Z,psi data and attempts to find important plasma lines and points such as the
         separatrix and x-points.
 
+        :param wall: The wall LineString
+        :type wall: LineString
+        :param: mag_axis: The magnetic axis
+        :type mag_axis: ndarray
+        :param sep_val: 
+        :type sep_val: float
         :param psi:
         :type psi:
         :param R:
@@ -35,7 +49,7 @@ class Psi(PlotBase):
         self.sep_val = sep_val
         self._find_xpt_mag_axis()
         self.xpt = [self.xpt_l, self.xpt_u]
-        self._calc_psi_norm()
+        self._calc_psi_norm(**kwargs)
 
         self.raw_dpsidR = np.abs(np.gradient(self.psi_norm_exp, self.R[0, :], axis=1))
         self.raw_1_R_dpsidR = self.raw_dpsidR / self.R
@@ -279,37 +293,66 @@ class Psi(PlotBase):
         psi_shifted = psi - psi_min  # set center to zero
         psi_shifted_xpt_l, psi_shifted_xpt_u = None, None
 
-        if self.xpt[0] is not None:
-
-            psi_shifted_xpt_l = griddata(np.column_stack((R.flatten(), Z.flatten())),
-                                   psi_shifted.flatten(),
-                                   [self.xpt[0][0], self.xpt[0][1]],
-                                   method='cubic')
-        if self.xpt[1] is not None:
-            psi_shifted_xpt_u = griddata(np.column_stack((R.flatten(), Z.flatten())),
-                                   psi_shifted.flatten(),
-                                   [self.xpt[1][0], self.xpt[1][1]],
-                                   method='cubic')
-        psi_shifted_xpt = [psi_shifted_xpt_l, psi_shifted_xpt_u]
-        if self.xpt[1] is None:
-            psi_norm = psi_shifted / np.average(psi_shifted_xpt_l)
-            num_xpts = 1
-            norm_xpt = self.xpt[0]
-            if kwargs.get("debug"):
-                print("DEBUG: 1 XPT - psi normalized to lower X-point  " + str(self.xpt[0]))
-        elif self.xpt[0] is None:
-            num_xpts = 1
-            norm_xpt = self.xpt[1]
-            if kwargs.get("debug"):
-                print("DEBUG: 1 XPT - psi normalized to upper X-point:  " + str(self.xpt[1]))
-            psi_norm = psi_shifted / np.average(psi_shifted_xpt_u)
+        if kwargs.get("psi_args"):
+            if kwargs.get("psi_args").get("xpt_select"):
+                if kwargs.get("psi_args").get("xpt_select") == UPPER_XPT:
+                    psi_shifted_xpt_u = griddata(np.column_stack((R.flatten(), Z.flatten())),
+                                                 psi_shifted.flatten(),
+                                                 [self.xpt[1][0], self.xpt[1][1]],
+                                                 method='cubic')
+                    norm_xpt = self.xpt[1]
+                    if kwargs.get("psi_args"):
+                        if kwargs.get("psi_args").get("debug"):
+                            print("DEBUG: 1 XPT - psi normalized to upper X-point:  " + str(self.xpt[1]))
+                    psi_norm = psi_shifted / np.average(psi_shifted_xpt_u)
+                elif kwargs.get("psi_args").get("xpt_select") == LOWER_XPT:
+                    psi_shifted_xpt_l = griddata(np.column_stack((R.flatten(), Z.flatten())),
+                                                 psi_shifted.flatten(),
+                                                 [self.xpt[0][0], self.xpt[0][1]],
+                                                 method='cubic')
+                    norm_xpt = self.xpt[0]
+                    if kwargs.get("psi_args"):
+                        if kwargs.get("psi_args").get("debug"):
+                            print("DEBUG: 1 XPT - psi normalized to lower X-point:  " + str(self.xpt[0]))
+                    psi_norm = psi_shifted / np.average(psi_shifted_xpt_l)
+                if self.xpt[0] is None or self.xpt[1] is None:
+                    num_xpts = 1
+                else:
+                    num_xpts = 2
         else:
-            num_xpts = 2
-            norm_xpt = self.xpt[1]
-            if kwargs.get("debug"):
-                print("DEBUG: 2 XPT -  psi normalized to upper X-point: " + str(self.xpt[1]))
-            # psi_norm = psi_shifted / np.average(psi_shifted_xpt)
-            psi_norm = psi_shifted / np.average(psi_shifted_xpt_u)
+            if self.xpt[0] is not None:
+                psi_shifted_xpt_l = griddata(np.column_stack((R.flatten(), Z.flatten())),
+                                       psi_shifted.flatten(),
+                                       [self.xpt[0][0], self.xpt[0][1]],
+                                       method='cubic')
+            if self.xpt[1] is not None:
+                psi_shifted_xpt_u = griddata(np.column_stack((R.flatten(), Z.flatten())),
+                                       psi_shifted.flatten(),
+                                       [self.xpt[1][0], self.xpt[1][1]],
+                                       method='cubic')
+            psi_shifted_xpt = [psi_shifted_xpt_l, psi_shifted_xpt_u]
+            if self.xpt[1] is None:
+                psi_norm = psi_shifted / np.average(psi_shifted_xpt_l)
+                num_xpts = 1
+                norm_xpt = self.xpt[0]
+                if kwargs.get("psi_args"):
+                    if kwargs.get("psi_args").get("debug"):
+                        print("DEBUG: 1 XPT - psi normalized to lower X-point  " + str(self.xpt[0]))
+            elif self.xpt[0] is None:
+                num_xpts = 1
+                norm_xpt = self.xpt[1]
+                if kwargs.get("psi_args"):
+                    if kwargs.get("psi_args").get("debug"):
+                        print("DEBUG: 1 XPT - psi normalized to upper X-point:  " + str(self.xpt[1]))
+                psi_norm = psi_shifted / np.average(psi_shifted_xpt_u)
+            else:
+                num_xpts = 2
+                norm_xpt = self.xpt[1]
+                if kwargs.get("psi_args"):
+                    if kwargs.get("psi_args").get("debug"):
+                        print("DEBUG: 2 XPT -  psi normalized to upper X-point: " + str(self.xpt[1]))
+                # psi_norm = psi_shifted / np.average(psi_shifted_xpt)
+                psi_norm = psi_shifted / np.average(psi_shifted_xpt_u)
 
         self.psi_norm_exp = psi_norm
         self.norm_xpt = norm_xpt
@@ -394,10 +437,10 @@ class Psi(PlotBase):
                         # The lower X-point will define our separatrix
                         xpt_sep = xpt[0]
                         xpt_temp = xpt_sep
-                        if ls.contains(xpt_sep):
+                        if ls.contains(Point(xpt_sep)):
                             contours_paths = path
                         else:
-                            print("FUck")
+                            print("Something unfortunate happened in Psi")
                         break
                     elif ls.convex_hull.contains(Point(xpt[1])):
                         # The upper X-point will define our separatrix

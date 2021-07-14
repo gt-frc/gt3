@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from GT3.utilities.PlotBase import PlotBase
+from GT3.utilities.PlotBase import PlotBase, PlotBaseWithHeatMap
 from scipy.interpolate import UnivariateSpline, interp1d, griddata
 from GT3.Core.Functions.CalcFSA import calc_fsa
 from GT3.Core.Functions.CalcGrad import calc_grad
@@ -12,6 +12,7 @@ from collections import namedtuple
 import GT3.constants as constants
 from GT3 import Core
 from typing import Union
+from math import exp
 
 e = constants.elementary_charge
 
@@ -122,6 +123,7 @@ class OneDProfile(PlotBase, BaseMath):
         __array_priority__ = 1000
         self.__array_priority__ = 1000
 
+        self._data_overwritten = False
         # If there are no values given, we set this to 0s
         if not np.any(val):
             val = np.zeros(psi.rho[:, 0].shape)
@@ -159,6 +161,8 @@ class OneDProfile(PlotBase, BaseMath):
         self.xLabel, self.yLabel, self.plotTitle = xLabel, yLabel, plotTitle
         self.set_plot_rho1d(self._rho1D)
         self._Spline = None
+        self._spline_k = 3
+        self._spline_s = 2
         if raw:
             try:
                 self._raw_rho = raw[0]
@@ -171,6 +175,10 @@ class OneDProfile(PlotBase, BaseMath):
 
     def __doc__(self):
         return self._docs
+
+    def set_to_zeros(self):
+        self.val = np.zeros(self._psi.rho[:, 0].shape)
+        return self
 
     def plot(self, edge=True, color="red", **kwargs):
         return self._plot_base(self.val, xLabel=self.xLabel, yLabel=self.yLabel,
@@ -199,18 +207,12 @@ class OneDProfile(PlotBase, BaseMath):
             self._derivative = derivative
             return self._derivative
 
-
     @property
-    def Spline(self, k=3, s=0):
-        self._Spline = UnivariateSpline(self._rho1D * self.a, self.val, k=k, s=s)
-        return self._Spline
-
-    @Spline.getter
     def Spline(self):
         if self._Spline:
             return self._Spline
         else:
-            self._Spline = UnivariateSpline(self._rho1D * self.a, self.val, k=3, s=0)
+            self._Spline = UnivariateSpline(self._rho1D * self.a, self.val, k=self._spline_k, s=self._spline_s)
             return self._Spline
 
     @Spline.setter
@@ -221,13 +223,19 @@ class OneDProfile(PlotBase, BaseMath):
         else:
             self._Spline = UnivariateSpline(self._rho1D * self.a, self.val, k=val[0], s=val[1])
 
+    def set_spline_s(self, s):
+        self._spline_s = s
+        self._Spline = UnivariateSpline(self._rho1D * self.a, self.val, k=self._spline_k, s=self._spline_s)
+        return self.Spline
+
+    def set_spline_k(self, k):
+        self._spline_k = k
+        self._Spline = UnivariateSpline(self._rho1D * self.a, self.val, k=self._spline_k, s=self._spline_s)
+        return self.Spline
+
     @property
     def OneDInterp(self):
         self._1Dinterp = interp1d(self._rho1D * self.a, self.val, kind='cubic')
-        return
-
-    @OneDInterp.getter
-    def OneDInterp(self):
         return self._1Dinterp
 
     @OneDInterp.setter
@@ -237,18 +245,20 @@ class OneDProfile(PlotBase, BaseMath):
     def isNonZero(self):
         return not np.all(self.val == 0)
 
-    def set_raw_data(self, raw):
+    def set_raw_data(self, raw, multiplier=None):
         try:
             self._raw_rho = raw[0]
-            self._raw_data = raw[1]
         except TypeError as err:
             raise (str(err))
+        if multiplier:
+            self._raw_data = raw[1] * multiplier
+        else:
+            self._raw_data = raw[1]
         return self._raw_rho, self._raw_data
 
-    def plot_raw_data(self, fsa=True, edge=False, **kwargs):
+    def plot_raw_data(self,  edge=False, **kwargs):
         """
-        Plots the experimental data vs. the flux-surface-averaged or [:, 0] data for comparison.
-        Set fsa to False to plot the [:, 0] data instead.
+        Plots the experimental data vs. values in self.val
         """
         try:
             self._raw_data
@@ -258,13 +268,26 @@ class OneDProfile(PlotBase, BaseMath):
             Otherwise, please verify that raw data are attached to this instance.
             """)
             raise err
-        if fsa:
-            fig = self._plot_base(self.fsa, xLabel=self.xLabel, yLabel=self.yLabel, edge=edge, line=True)
-            fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize, **kwargs)
-        else:
-            fig = self._plot_base(self.to1D(), xLabel=self.xLabel, yLabel=self.yLabel, edge=edge, line=True)
-            fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize, **kwargs)
+
+        fig = self._plot_base(self.val, xLabel=self.xLabel, yLabel=self.yLabel, edge=edge, line=True)
+        fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize, **kwargs)
         return fig
+
+    def attenuate(self, gamma, rho=1.0):
+        maxVal = self.OneDInterp(rho * self._psi.a)
+        newVal = maxVal*np.exp(-1. * gamma * (self._psi.a - self._rho1D * self._psi.a))
+        self._data_overwritten = True
+        return OneDProfile(self._psi, newVal, self._R, self._Z)
+
+    def overwrite_with_spline(self):
+        self.val = self.Spline(self._rho1D * self._psi.a)
+        if hasattr(self, "_derivative"):
+            del self._derivative
+        if hasattr(self, "_L"):
+            del self._L
+        self._data_overwritten = True
+        return self
+
 
 
 class TwoDProfile(PlotBase, BaseMath):
@@ -309,7 +332,6 @@ class TwoDProfile(PlotBase, BaseMath):
     def __doc__(self):
         return self._docs
 
-
     @property
     def L(self):
         """
@@ -336,12 +358,15 @@ class TwoDProfile(PlotBase, BaseMath):
             # self._L = TwoDProfile(self._psi, L, self.R, self.Z, wall=self.wall)
             return self._L
 
-    def set_raw_data(self, raw):
+    def set_raw_data(self, raw, multiplier=None):
         try:
             self._raw_rho = raw[0]
-            self._raw_data = raw[1]
         except TypeError as err:
             raise (str(err))
+        if multiplier:
+            self._raw_data = raw[1] * multiplier
+        else:
+            self._raw_data = raw[1]
         return self._raw_rho, self._raw_data
 
     def plot_raw_data(self, fsa=True, edge=False, **kwargs):
@@ -365,12 +390,18 @@ class TwoDProfile(PlotBase, BaseMath):
             fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize, **kwargs)
         return fig
 
+    def set_to_zeros(self):
+        self.val = np.zeros(self._psi.rho.shape)
+        self.fsa = OneDProfile(self._psi, calc_fsa(self.val, self.R, self.Z), self.R, self.Z)
+        return self
+
     def set_wall(self, wall):
         if type(wall) is LineString:
             self.wall = wall
             self.set_plot_wall(wall)
         else:
             print("Wall must be a LineString. Wall not updated.")
+
 
     def plot2D(self, res=50):
         if self.wall:
@@ -424,6 +455,10 @@ class TwoDProfile(PlotBase, BaseMath):
     def L(self, value):
         self._L = value
 
+class TwoDProfileWithHM(TwoDProfile, PlotBaseWithHeatMap):
+    def __init__(self, psi, val, R, Z, wall=None, docs="", units="", plotTitle="", xLabel=r"$\rho$", yLabel="", raw=None):
+        super(TwoDProfileWithHM, self).__init__(psi, val, R, Z, wall=wall, docs=docs, units=units, plotTitle=plotTitle,
+                         xLabel=xLabel, yLabel=yLabel, raw=raw)
 
 class TemperatureProfiles(PlotBase):
 
@@ -463,31 +498,42 @@ class TemperatureProfiles(PlotBase):
         self.set_plot_RZ(R, Z)
         self.set_plot_rho1d(psi.rho[:,0])
 
-        # If raw data are supplied, add it to the density data
+        # If raw data are supplied, add it to the temperature data
         if 'raw' in kwargs:
             raw = kwargs.get('raw')  # type: dict
             if 'i' in raw:
                 self.i.kev.set_raw_data(raw.get('i'))
+                self.i.ev.set_raw_data(raw.get('i'), multiplier=1000.)
             if 'D' in raw:
                 self.D.kev.set_raw_data(raw.get('D'))
+                self.D.ev.set_raw_data(raw.get('D'), multiplier=1000.)
             if 'T' in raw:
                 self.T.kev.set_raw_data(raw.get('T'))
+                self.T.ev.set_raw_data(raw.get('T'), multiplier=1000.)
             if 'e' in raw:
                 self.e.kev.set_raw_data(raw.get('e'))
+                self.e.ev.set_raw_data(raw.get('e'), multiplier=1000.)
             if 'C' in raw:
                 self.C.kev.set_raw_data(raw.get('C'))
+                self.C.ev.set_raw_data(raw.get('C'), multiplier=1000.)
             if 'W' in raw:
                 self.W.kev.set_raw_data(raw.get('W'))
+                self.W.ev.set_raw_data(raw.get('W'), multiplier=1000.)
             if 'Be' in raw:
                 self.Be.kev.set_raw_data(raw.get('Be'))
+                self.Be.ev.set_raw_data(raw.get('e'), multiplier=1000.)
             if 'Ne' in raw:
                 self.Ne.kev.set_raw_data(raw.get('Ne'))
+                self.Ne.ev.set_raw_data(raw.get('Ne'), multiplier=1000.)
             if 'Ar' in raw:
                 self.Ar.kev.set_raw_data(raw.get('Ar'))
+                self.Ar.ev.set_raw_data(raw.get('Ar'), multiplier=1000.)
             if 'Kr' in raw:
                 self.Kr.kev.set_raw_data(raw.get('Kr'))
+                self.Kr.ev.set_raw_data(raw.get('Kr'), multiplier=1000.)
             if 'alpha' in raw:
                 self.alpha.kev.set_raw_data(raw.get('alpha'))
+                self.alpha.ev.set_raw_data(raw.get('alpha'), multiplier=1000.)
 
     def _builder(self, psi, args, R, Z, wall, s, plotTitle=""):
         return TemperatureSplit(self._profileType(psi, args.get(s), R, Z, units="keV", wall=wall, plotTitle=plotTitle),
