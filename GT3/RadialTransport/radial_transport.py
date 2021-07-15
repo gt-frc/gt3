@@ -136,8 +136,14 @@ class RadialTransport(PlotBase):
         self.izn_rate = core.izn_rate.tot.fsa  # TODO: Should this be a flux surface average or a flux surface total?
         self.cool_rate = core.cool_rate.fsa  # TODO: Should this be a flux surface average or a flux surface total?
 
-        if kwargs.get("atten_izn"):
-            self.izn_rate = core.izn_rate.tot.fsa.attenuate(100)
+        if kwargs.get("rtrans_override"):
+            if kwargs.get("rtrans_override").get("atten_izn"):
+                self.izn_rate = core.izn_rate.tot.fsa.attenuate(kwargs.get("rtrans_override").get("atten_izn"))
+
+            if kwargs.get("rtrans_override").get("atten_nn"):
+                self.core.n.n.tot.fsa.attenuate(kwargs.get("rtrans_override").get("atten_nn"))
+                self.core.n.n.t.fsa.attenuate(kwargs.get("rtrans_override").get("atten_nn"))
+                self.core.n.n.s.fsa.attenuate(kwargs.get("rtrans_override").get("atten_nn"))
 
         n = RadTransDensityProfiles(self.core,
                                     i=self.core.n.i.fsa,

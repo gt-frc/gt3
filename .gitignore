@@ -109,7 +109,6 @@ logs/
 # Input files
 /inputs/
 /neutSensitivity.py
-quickGT3Run.py
 
 # Any backup files
 *.bak
@@ -117,3 +116,8 @@ quickGT3Run.py
 
 # Directory for shot runs
 /RunScripts/
+
+# Random scripts
+quickGT3Run.py
+runAllShots.py
+iolSensitivity.py
