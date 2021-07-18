@@ -324,15 +324,20 @@ class RadialTransport(PlotBase):
         mbal_rhs_C = calc_mbal_rhs(self.mom_src_tor_C_tot, z_c, n.C, B_p, self.gamma.C.int)
 
         nu_c_DC = 1 / calc_t90(m_d, m_c, z_d, z_c, n.C, T.i.J)
+        nu_c_DD = 1 / calc_t90(m_d, m_d, z_d, z_d, n.D, T.i.J)
         nu_c_CD = 1 / calc_t90(m_c, m_d, z_c, z_d, n.i, T.i.J)
 
+        self.nu_90_jk = OneDProfile(core.psi, nu_c_DC, core.R, core.Z)
+        self.nu_90_kj = OneDProfile(core.psi, nu_c_CD, core.R, core.Z)
+        self.nu_90_jj = OneDProfile(core.psi, nu_c_DD, core.R, core.Z)
+
         # Piper changes: added alternate collision frequency calculation for comparison.
-        self.nu_c_j_k = calc_nu_j_k(m_d, m_c, z_d, z_c, T.i.ev, n.C)
-        self.nu_c_k_j = calc_nu_j_k(m_c, m_d, z_c, z_d, T.C.ev, n.i)
-        self.nu_c_j_j = calc_nu_j_k(m_d, m_d, z_d, z_d, T.i.ev, n.i)
-        self.nu_c_j_e = calc_nu_j_k(m_d, m_e, z_d, z_d, T.i.ev, n.e)
-        self.nu_c_e_j = calc_nu_j_k(m_e, m_d, z_d, z_d, T.e.ev, n.i)
-        self.nu_c_e_e = calc_nu_j_k(m_e, m_e, z_d, z_d, T.e.ev, n.e)
+        self.nu_c_j_k = OneDProfile(core.psi, calc_nu_j_k(m_d, m_c, z_d, z_c, T.i.ev, n.C), core.R, core.Z)
+        self.nu_c_k_j = OneDProfile(core.psi, calc_nu_j_k(m_c, m_d, z_c, z_d, T.C.ev, n.i), core.R, core.Z)
+        self.nu_c_j_j = OneDProfile(core.psi, calc_nu_j_k(m_d, m_d, z_d, z_d, T.i.ev, n.i), core.R, core.Z)
+        self.nu_c_j_e = OneDProfile(core.psi, calc_nu_j_k(m_d, m_e, z_d, z_d, T.i.ev, n.e), core.R, core.Z)
+        self.nu_c_e_j = OneDProfile(core.psi, calc_nu_j_k(m_e, m_d, z_d, z_d, T.e.ev, n.i), core.R, core.Z)
+        self.nu_c_e_e = OneDProfile(core.psi, calc_nu_j_k(m_e, m_e, z_d, z_d, T.e.ev, n.e), core.R, core.Z)
 
         self.nu_drag_D = calc_nu_drag(n.i, m_d, self.vtor_D_total, self.vtor_C_total, mbal_rhs_D, nu_c_DC)
         self.nu_drag_C = calc_nu_drag(n.i, m_d, self.vtor_D_total, self.vtor_C_total, mbal_rhs_C, nu_c_CD)

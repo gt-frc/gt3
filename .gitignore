@@ -88,6 +88,7 @@ celerybeat-schedule
 .venv
 venv/
 ENV/
+venv3/
 
 # Spyder project settings
 .spyderproject
@@ -121,3 +122,8 @@ logs/
 quickGT3Run.py
 runAllShots.py
 iolSensitivity.py
+
+# Testing
+/GT3/TestBase/TestBaseProfiles/gt3_164436_3740_outbeams.json
+/GT3/TestBase/TestBaseProfiles/gt3_164436_3740_outneuts.json
+/tests/**/*Out.json
