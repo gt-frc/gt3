@@ -324,7 +324,12 @@ class RadialTransport(PlotBase):
         mbal_rhs_C = calc_mbal_rhs(self.mom_src_tor_C_tot, z_c, n.C, B_p, self.gamma.C.int)
 
         nu_c_DC = 1 / calc_t90(m_d, m_c, z_d, z_c, n.C, T.i.J)
+        nu_c_DD = 1 / calc_t90(m_d, m_d, z_d, z_d, n.D, T.i.J)
         nu_c_CD = 1 / calc_t90(m_c, m_d, z_c, z_d, n.i, T.i.J)
+
+        self.nu_90_jk = OneDProfile(core.psi, nu_c_DC, core.R, core.Z)
+        self.nu_90_kj = OneDProfile(core.psi, nu_c_CD, core.R, core.Z)
+        self.nu_90_jj = OneDProfile(core.psi, nu_c_DD, core.R, core.Z)
 
         # Piper changes: added alternate collision frequency calculation for comparison.
         self.nu_c_j_k = calc_nu_j_k(m_d, m_c, z_d, z_c, T.i.ev, n.C)
