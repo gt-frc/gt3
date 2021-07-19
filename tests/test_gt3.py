@@ -5,6 +5,9 @@ import GT3
 from tests.ShotBase import *
 from matplotlib.axes._axes import Axes
 from matplotlib.pyplot import Figure
+from GT3.Core.Functions.ProfileClasses import TwoDProfile, OneDProfile
+from shapely.geometry import Point
+import numpy as np
 
 
 class CommonFunctions(object):
@@ -92,7 +95,6 @@ class RunModificationTest(SingleLowerNullTest):
         self.assertTrue(self.plasma.rtrans._n.i._data_overwritten)
         self.assertTrue(self.plasma.rtrans._n.e._data_overwritten)
         self.plasma.rtrans.set_chi_asymmetry(0.05, 0.05)
-
 
 
 class PlotCoreTest(DoubleNullTest):
@@ -203,6 +205,81 @@ class GT3TestClassTest(unittest.TestCase, CommonFunctions):
         cls.plasma = gt3(preparedInput=TestClass())
         cls.plasma.run_radial_transport()
         TestClass().print_summary()
+
+
+class ProfileClassTest(SingleLowerNullTest):
+    plasma = None
+
+    @classmethod
+    def setUpClass(cls):
+        import matplotlib.pyplot as plt
+        super(ProfileClassTest, cls).setUpClass()
+        cls.plt = plt
+        cls.plasma.run_radial_transport()
+        cls.plt.ion()
+        cls.data = cls.plasma.core.T.i.kev * 0.1
+        cls.raw_data = cls.data[:,0]
+        cls.rho = cls.plasma.core.T.i.kev.rho[:,0]
+        cls.docs = "A test TwoDProfile"
+        cls.units = "/m^3"
+        cls.title = "Test TwoDProfile"
+        cls.xLabel = r"$/rho$"
+        cls.yLabel = r"Test"
+
+        cls.dataProfile = cls._get_default_twod_profile(cls)
+
+
+    def test_TwoDProfile(self):
+        self.assertEquals(self.dataProfile.__doc__, self.docs)
+
+        self.assertIsInstance(self.dataProfile.fsa, OneDProfile)
+        self.assertIsInstance(self.dataProfile.fsa, OneDProfile)
+        self.assertIsInstance(self.dataProfile.L, TwoDProfile)
+        self.assertIsInstance(self.dataProfile.plot_raw_data(), Axes)
+        self.assertIsInstance(self.dataProfile.plot_raw_data(fsa=False), Axes)
+        self.assertIsInstance(self.dataProfile.plot_fsa(), Axes)
+        self.assertIsInstance(self.dataProfile.getGrid(), np.ndarray)
+
+    def test_TwoDProfile_errors(self):
+        self.assertRaises(IndexError, self.dataProfile.set_raw_data, "")
+        del self.dataProfile._raw_data
+        del self.dataProfile._raw_rho
+        self.assertWarns(Warning, self.dataProfile.plot_raw_data)
+
+        self.assertRaises(TypeError, self._create_2d_type_error)
+        self.assertWarns(Warning, self.dataProfile.set_wall, Point((0., 0.)))
+        del self.dataProfile.wall
+        self.assertWarns(Warning, self.dataProfile.plot2D)
+        self.dataProfile.set_wall(self.plasma.core.wall_line)
+
+    def _create_2d_type_error(self):
+        return TwoDProfile(self.plasma.core.psi,
+                                      [3., 4., 5.],
+                                      self.plasma.core.R,
+                                      self.plasma.core.Z)
+
+    def test_TwoDProfile_mods(self):
+        self.dataProfile_mod = self._get_default_twod_profile()
+        self.dataProfile_mod.set_to_zeros()
+        self.assertFalse(self.dataProfile_mod.isNonZero())
+
+    def _get_default_twod_profile(self):
+        return TwoDProfile(self.plasma.core.psi,
+                           self.data,
+                           self.plasma.core.R,
+                           self.plasma.core.Z,
+                           wall=self.plasma.core.wall_line,
+                           docs=self.docs,
+                           units=self.units,
+                           plotTitle=self.title,
+                           xLabel=self.xLabel,
+                           yLabel=self.yLabel,
+                           raw=(self.rho, self.raw_data))
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
+    
 
 
 if __name__ == '__main__':

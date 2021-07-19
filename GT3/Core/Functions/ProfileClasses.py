@@ -12,7 +12,7 @@ from collections import namedtuple
 import GT3.constants as constants
 from GT3 import Core
 from typing import Union
-from math import exp
+from warnings import warn
 
 e = constants.elementary_charge
 
@@ -144,7 +144,7 @@ class OneDProfile(PlotBase, BaseMath):
             raise TypeError("Rho needs to be a 1D np.array, 2D np.array, or list ")
 
         if type(val) is list:
-            self._rho1D = array(val)
+            self.val = array(val)
         elif type(val) is ndarray:
             if len(val.shape) == 2:
                 self.val = val[:, 0]
@@ -155,7 +155,7 @@ class OneDProfile(PlotBase, BaseMath):
         else:
             raise TypeError("Value needs to be a 1D np.array, 2D np.array, or list ")
 
-        self._docs = docs
+        self.docs = docs
         self._psi = psi
         self.units = units
         self.xLabel, self.yLabel, self.plotTitle = xLabel, yLabel, plotTitle
@@ -173,8 +173,6 @@ class OneDProfile(PlotBase, BaseMath):
         #del self.plot_contours_with_wall
         #del self.plot_with_wall
 
-    def __doc__(self):
-        return self._docs
 
     def set_to_zeros(self):
         self.val = np.zeros(self._psi.rho[:, 0].shape)
@@ -183,6 +181,9 @@ class OneDProfile(PlotBase, BaseMath):
     def plot(self, edge=True, color="red", **kwargs):
         return self._plot_base(self.val, xLabel=self.xLabel, yLabel=self.yLabel,
                                title=self.plotTitle, color=color, edge=edge, **kwargs)
+    @property
+    def __doc__(self):
+        return self.docs
 
     @property
     def L(self):
@@ -219,7 +220,7 @@ class OneDProfile(PlotBase, BaseMath):
     def Spline(self, val):
         """Input a (k,s) tuple and set the spline fit"""
         if type(val) is not tuple:
-            print("Value is not tuple. Spline not modified.")
+            warn("Value is not tuple. Spline not modified.", UserWarning)
         else:
             self._Spline = UnivariateSpline(self._rho1D * self.a, self.val, k=val[0], s=val[1])
 
@@ -263,11 +264,11 @@ class OneDProfile(PlotBase, BaseMath):
         try:
             self._raw_data
         except AttributeError as err:
-            print("""
+            raise err
+            warn("""
             Raw data not found. If this is a temperature profile, use the kev version, i.e., T.x.kev.plot_raw_data().
             Otherwise, please verify that raw data are attached to this instance.
-            """)
-            raise err
+            """, RuntimeWarning)
 
         fig = self._plot_base(self.val, xLabel=self.xLabel, yLabel=self.yLabel, edge=edge, line=True)
         fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize, **kwargs)
@@ -312,7 +313,7 @@ class TwoDProfile(PlotBase, BaseMath):
             raise TypeError("Value needs to be 2D np.array")
 
         self.val, self.R, self.Z, self.wall = val, R, Z, wall
-        self._docs = docs
+        self.docs = docs
         self.units = units
         self.plotTitle, self.xLabel, self.yLabel = plotTitle, xLabel, yLabel
 
@@ -320,17 +321,30 @@ class TwoDProfile(PlotBase, BaseMath):
         if self.wall:
             self.set_plot_wall(wall)
         self.set_plot_RZ(self.R[:, 0], self.Z[:, 0])
-        self.fsa = OneDProfile(self._psi, calc_fsa(self.val, self.R, self.Z), self.R, self.Z)
 
-        if raw:
+        if np.any(raw):
             try:
                 self._raw_rho = raw[0]
                 self._raw_data = raw[1]
             except TypeError as err:
                 raise(str(err))
 
+    @property
     def __doc__(self):
-        return self._docs
+        return self.docs
+
+    @property
+    def fsa(self):
+        self._fsa = OneDProfile(self._psi, calc_fsa(self.val, self.R, self.Z), self.R, self.Z)
+        return self._fsa
+
+    @fsa.getter
+    def fsa(self):
+        try:
+            return self._fsa
+        except:
+            self._fsa = OneDProfile(self._psi, calc_fsa(self.val, self.R, self.Z), self.R, self.Z)
+            return self._fsa
 
     @property
     def L(self):
@@ -345,7 +359,7 @@ class TwoDProfile(PlotBase, BaseMath):
         self.L = TwoDProfile(self._psi, L, self.R, self.Z, wall=self.wall)
         # L = -1.0 * self.val / self.derivative()
         # self._L = TwoDProfile(self._psi, L, self.R, self.Z, wall=self.wall)
-        return self._L
+        return self.L
 
     @L.getter
     def L(self):
@@ -361,8 +375,9 @@ class TwoDProfile(PlotBase, BaseMath):
     def set_raw_data(self, raw, multiplier=None):
         try:
             self._raw_rho = raw[0]
-        except TypeError as err:
-            raise (str(err))
+        except (TypeError, IndexError) as err:
+            print(err)
+            raise err
         if multiplier:
             self._raw_data = raw[1] * multiplier
         else:
@@ -377,11 +392,11 @@ class TwoDProfile(PlotBase, BaseMath):
         try:
             self._raw_data
         except AttributeError as err:
-            print("""
+            warn("""
             Raw data not found. If this is a temperature profile, use the kev version, i.e., T.x.kev.plot_raw_data().
             Otherwise, please verify that raw data are attached to this instance.
-            """)
-            raise err
+            """, UserWarning)
+            return None
         if fsa:
             fig = self._plot_base(self.fsa, xLabel=self.xLabel, yLabel=self.yLabel, edge=edge, line=True)
             fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize, **kwargs)
@@ -392,7 +407,7 @@ class TwoDProfile(PlotBase, BaseMath):
 
     def set_to_zeros(self):
         self.val = np.zeros(self._psi.rho.shape)
-        self.fsa = OneDProfile(self._psi, calc_fsa(self.val, self.R, self.Z), self.R, self.Z)
+        self._clear_derivables()
         return self
 
     def set_wall(self, wall):
@@ -400,14 +415,13 @@ class TwoDProfile(PlotBase, BaseMath):
             self.wall = wall
             self.set_plot_wall(wall)
         else:
-            print("Wall must be a LineString. Wall not updated.")
-
+            warn("Wall must be a LineString. Wall not updated.", UserWarning)
 
     def plot2D(self, res=50):
-        if self.wall:
+        if hasattr(self, "wall"):
             return self.plot_contours_with_wall(self.val, res=res)
         else:
-            print("Wall not defined. ")
+            warn("Wall not defined. ", UserWarning)
 
     def plot_fsa(self, color='red', edge=True, **kwargs):
         """Returns the flux-surface-averaged values plotted"""
@@ -443,17 +457,31 @@ class TwoDProfile(PlotBase, BaseMath):
 
     def update(self, val):
         self.val = val
-        self.fsa = OneDProfile(self._psi, calc_fsa(self.val, self.R, self.Z), self.R, self.Z)
+        self._clear_derivables()
 
     def update_from_1D(self, val):
-        if hasattr(self, "_derivative"):
-            del self._derivative
+        self._clear_derivables()
         self.val = np.broadcast_to(val, (self.rho.shape[1], len(val))).T
-        self.fsa = OneDProfile(self._psi, calc_fsa(self.val, self.R, self.Z), self.R, self.Z)
+        #self.fsa = OneDProfile(self._psi, calc_fsa(self.val, self.R, self.Z), self.R, self.Z)
 
     @L.setter
     def L(self, value):
         self._L = value
+
+    def _clear_derivables(self):
+        try:
+            del self._derivative
+        except AttributeError:
+            pass
+        try:
+            del self._L
+        except AttributeError:
+            pass
+        try:
+            del self._fsa
+        except AttributeError:
+            pass
+
 
 class TwoDProfileWithHM(TwoDProfile, PlotBaseWithHeatMap):
     def __init__(self, psi, val, R, Z, wall=None, docs="", units="", plotTitle="", xLabel=r"$\rho$", yLabel="", raw=None):
