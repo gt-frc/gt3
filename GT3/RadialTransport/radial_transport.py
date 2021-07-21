@@ -179,6 +179,9 @@ class RadialTransport(PlotBase):
 
         self._overwrite_with_splines(**kwargs)
 
+        self.epsilon = OneDProfile(core.psi, self.rhor * self.core.a / self.core.R0_a, core.R, core.Z)
+
+
 
         # prepare iol quantities
         F_orb_d = iol.forb_d_therm_1D
@@ -339,9 +342,10 @@ class RadialTransport(PlotBase):
         self.nu_c_e_j = OneDProfile(core.psi, calc_nu_j_k(m_e, m_d, z_d, z_d, T.e.ev, n.i), core.R, core.Z)
         self.nu_c_e_e = OneDProfile(core.psi, calc_nu_j_k(m_e, m_e, z_d, z_d, T.e.ev, n.e), core.R, core.Z)
 
-        self.nu_drag_D = calc_nu_drag(n.i, m_d, self.vtor_D_total, self.vtor_C_total, mbal_rhs_D, nu_c_DC)
-        self.nu_drag_C = calc_nu_drag(n.i, m_d, self.vtor_D_total, self.vtor_C_total, mbal_rhs_C, nu_c_CD)
-        self.nustar = calc_nustar(self.nu_c_j_j, core.q.fsa, core.R0_a, self.vpol_D)
+        self.nu_drag_D = OneDProfile(core.psi, calc_nu_drag(n.i, m_d, self.vtor_D_total, self.vtor_C_total, mbal_rhs_D, nu_c_DC), core.R, core.Z)
+        self.nu_drag_C = OneDProfile(core.psi, calc_nu_drag(n.i, m_d, self.vtor_D_total, self.vtor_C_total, mbal_rhs_C, nu_c_CD), core.R, core.Z)
+        #self.nustar = OneDProfile(core.psi, calc_nustar(self.nu_c_j_j, core.q.fsa, core.R0_a, self.core.v.D.tot.fsa()), core.R, core.Z)
+        self.nustar = OneDProfile(core.psi, calc_nustar(self.nu_90_jj, core.q.fsa, core.R0_a, self.core.v.D.tot.fsa.val), core.R, core.Z)
 
         ##############################################################
         # Pinch Velocity
@@ -351,8 +355,8 @@ class RadialTransport(PlotBase):
 
 
         self.vrpinch_ext_term = calc_external_term(self.mom_src_tor_D_tot, n.i, ch_d, B_p)
-        self.vrpinch_poloidal_term = calc_poloidal_term(n.i, m_d, ch_d, nu_c_DC, self.nu_drag_D, B_t, B_p, self.vpol_D)
-        self.vrpinch_Er_term = calc_radial_E_field_term(n.i, m_d, ch_d, nu_c_DC, self.nu_drag_D, Er, B_p)
+        self.vrpinch_poloidal_term = calc_poloidal_term(n.i, m_d, ch_d, nu_c_DC, self.nu_drag_D.val, B_t, B_p, self.vpol_D)
+        self.vrpinch_Er_term = calc_radial_E_field_term(n.i, m_d, ch_d, nu_c_DC, self.nu_drag_D.val, Er, B_p)
         self.vrpinch_toroidal_term = calc_toroidal_term(n.i, m_d, ch_d, nu_c_DC, B_p, self.vtor_C_total)
         self.vrpinch = calc_pinch_velocity(self.vrpinch_ext_term, self.vrpinch_poloidal_term, self.vrpinch_Er_term,
                                            self.vrpinch_toroidal_term)

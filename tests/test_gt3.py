@@ -279,7 +279,7 @@ class ProfileClassTest(SingleLowerNullTest):
     @classmethod
     def tearDownClass(cls):
         pass
-    
+
 
 
 if __name__ == '__main__':

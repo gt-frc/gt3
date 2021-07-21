@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from GT3.utilities.PlotBase import PlotBase, PlotBaseWithHeatMap
-from scipy.interpolate import UnivariateSpline, interp1d, griddata
+from scipy.interpolate import UnivariateSpline, interp1d, griddata, interp2d
 from GT3.Core.Functions.CalcFSA import calc_fsa
 from GT3.Core.Functions.CalcGrad import calc_grad
 from shapely.geometry import LineString
@@ -33,6 +33,13 @@ class BaseMath:
         self.__array_priority__ = 1000.
 
     def __add__(self, other):
+
+        if isinstance(other, TwoDProfile) or isinstance(other, OneDProfile):
+            return self.val + other.val
+        else:
+            return self.val + other
+
+    def __radd__(self, other):
 
         if isinstance(other, TwoDProfile) or isinstance(other, OneDProfile):
             return self.val + other.val
@@ -275,13 +282,13 @@ class OneDProfile(PlotBase, BaseMath):
         return fig
 
     def attenuate(self, gamma, rho=1.0):
-        maxVal = self.OneDInterp(rho * self._psi.a)
-        newVal = maxVal*np.exp(-1. * gamma * (self._psi.a - self._rho1D * self._psi.a))
+        maxVal = self.OneDInterp(rho * self.a)
+        newVal = maxVal*np.exp(-1. * gamma * (self.a - self._rho1D * self       .a))
         self._data_overwritten = True
         return OneDProfile(self._psi, newVal, self._R, self._Z)
 
     def overwrite_with_spline(self):
-        self.val = self.Spline(self._rho1D * self._psi.a)
+        self.val = self.Spline(self._rho1D * self.a)
         if hasattr(self, "_derivative"):
             del self._derivative
         if hasattr(self, "_L"):
@@ -302,6 +309,7 @@ class TwoDProfile(PlotBase, BaseMath):
         self.rho = psi.rho
         self._psi = psi
         self.a = psi.a
+        self._data_overwritten = False
         if not np.any(val):
             val = np.zeros(psi.rho.shape)
         if type(val) is ndarray:
@@ -316,6 +324,8 @@ class TwoDProfile(PlotBase, BaseMath):
         self.docs = docs
         self.units = units
         self.plotTitle, self.xLabel, self.yLabel = plotTitle, xLabel, yLabel
+        self._spline_k = 3
+        self._spline_s = 2
 
         self.set_plot_rho1d(self.rho[: ,0])
         if self.wall:
@@ -436,7 +446,7 @@ class TwoDProfile(PlotBase, BaseMath):
         return self.val
 
     def Spline(self, vals, k=3, s=0):
-        return UnivariateSpline(self.rho, self.val, k=k, s=s)(vals)
+        return interp2d(self.rho, self.val, k=k, s=s)(vals)
 
     def TwoDInterp(self, vals, method='cubic'):
         return griddata(np.column_stack((self.R.flatten(), self.Z.flatten())),
@@ -467,6 +477,25 @@ class TwoDProfile(PlotBase, BaseMath):
     @L.setter
     def L(self, value):
         self._L = value
+
+    def overwrite_with_spline(self):
+        self.val = self.Spline(self.rho * self.a)
+        if hasattr(self, "_derivative"):
+            del self._derivative
+        if hasattr(self, "_L"):
+            del self._L
+        self._data_overwritten = True
+        return self
+
+    def set_spline_s(self, s):
+        self._spline_s = s
+        self._Spline = UnivariateSpline(self._rho1D * self.a, self.val, k=self._spline_k, s=self._spline_s)
+        return self.Spline
+
+    def set_spline_k(self, k):
+        self._spline_k = k
+        self._Spline = UnivariateSpline(self._rho1D * self.a, self.val, k=self._spline_k, s=self._spline_s)
+        return self.Spline
 
     def _clear_derivables(self):
         try:
