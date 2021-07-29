@@ -45,7 +45,7 @@ class gt3:
         if preparedInput:
             self.inp = preparedInput
         else:
-            self.inp = ReadInfile(self.inputFile)
+            self.inp = ReadInfile(self.inputFile, **kwargs)
         self.core = Core(self.inp, debug=self.debug, **kwargs)
         self.iolFlag = iolFlag
         self.neutFlag = neutFlag
@@ -66,27 +66,27 @@ class gt3:
         if mode == 'coreandsol':
             self.sol = Sol(self.inp, self.core)
         elif mode == 'thermaliol':
-            self.iol = IOL(self.inp, self.core)
+            self.iol = IOL(self.inp, self.core, **kwargs)
         elif mode == 'fulliol':
-            self.iol = IOL(self.inp, self.core)
+            self.iol = IOL(self.inp, self.core, **kwargs)
             self.nbi = BeamDeposition(self.inp, self.core, self.iol, pwrFracOverride=self.beamPowerFracOverride)
         elif mode == 'imp':
             self.imp = ImpRad(core=self.core)
         elif mode == 'ntrls':
             self._run_neutpy()
         elif mode == 'ntrlsandiol':
-            self.iol = IOL(self.inp, self.core)
+            self.iol = IOL(self.inp, self.core, **kwargs)
             self.nbi = BeamDeposition(self.inp, self.core, self.iol, pwrFracOverride=self.beamPowerFracOverride)
             self._run_neutpy()
         elif mode == 'nbi':
             if self.iolFlag:
-                self.iol = IOL(self.inp, self.core)
+                self.iol = IOL(self.inp, self.core, **kwargs)
                 self.nbi = BeamDeposition(self.inp, self.core, self.iol, pwrFracOverride=self.beamPowerFracOverride)
             else:
                 self.nbi = BeamDeposition(self.inp, self.core, pwrFracOverride=self.beamPowerFracOverride)
         elif mode == 'marfe_denlim':
             if self.iolFlag:
-                self.iol = IOL(self.inp, self.core)
+                self.iol = IOL(self.inp, self.core, **kwargs)
                 self.nbi = BeamDeposition(self.inp, self.core, self.iol, pwrFracOverride=self.beamPowerFracOverride)
             else:
                 self.nbi = BeamDeposition(self.inp, self.core, pwrFracOverride=self.beamPowerFracOverride)
@@ -96,7 +96,7 @@ class gt3:
             self.mar = Marfe(core=self.core)
         elif mode == 'marfe':
             if self.iolFlag:
-                self.iol = IOL(self.inp, self.core)
+                self.iol = IOL(self.inp, self.core, **kwargs)
                 self.nbi = BeamDeposition(self.inp, self.core, self.iol, pwrFracOverride=self.beamPowerFracOverride)
             else:
                 self.nbi = BeamDeposition(self.inp, self.core,  pwrFracOverride=self.beamPowerFracOverride)
@@ -105,7 +105,7 @@ class gt3:
             self.mar = Marfe(core=self.core)
         elif mode == 'allthethings':
             if self.iolFlag:
-                self.iol = IOL(self.inp, self.core)
+                self.iol = IOL(self.inp, self.core, **kwargs)
                 self.nbi = BeamDeposition(self.inp, self.core, self.iol,  pwrFracOverride=self.beamPowerFracOverride)
             else:
                 self.nbi = BeamDeposition(self.inp, self.core,  pwrFracOverride=self.beamPowerFracOverride)
@@ -115,7 +115,7 @@ class gt3:
             self.mar = Marfe(self.inp, self.core, self.imp)
         elif mode == 'radialtrans':
             if self.iolFlag:
-                self.iol = IOL(self.inp, self.core)
+                self.iol = IOL(self.inp, self.core, **kwargs)
                 self.nbi = BeamDeposition(self.inp, self.core, self.iol,  pwrFracOverride=self.beamPowerFracOverride)
             else:
                 self.nbi = BeamDeposition(self.inp, self.core,  pwrFracOverride=self.beamPowerFracOverride)
@@ -143,16 +143,16 @@ class gt3:
         self.sol = Sol(self.inp, self.core)
         return self
 
-    def run_IOL(self):
-        self.iol = IOL(self.inp, self.core)
+    def run_IOL(self, *args, **kwargs):
+        self.iol = IOL(self.inp, self.core, **kwargs)
         return self
 
-    def run_NBI(self, reRun=False):
+    def run_NBI(self, reRun=False, **kwargs):
         try:
             self.iol
         except AttributeError:
             print ("IOL module not run. Running now...")
-            self.run_IOL()
+            self.run_IOL(**kwargs)
         if self.iolFlag:
             self.nbi = BeamDeposition(self.inp, self.core, self.iol, reRun=reRun,
                                       pwrFracOverride=self.beamPowerFracOverride)
@@ -190,7 +190,7 @@ class gt3:
                 self.iol
             except AttributeError:
                 print ("IOL module not run. Running now...")
-                self.run_IOL()
+                self.run_IOL(**kwargs)
         try:
             self.nbi
         except AttributeError:

@@ -5,6 +5,7 @@ import numpy as np
 from scipy.interpolate import interp2d, Rbf
 from shapely.geometry import LineString, Point, MultiPoint
 from matplotlib import Path
+from warnings import warn
 
 MARKERSIZE = 10
 
@@ -39,11 +40,22 @@ class PlotBase:
             color = self._defColor
         plot = plt.figure()
         fig = plot.add_subplot(111)
-        fig.set_xlabel(xLabel, fontsize=30)
-        fig.set_ylabel(yLabel, fontsize=30)
+        if kwargs.get("xlabel"):
+            fig.set_xlabel(kwargs.get("xlabel"), fontsize=30)
+        else:
+            fig.set_xlabel(xLabel, fontsize=30)
+        if kwargs.get("ylabel"):
+            fig.set_ylabel(kwargs.get("ylabel"), fontsize=30)
+        else:
+            fig.set_ylabel(yLabel, fontsize=30)
         plt.xticks(fontsize=20)
         plt.yticks(fontsize=20)
         fig.set_title(title)
+        if kwargs.get("multiplier"):
+            if isinstance(kwargs.get("multiplier"), (float, int)):
+                val = val * kwargs.get("multiplier")
+            else:
+                warn("Multiplier kwarg is not a float or int", UserWarning)
         if kwargs.get("logPlot"):
             fig.set_yscale("log")
             val = np.abs(val)

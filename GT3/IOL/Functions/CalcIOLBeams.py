@@ -6,7 +6,7 @@ from scipy.interpolate import interp1d
 from GT3.IOL.Functions.CalcVSep import calc_vsep
 
 
-def calc_iol_beams(z, m, param, thetapts, v_mono, zeta_beam, coslist):
+def calc_iol_beams(z, m, param, thetapts, v_mono, zeta_beam, coslist, *args, **kwargs):
     """calculates IOL for a monoenergetic species with a single known launch angle (i.e. beam ions)
     :param z: The Z value of the beam ions
     :type z: float
@@ -22,12 +22,18 @@ def calc_iol_beams(z, m, param, thetapts, v_mono, zeta_beam, coslist):
     :return:
     """
 
-    v_sep, v_sep_min = calc_vsep(z, m, param)
+    if kwargs.get("iol_override"):
+         if kwargs.get("iol_override").get("vflip"):
+             v_sep, v_sep_min, _, _, _ = calc_vsep(z, m, param, alternate=True)
+         else:
+             v_sep, v_sep_min, _, _, _ = calc_vsep(z, m, param)
+    else:
+        v_sep, v_sep_min, _, _, _ = calc_vsep(z, m, param)
 
     # Obtain v_sep_min(zeta_beam) for each rho value
     v_sep_min_zeta = np.zeros(len(v_sep_min))
 
-    for i,v in enumerate(v_sep_min):
+    for i,v in enumerate(np.abs(v_sep_min)):
         # create interpolation function of v_sep_min(rho) vs zeta
         v_sep_min_zeta_interp = interp1d(coslist, v, fill_value='extrapolate')
         # get v_sep_min(zeta_beam)

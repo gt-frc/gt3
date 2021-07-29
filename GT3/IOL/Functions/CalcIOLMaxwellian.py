@@ -8,10 +8,16 @@ from scipy.special import gammaincc
 
 
 
-def calc_iol_maxwellian(z, m, param, thetapts, Tprofile, coslist, numcos):
+def calc_iol_maxwellian(z, m, param, thetapts, Tprofile, coslist, numcos, *args, **kwargs):
     """Calculates eps_min for IOL of species treated with a truncated maxwellian."""
 
-    v_sep, v_sep_min = calc_vsep(z, m, param)
+    if kwargs.get("iol_override"):
+        if kwargs.get("iol_override").get("vflip"):
+            v_sep, v_sep_min, _a, _b, _c = calc_vsep(z, m, param, alternate=True)
+        else:
+            v_sep, v_sep_min, _a, _b, _c = calc_vsep(z, m, param)
+    else:
+        v_sep, v_sep_min, _a, _b, _c = calc_vsep(z, m, param)
 
     # Define the Maxwellian for every point in the plasma based on its temperature
 
@@ -45,4 +51,4 @@ def calc_iol_maxwellian(z, m, param, thetapts, Tprofile, coslist, numcos):
     E_orb_1D = np.nan_to_num(E_orb_1D)
     E_orb = np.repeat(E_orb_1D.reshape(-1, 1), thetapts, axis=1)
 
-    return F_orb, M_orb, E_orb
+    return F_orb, M_orb, E_orb, np.amin(v_sep_min, axis=1), np.amin(eps_min, axis=1), _a, _b, _c
