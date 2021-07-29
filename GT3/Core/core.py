@@ -24,6 +24,7 @@ from scipy.interpolate import interp1d
 from GT3.Psi import Psi
 import GT3.constants as constants
 from GT3.utilities import PlotBase
+from warnings import warn
 from .Functions.ProfileClasses import SlowFastSplit, TwoDProfile, ImpurityProfiles, TemperatureProfiles, \
     DensityProfiles, PressureProfiles, VectorialProfiles, VectorialBase, TwoDProfileWithHM
 
@@ -460,6 +461,9 @@ class Core(PlotBase.PlotBase):
             except (AttributeError, TypeError):
                 E_r_fit = UnivariateSpline(inp.er_data[:, 0], inp.er_data[:, 1], k=3, s=0)
             self.E_r = TwoDProfile(self.psi, E_r_fit(self.rho), self.R, self.Z, wall=self.wall_line, units=r"$V/m")
+            if np.average(np.abs(self.E_r.fsa.val)) <= 100.:
+                warn("Electric field average is <100V. Verify E_r data and any multipliers are correct.", UserWarning)
+                print("I AM WRNIANG")
             E_pot = np.zeros(self.rho.shape)
             try:
                 for i, rhoval in enumerate(self.rho[:, 0]):
