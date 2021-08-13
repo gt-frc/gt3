@@ -17,7 +17,10 @@ try:
     from GT3.Neutrals import Neutrals
 except ImportError:
     pass
-
+SOL_MODES = ('coreandsol', )
+IOL_MODES = ('thermaliol', 'fulliol', 'ntrlsandiol', )
+NBI_MODES = ('fulliol', 'ntrlsandiol', 'nbi', )
+IOL_FLAG_MODES = ('nbi', )
 class gt3:
 
     debug=False
@@ -25,21 +28,11 @@ class gt3:
     def __init__(self, inputFile=None, preparedInput = None, mode="coreonly", **kwargs):
         sys.dont_write_bytecode = True
         # Create shotlabel as an attribute of plasma class
-        if "iolFlag" in kwargs:
-            iolFlag = kwargs['iolFlag']
-        else:
-            iolFlag = True
+        self.iolFlag = kwargs.get("iolFlag", True)
+        self.neutFlag = kwargs.get('neutFlag', True)
+        self.verbose = kwargs.get('verbose', False)
+        self.debug = True if kwargs.get('debug') else False
 
-        if "neutFlag" in kwargs:
-            neutFlag = kwargs['neutFlag']
-        else:
-            neutFlag = True
-        if "verbose" in kwargs:
-            verbose = kwargs['verbose']
-        else:
-            verbose = False
-        if kwargs.get("debug"):
-            self.debug = True
         if inputFile:
             self.inputFile = inputFile
         if preparedInput:
@@ -47,9 +40,6 @@ class gt3:
         else:
             self.inp = ReadInfile(self.inputFile, **kwargs)
         self.core = Core(self.inp, debug=self.debug, **kwargs)
-        self.iolFlag = iolFlag
-        self.neutFlag = neutFlag
-        self.verbose = verbose
         self.beamPowerFracOverride = None
         self.ntrl_cpu_override = False
 
@@ -60,10 +50,10 @@ class gt3:
             self.neutpyLoaded = False
 
         if mode == 'coreonly':
-            pass
+            pass #really? if pass? That is terrible
 
 
-        if mode == 'coreandsol':
+        if mode in 'coreandsol':
             self.sol = Sol(self.inp, self.core)
         elif mode == 'thermaliol':
             self.iol = IOL(self.inp, self.core, **kwargs)
