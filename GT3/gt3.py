@@ -17,10 +17,6 @@ try:
     from GT3.Neutrals import Neutrals
 except ImportError:
     pass
-SOL_MODES = ('coreandsol', )
-IOL_MODES = ('thermaliol', 'fulliol', 'ntrlsandiol', )
-NBI_MODES = ('fulliol', 'ntrlsandiol', 'nbi', )
-IOL_FLAG_MODES = ('nbi', )
 class gt3:
 
     debug=False
@@ -50,10 +46,10 @@ class gt3:
             self.neutpyLoaded = False
 
         if mode == 'coreonly':
-            pass #really? if pass? That is terrible
+            pass 
 
 
-        if mode in 'coreandsol':
+        if mode == 'coreandsol':
             self.sol = Sol(self.inp, self.core)
         elif mode == 'thermaliol':
             self.iol = IOL(self.inp, self.core, **kwargs)
