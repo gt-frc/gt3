@@ -463,7 +463,6 @@ class Core(PlotBase.PlotBase):
             self.E_r = TwoDProfile(self.psi, E_r_fit(self.rho), self.R, self.Z, wall=self.wall_line, units=r"$V/m")
             if np.average(np.abs(self.E_r.fsa.val)) <= 100.:
                 warn("Electric field average is <100V. Verify E_r data and any multipliers are correct.", UserWarning)
-                print("I AM WRNIANG")
             E_pot = np.zeros(self.rho.shape)
             try:
                 for i, rhoval in enumerate(self.rho[:, 0]):

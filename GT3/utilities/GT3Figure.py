@@ -1,0 +1,242 @@
+#!/usr/bin/python
+
+import matplotlib.pyplot as plt
+import numpy as np
+from GT3.utilities.PlotBase import MARKERSIZE_LARGE, MARKERSIZE_SMALL, MARKERSIZE_MEDIUM, PLOTMARKERS, PLOTCOLORS
+
+class GT3FigureSinglePlot:
+
+    def __init__(self, *args, **kwargs):
+        self._markerSize = MARKERSIZE_SMALL
+        self._markers = False
+        self._defColor = PLOTCOLORS[0]
+        self.fig = plt.figure()
+        self.ax = self.fig.add_subplot(111)
+        self.legend = []
+        self._sciNotation = False
+        self._xLabelFontSize = 30
+        self._yLabelFontSize = 30
+        self._xMin = 0.
+        self._xMax = 1.
+        self._yMin = 0.
+        self._yMax = 1.
+        self._legendFontSize = 10
+        self._legendScale = 1.0
+
+        if kwargs.get("title"):
+            self.title = kwargs.get("title")
+            self.ax.set_title(self.title)
+        else:
+            self.title = ""
+
+        if kwargs.get("yLabel"):
+            self.yLabel = kwargs.get("yLabel")
+            self.ax.set_ylabel(self.title)
+        else:
+            self.yLabel = ""
+
+        if kwargs.get("xLabel"):
+            self.xLabel = kwargs.get("xLabel")
+            self.ax.set_xlabel(self.title)
+        else:
+            self.xLabel = ""
+
+        if kwargs.get("markers"):
+            self._attachMarkers = True
+        else:
+            self._attachMarkers = False
+
+
+        self.showLegend = False
+        plt.xticks(fontsize=20)
+        plt.yticks(fontsize=20)
+
+        self.scatter_data = []
+
+
+    def set_title(self, title):
+        self.ax.set_title(title)
+
+    def set_xLabel(self, xLabel):
+        self.ax.set_xlabel(xLabel, fontsize=self._xLabelFontSize)
+        return self
+
+    def set_xLabel_fontsize(self, s):
+        self._xLabelFontSize = s
+        self.ax.set_xlabel(self.get_xLabel()[0], fontsize=self._xLabelFontSize)
+        return self
+
+    def get_xLabel(self):
+        return self.ax.get_xlabel(), self._xLabelFontSize
+
+    def set_yLabel(self, yLabel):
+        self.ax.set_ylabel(yLabel, fontsize=self._yLabelFontSize)
+        return self
+
+    def set_yLabel_fontsize(self, s):
+        self._yLabelFontSize = s
+        self.ax.set_ylabel(self.get_yLabel()[0], fontsize=self._yLabelFontSize)
+        return self
+
+    def get_yLabel(self):
+        return self.ax.get_ylabel(), self._yLabelFontSize
+
+    def plot_as_semiLog(self):
+        self.ax.set_yscale("log")
+        return self
+
+    def set_xlim(self, xmin, xmax, replot=True):
+        self._xMin = xmin
+        self._xMax = xmax
+        if replot:
+            self._replot()
+        return self
+
+    def set_ylim(self, ymin, ymax, replot=True):
+        self._yMin = ymin
+        self._yMax = ymax
+        if replot:
+            self._replot()
+        return self
+
+    def add_line(self, x, y, color="black"):
+        self.ax.plot(x, y, color=color)
+        return self
+
+    def add_scatter(self, x, y, *args, **kwargs):
+
+        if kwargs.get("legend"):
+            self.legend.append(kwargs.get("legend"))
+            self.ax.legend(self.legend)
+            self.showLegend = True
+        else:
+            self.legend.append(None)
+
+        #self.ax.scatter(x, y, color=color, s=self._markerSize)
+        self.scatter_data.append([x,y])
+
+        self._replot(axisStick=True)
+        self._xMin, self._xMax = self.ax.get_xlim()
+        self._yMin, self._yMax = self.ax.get_ylim()
+        return self
+
+    def set_marker_size(self, s):
+
+        self._markerSize = s
+        self._replot()
+        return self
+
+    def set_number_xticks(self, num):
+        self.ax.locator_params(axis="x", nbins=num)
+        return self
+
+    def set_number_yticks(self, num):
+        self.ax.locator_params(axis="y", nbins=num)
+        return self
+
+    def set_xticks_fontsize(self, size):
+        self.ax.tick_params(axis='x', labelsize=size)
+        return self
+
+    def set_yticks_fontsize(self, size):
+        self.ax.tick_params(axis='y', labelsize=size)
+        return self
+
+    def set_legend_fontsize(self, size):
+        self._legendFontSize = size
+        self._replot()
+        return self
+
+    def set_legend_scale(self, scale):
+        self._legendScale = scale
+        self._replot()
+        return self
+
+    def toggle_legend(self):
+        self.showLegend = not self.showLegend
+        self._replot()
+
+    def toggle_markers(self):
+        self._markers = not self._markers
+        self._replot()
+
+    def toggle_sci_notation(self):
+        self._sciNotation = not self._sciNotation
+        self._replot()
+        return self
+
+    def _replot(self, *args, **kwargs):
+        self.ax.cla()
+        for n, data in enumerate(self.scatter_data):
+            if self._markers:
+                self.ax.scatter(data[0], data[1], color=PLOTCOLORS[n], s=self._markerSize, marker=PLOTMARKERS[n])
+            else:
+                self.ax.scatter(data[0], data[1], color=PLOTCOLORS[n], s=self._markerSize)
+        if self.showLegend:
+            self.ax.legend(self.legend, prop={'size': self._legendFontSize}, markerscale=self._legendScale)
+        if not kwargs.get("axisStick"):
+            self.ax.set_xlim(self._xMin, self._xMax)
+            self.ax.set_ylim(self._yMin, self._yMax)
+        self.ax.set_title( self.title)
+        if self._sciNotation:
+            self.ax = format_exponent(self.ax)
+
+        return self
+
+
+def format_exponent(ax, axis='y'):
+
+    # Change the ticklabel format to scientific format
+    ax.ticklabel_format(axis=axis, style='sci', scilimits=(-2, 2))
+
+    # Get the appropriate axis
+    if axis == 'y':
+        ax_axis = ax.yaxis
+        x_pos = 0.0
+        y_pos = 1.0
+        horizontalalignment='left'
+        verticalalignment='bottom'
+    else:
+        ax_axis = ax.xaxis
+        x_pos = 1.0
+        y_pos = -0.05
+        horizontalalignment='right'
+        verticalalignment='top'
+
+    # Run plt.tight_layout() because otherwise the offset text doesn't update
+    plt.tight_layout()
+    ##### THIS IS A BUG
+    ##### Well, at least it's sub-optimal because you might not
+    ##### want to use tight_layout(). If anyone has a better way of
+    ##### ensuring the offset text is updated appropriately
+    ##### please comment!
+
+    # Get the offset value
+    offset = ax_axis.get_offset_text().get_text()
+
+    if len(offset) > 0:
+        # Get that exponent value and change it into latex format
+        minus_sign = u'\u2212'
+        expo = np.float(offset.replace(minus_sign, '-').split('e')[-1])
+        offset_text = r'x$\mathregular{10^{%d}}$' %expo
+
+        # Turn off the offset text that's calculated automatically
+        ax_axis.offsetText.set_visible(False)
+
+        # Add in a text box at the top of the y axis
+        ax.text(x_pos, y_pos, offset_text, transform=ax.transAxes,
+               horizontalalignment=horizontalalignment,
+               verticalalignment=verticalalignment,
+                fontsize=24)
+    return ax
+
+if __name__ == "__main__":
+    import numpy as np
+    gtf = GT3FigureSinglePlot()
+    x = np.linspace(0., 1., 100)
+    linPlot = np.linspace(0., 3., 100)
+    sinPlot = np.sin(np.pi * 2 * x)
+    cosPlot = np.cos(np.pi * 2 * x)
+    gtf.add_scatter(x, linPlot, legend="Linpl")
+    gtf.add_scatter(x, sinPlot, legend="SinPlot")
+    gtf.add_scatter(x, cosPlot)

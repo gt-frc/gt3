@@ -48,20 +48,20 @@ class PlotBase:
     def set_plot_wall(self, wall):
         self._wall_line = wall
 
-    def _plot_base(self, val, xLabel=r'$\rho$', yLabel="Value", title="Title", color=None, edge=False, show=True,
+    def _plot_base(self, val, title="Title", color=None, edge=False, show=True,
                    line=False, **kwargs):
         if not color:
             color = self._defColor
         plot = plt.figure()
         fig = plot.add_subplot(111)
-        if kwargs.get("xlabel"):
-            fig.set_xlabel(kwargs.get("xlabel"), fontsize=30)
+        if kwargs.get("xLabel"):
+            fig.set_xlabel(kwargs.get("xLabel"), fontsize=30)
         else:
-            fig.set_xlabel(xLabel, fontsize=30)
-        if kwargs.get("ylabel"):
-            fig.set_ylabel(kwargs.get("ylabel"), fontsize=30)
+            fig.set_xlabel(r'$\rho$', fontsize=30)
+        if kwargs.get("yLabel"):
+            fig.set_ylabel(kwargs.get("yLabel"), fontsize=30)
         else:
-            fig.set_ylabel(yLabel, fontsize=30)
+            fig.set_ylabel("", fontsize=30)
         plt.xticks(fontsize=20)
         plt.yticks(fontsize=20)
         fig.set_title(title)
