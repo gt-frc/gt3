@@ -118,11 +118,17 @@ logs/
 # Directory for shot runs
 /RunScripts/
 
+/tri_tmp
+
 # Random scripts
 quickGT3Run.py
 runAllShots.py
 iolSensitivity.py
 RMPComparison.py
+QHComparison.py
+QHInvestigation.py
+IOLSensitivityStudy.py
+GT3RunAllShots.sh
 
 # Testing
 /GT3/TestBase/TestBaseProfiles/gt3_164436_3740_outbeams.json
