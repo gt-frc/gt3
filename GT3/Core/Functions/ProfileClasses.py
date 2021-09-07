@@ -13,6 +13,7 @@ import GT3.constants as constants
 from GT3 import Core
 from typing import Union
 from warnings import warn
+from GT3.utilities.PlotBase import PLOTCOLORS, PLOTMARKERS, MARKERSIZE_MEDIUM, MARKERSIZE_LARGE, MARKERSIZE_SMALL
 
 e = constants.elementary_charge
 
@@ -185,7 +186,7 @@ class OneDProfile(PlotBase, BaseMath):
         self.val = np.zeros(self._psi.rho[:, 0].shape)
         return self
 
-    def plot(self, edge=True, color="red", **kwargs):
+    def plot(self, edge=True, color=PLOTCOLORS[0], **kwargs):
         return self._plot_base(self.val, xLabel=self.xLabel, yLabel=self.yLabel,
                                title=self.plotTitle, color=color, edge=edge, **kwargs)
     @property
@@ -211,7 +212,9 @@ class OneDProfile(PlotBase, BaseMath):
         if hasattr(self, "_derivative"):
             return self._derivative
         else:
-            derivative = self.Spline.derivative()(self._rho1D * self.a)
+            norm = UnivariateSpline(self._rho1D * self.a, self.val / max(self.val), k=self._spline_k, s=self._spline_s)
+            derivative = norm.derivative()(self._rho1D * self.a) * max(self.val)
+            #derivative = self.Spline.derivative()(self._rho1D * self.a)
             self._derivative = derivative
             return self._derivative
 
@@ -278,7 +281,7 @@ class OneDProfile(PlotBase, BaseMath):
             """, RuntimeWarning)
 
         fig = self._plot_base(self.val, xLabel=self.xLabel, yLabel=self.yLabel, edge=edge, line=True)
-        fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize, **kwargs)
+        fig.scatter(self._raw_rho, self._raw_data, marker=PLOTMARKERS[0], s=self._markerSize, **kwargs)
         return fig
 
     def attenuate(self, gamma, rho=1.0):
@@ -409,10 +412,10 @@ class TwoDProfile(PlotBase, BaseMath):
             return None
         if fsa:
             fig = self._plot_base(self.fsa, xLabel=self.xLabel, yLabel=self.yLabel, edge=edge, line=True)
-            fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize, **kwargs)
+            fig.scatter(self._raw_rho, self._raw_data, marker=PLOTMARKERS[0], s=self._markerSize, **kwargs)
         else:
             fig = self._plot_base(self.to1D(), xLabel=self.xLabel, yLabel=self.yLabel, edge=edge, line=True)
-            fig.scatter(self._raw_rho, self._raw_data, marker="x", s=self._markerSize, **kwargs)
+            fig.scatter(self._raw_rho, self._raw_data, marker=PLOTMARKERS[0], s=self._markerSize, **kwargs)
         return fig
 
     def set_to_zeros(self):
@@ -433,7 +436,7 @@ class TwoDProfile(PlotBase, BaseMath):
         else:
             warn("Wall not defined. ", UserWarning)
 
-    def plot_fsa(self, color='red', edge=True, **kwargs):
+    def plot_fsa(self, color=PLOTCOLORS[0], edge=True, **kwargs):
         """Returns the flux-surface-averaged values plotted"""
         return self._plot_base(self.fsa, xLabel=self.xLabel, yLabel=self.yLabel, color=color, edge=edge, **kwargs)
 
@@ -594,8 +597,8 @@ class TemperatureProfiles(PlotBase):
 
     def _builder(self, psi, args, R, Z, wall, s, plotTitle=""):
         return TemperatureSplit(self._profileType(psi, args.get(s), R, Z, units="keV", wall=wall, plotTitle=plotTitle),
-                                self._profileType(psi, args.get(s) * 1E3, R, Z, units="eV", wall=wall, plotTitle=plotTitle),
-                                self._profileType(psi, args.get(s) * 1E3 * e, R, Z, units="J", wall=wall, plotTitle=plotTitle))
+                                self._profileType(psi, args.get(s) * 1.0E3, R, Z, units="eV", wall=wall, plotTitle=plotTitle),
+                                self._profileType(psi, args.get(s) * 1.0E3 * e, R, Z, units="J", wall=wall, plotTitle=plotTitle))
 
 
     def plot_contours_with_wall(self, obj, res=50):
@@ -609,11 +612,11 @@ class TemperatureProfiles(PlotBase):
         legend = [r"$T_i$"]
         if e:
             if self.e:
-                fig.scatter(self._plot_rho1d, self.e.kev.fsa, color="blue", s=self._markerSize, **kwargs)
+                fig.scatter(self._plot_rho1d, self.e.kev.fsa, color=PLOTCOLORS[1], s=self._markerSize, **kwargs)
                 legend.append(r"$T_e$")
         if C:
             if self.C:
-                fig.scatter(self._plot_rho1d, self.C.kev.fsa, color="green", s=self._markerSize, **kwargs)
+                fig.scatter(self._plot_rho1d, self.C.kev.fsa, color=PLOTCOLORS[2], s=self._markerSize, **kwargs)
                 legend.append(r"$T_C$")
         if len(legend) >1:
             fig.legend(legend)
@@ -802,11 +805,11 @@ class ImpurityProfiles(PlotBase, BaseMath):
         legend = [r"$n_i$"]
         if e:
             if self.e:
-                fig.scatter(self._plot_rho1d, self.e.fsa, color="blue", s=self._markerSize)
+                fig.scatter(self._plot_rho1d, self.e.fsa, color=PLOTCOLORS[1], s=self._markerSize)
                 legend.append(r"$n_e$")
         if C:
             if self.C:
-                fig.scatter(self._plot_rho1d, self.C.fsa, color="green", s=self._markerSize)
+                fig.scatter(self._plot_rho1d, self.C.fsa, color=PLOTCOLORS[2], s=self._markerSize)
                 legend.append(r"$n_C$")
         if len(legend) >1:
             fig.legend(legend)
@@ -841,11 +844,11 @@ class PressureProfiles(PlotBase):
         legend = [r"$p_i$"]
         if e:
             if self.e:
-                fig.scatter(self._plot_rho1d, self.e.fsa, color="blue", s=self._markerSize)
+                fig.scatter(self._plot_rho1d, self.e.fsa, color=PLOTCOLORS[1], s=self._markerSize)
                 legend.append(r"$p_e$")
         if C:
             if self.C:
-                fig.scatter(self._plot_rho1d, self.C.fsa, color="green", s=self._markerSize)
+                fig.scatter(self._plot_rho1d, self.C.fsa, color=PLOTCOLORS[2], s=self._markerSize)
                 legend.append(r"$p_C$")
         if len(legend) >1:
             fig.legend(legend)
@@ -894,7 +897,7 @@ class OneDNeutralsProfiles(NeutralsProfiles):
     # def plot_contours_with_wall(self, obj, res=50):
     #     pass
 
-    def plot_add_scatter(self, fig, val, color="blue"):
+    def plot_add_scatter(self, fig, val, color=PLOTCOLORS[1]):
         pass
 
 class VectorialProfiles:
@@ -1027,22 +1030,32 @@ class Flux(PlotBase, BaseMath):
 
     def __init__(self, core: Core, label="", **kwargs):
         super().__init__()
-        DiffIntSplit = namedtuple("DiffIntSplit", "diff int")
+        DiffIntSplit = namedtuple("DiffIntSplit", "diff int diff_noIOL int_noIOL")
         self.label = label
         self.set_plot_rho1d(core.rho[:, 0])
         D_int = kwargs.get("D_int")
+        D_int_noIOL = kwargs.get("D_int_noIOL")
         D_diff = kwargs.get("D_diff")
+        D_diff_noIOL = kwargs.get("D_diff_noIOL")
         C_int = kwargs.get("C_int")
+        C_int_noIOL = kwargs.get("C_int_noIOL")
         C_diff = kwargs.get("C_diff")
+        C_diff_noIOL = kwargs.get("C_diff_noIOL")
         e_int = kwargs.get("e_int")
         e_diff = kwargs.get("e_diff")
         self._core = core
 
         self.D = DiffIntSplit(OneDProfile(core.psi, D_diff, core.R, core.Z),
-                              OneDProfile(core.psi, D_int, core.R, core.Z))
+                              OneDProfile(core.psi, D_int, core.R, core.Z),
+                              OneDProfile(core.psi, D_diff_noIOL, core.R, core.Z),
+                              OneDProfile(core.psi, D_int_noIOL, core.R, core.Z))
         self.C = DiffIntSplit(OneDProfile(core.psi, C_diff, core.R, core.Z),
-                              OneDProfile(core.psi, C_int, core.R, core.Z))
+                              OneDProfile(core.psi, C_int, core.R, core.Z),
+                              OneDProfile(core.psi, C_diff_noIOL, core.R, core.Z),
+                              OneDProfile(core.psi, C_int_noIOL, core.R, core.Z))
         self.e = DiffIntSplit(OneDProfile(core.psi, e_diff, core.R, core.Z),
+                              OneDProfile(core.psi, e_int, core.R, core.Z),
+                              OneDProfile(core.psi, e_diff, core.R, core.Z),
                               OneDProfile(core.psi, e_int, core.R, core.Z))
 
     def plot_D(self, **kwargs):

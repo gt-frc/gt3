@@ -128,7 +128,7 @@ class gt3:
         if self.neutpyLoaded:
             self.ntrl = Neutrals(self.inp, self.core, cpus=self.ntrl_cpu_override, **kwargs)
             if reRun:
-                self.ntrl.reRun(cpus=self.ntrl_cpu_override)
+                self.ntrl.reRun(cpus=self.ntrl_cpu_override,  **kwargs)
         else:
             print("NeutPy is not loaded. Cannot run Neutrals calculation")
 
@@ -185,16 +185,18 @@ class gt3:
         return self
 
     def run_radial_transport(self, nbiReRun=False, ntrlReRun=False, debug=False, *args, **kwargs):
+        if kwargs.get("neutpy_iterate"):
+            ntrlReRun=True
         if self.iolFlag:
             try:
                 self.iol
             except AttributeError:
-                print ("IOL module not run. Running now...")
+                print("IOL module not run. Running now...")
                 self.run_IOL(**kwargs)
         try:
             self.nbi
         except AttributeError:
-            print ("NBI module not run. Running now...")
+            print("NBI module not run. Running now...")
             self.run_NBI(reRun=nbiReRun)
 
         try:
@@ -210,9 +212,19 @@ class gt3:
                 print ("Neutrals module not run. Running now...")
                 self.run_neutrals(reRun=ntrlReRun, **kwargs)
 
-
         self.rtrans = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag, **kwargs)
-        return self
+        if self.rtrans.reRun:
+            kwargs['neutpy_D'] = self.rtrans.D_i.val[-1]
+            kwargs['neutpy_chi'] = self.rtrans.chi.i.chi0[-1]
+            kwargs['neutpy_q'] = self.rtrans.Q.D.diff.val[-1]
+            kwargs['neutpy_gamma'] = self.rtrans.gamma.D.diff.val[-1]
+            print(kwargs)
+            self.run_neutrals(reRun=True, **kwargs)
+            self.rtrans_iter = RadialTransport(self.core, self.iol, self.nbi, self.iolFlag, self.neutFlag, **kwargs)
+            return self
+        else:
+            return self
+
 
     def disable_IOL(self):
         self.iolFlag = False

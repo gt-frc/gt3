@@ -312,7 +312,7 @@ class IOL(PlotBase):
         if kwargs.get("noColor"):
             fig3.scatter(self.rho[:, 0], self.morb_d_therm_1D, marker='o', color='black')
         else:
-            fig3.scatter(self.rho[:,0], self.morb_d_therm_1D, marker='o', color='green')
+            fig3.scatter(self.rho[:, 0], self.morb_d_therm_1D, marker='o', color='green')
 
         if edge:
             fig1.set_xlim(0.85, 1.0)

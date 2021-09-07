@@ -70,12 +70,16 @@ class ReadInfile:
         try:
             result = parser.getfloat(section, name)
             try:
-                if kwargs.get("inp_override").get(name):
-                    multi = kwargs.get("inp_override").get(name)
-                    print(name+" is overwritten")
-                    return result * multi
-                else:
-                    return result
+                if kwargs.get("inp_override").get(name).get("multi"):
+                    result = result * kwargs.get("inp_override").get(name).get("multi")
+                    print(name + " is being scaled")
+                if kwargs.get("inp_override").get(name).get("add"):
+                    result = result + kwargs.get("inp_override").get(name).get("add")
+                    print(name + " is being translated")
+                if kwargs.get("inp_override").get(name).get("replace"):
+                    result = kwargs.get("inp_override").get(name).get("replace")
+                    print(name + " is being replaced")
+                return result
             except AttributeError:
                 return result
         except configparser.NoOptionError as e:
@@ -103,9 +107,18 @@ class ReadInfile:
             result = np.genfromtxt(filepath, comments='#')
             try:
                 if kwargs.get("inp_override").get(name):
-                    multi = kwargs.get("inp_override").get(name)
-                    print(name+" is overwritten")
-                    return np.array((result[:, 0], result[:, 1] * multi)).T
+                    temp = np.array((result[:, 0], result[:, 1]))
+                    if kwargs.get("inp_override").get(name).get("multi") is not None:
+                        multi = kwargs.get("inp_override").get(name).get("multi")
+                        print(name+" is being scaled")
+                        temp = np.array((result[:, 0], result[:, 1] * multi)).T
+                    if kwargs.get("inp_override").get(name).get("add") is not None:
+                        add = kwargs.get("inp_override").get(name).get("add")
+                        if float(add) == 0.0:
+                            return result
+                        print(name + " is being translated")
+                        temp = np.array((result[:, 0], result[:, 1] + add)).T
+                    return temp
                 else:
                     return result
             except AttributeError:

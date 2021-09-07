@@ -7,15 +7,29 @@ from shapely.geometry import LineString, Point, MultiPoint
 from matplotlib import Path
 from warnings import warn
 
-MARKERSIZE = 10
+MARKERSIZE_SMALL = 20
+MARKERSIZE_MEDIUM = 40
+MARKERSIZE_LARGE = 60
+PLOTCOLORS = ['tab:red',
+              'tab:blue',
+              'tab:green',
+              'tab:orange',
+              'tab:purple',
+              'tab:brown',
+              'tab:pink',
+              'tab:gray',
+              'tab:olive',
+              'tab:cyan']
+
+PLOTMARKERS = ['o', 'x', '+', 'D', 'v', '^', 's']
 
 class PlotBase:
 
     def __init__(self):
         super(PlotBase, self).__init__()
-        self._markerSize = MARKERSIZE
+        self._markerSize = MARKERSIZE_SMALL
         self._markers = False
-        self._defColor = 'red'
+        self._defColor = PLOTCOLORS[0]
 
     def set_marker_size(self, s):
         self._markerSize = s

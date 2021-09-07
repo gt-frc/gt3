@@ -205,7 +205,7 @@ class Core(PlotBase.PlotBase):
             q = np.repeat(q_1D[np.newaxis, :], self.rho.shape[1], axis=0).T
             self.q = TwoDProfile(self.psi, q, self.R, self.Z, wall=self.wall_line)
         self.q0 = self.q.fsa.val[0]
-        self.q95 = self.q.fsa.Spline(0.95)
+        self.q95 = self.q.fsa.Spline(0.95*self.a)
 
         # create Lz-related variables. These are initiated as np.zeros until updated by ImpRad module
         self.Lz = ImpurityProfiles(core=self)

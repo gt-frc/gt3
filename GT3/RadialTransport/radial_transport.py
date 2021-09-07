@@ -29,7 +29,7 @@ import GT3.constants as constants
 from GT3.Core.Functions.ProfileClasses import OneDProfile, TemperatureProfiles, DensityProfiles, PressureProfiles, Flux
 from GT3.utilities.PlotBase import PlotBase
 from GT3 import Core, BeamDeposition
-
+from GT3.utilities.PlotBase import PLOTCOLORS, PLOTMARKERS
 eps_0 = constants.epsilon_0
 e = constants.elementary_charge
 m_e = constants.electron_mass
@@ -111,6 +111,7 @@ class RadialTransport(PlotBase):
         """
         super().__init__()
         sys.dont_write_bytecode = True
+        self.reRun=False
 
         ##############################################################
         # prep quantities for 1D transport analysis
@@ -247,8 +248,14 @@ class RadialTransport(PlotBase):
         self.mom_src_anom = np.zeros(r.shape)  # TODO: Anomolous torque
 
         frac = n.i / (n.i + n.C)
-        self.mom_src_tor_D_tot = (1 - frac) * (self.mom_src_nbi + self.mom_src_anom)
-        self.mom_src_tor_C_tot = frac * (self.mom_src_nbi + self.mom_src_anom)
+
+        # This seems backwards.
+        #self.mom_src_tor_D_tot = (1 - frac) * (self.mom_src_nbi + self.mom_src_anom)
+        #self.mom_src_tor_C_tot = frac * (self.mom_src_nbi + self.mom_src_anom)
+
+        self.mom_src_tor_D_tot = frac * (self.mom_src_nbi_tot + self.mom_src_anom)
+        self.mom_src_tor_D_kept = frac * (self.mom_src_nbi_kept + self.mom_src_anom)
+        self.mom_src_tor_C_tot = (1.-frac) * (self.mom_src_nbi + self.mom_src_anom)
 
         ##############################################################
         # rotation
@@ -322,8 +329,10 @@ class RadialTransport(PlotBase):
         # calculate nu_drags
         #mbal_rhs_D = calc_mbal_rhs(self.mom_src_tor_D_tot, z_d, n.i, B_p,
         #                           self.gamma_int_D)  # Piper Changes: Uses integral cylindrical gamma
-        mbal_rhs_D = calc_mbal_rhs(self.mom_src_tor_D_tot, z_d, n.i, B_p,
+        mbal_rhs_D = calc_mbal_rhs(self.mom_src_tor_D_kept, z_d, n.i, B_p,
                                    self.gamma.D.diff)  # Piper Changes: Uses integral cylindrical gamma
+        mbal_rhs_D_noIOL = calc_mbal_rhs(self.mom_src_tor_D_tot, z_d, n.i, B_p,
+                                   self.gamma.D.diff_noIOL)
         mbal_rhs_C = calc_mbal_rhs(self.mom_src_tor_C_tot, z_c, n.C, B_p, self.gamma.C.int)
 
         nu_c_DC = 1 / calc_t90(m_d, m_c, z_d, z_c, n.C, T.i.J)
@@ -342,10 +351,21 @@ class RadialTransport(PlotBase):
         self.nu_c_e_j = OneDProfile(core.psi, calc_nu_j_k(m_e, m_d, z_d, z_d, T.e.ev, n.i), core.R, core.Z)
         self.nu_c_e_e = OneDProfile(core.psi, calc_nu_j_k(m_e, m_e, z_d, z_d, T.e.ev, n.e), core.R, core.Z)
 
-        self.nu_drag_D = OneDProfile(core.psi, calc_nu_drag(n.i, m_d, self.vtor_D_total, self.vtor_C_total, mbal_rhs_D, nu_c_DC), core.R, core.Z)
-        self.nu_drag_C = OneDProfile(core.psi, calc_nu_drag(n.i, m_d, self.vtor_D_total, self.vtor_C_total, mbal_rhs_C, nu_c_CD), core.R, core.Z)
-        #self.nustar = OneDProfile(core.psi, calc_nustar(self.nu_c_j_j, core.q.fsa, core.R0_a, self.core.v.D.tot.fsa()), core.R, core.Z)
-        self.nustar = OneDProfile(core.psi, calc_nustar(self.nu_90_jj, core.q.fsa, core.R0_a, self.core.v.D.tot.fsa.val), core.R, core.Z)
+        self.nu_drag_D = OneDProfile(core.psi,
+                                     calc_nu_drag(n.i, m_d, self.vtor_D_total, self.vtor_C_total, mbal_rhs_D, nu_c_DC),
+                                     core.R, core.Z)
+        self.nu_drag_D_noIOL = OneDProfile(core.psi,
+                                     calc_nu_drag(n.i, m_d, self.vtor_D_total, self.vtor_C_total, mbal_rhs_D_noIOL, nu_c_DC),
+                                     core.R, core.Z)
+        self.nu_drag_C = OneDProfile(core.psi,
+                                     calc_nu_drag(n.i, m_d, self.vtor_D_total, self.vtor_C_total, mbal_rhs_C, nu_c_CD),
+                                     core.R, core.Z)
+        self.nustar_j = OneDProfile(core.psi,
+                                    calc_nustar(self.nu_c_j_j, core.q.fsa, core.R0_a, self.core.v.D.tot.fsa.val),
+                                    core.R, core.Z)
+        self.nustar_90_j = OneDProfile(core.psi,
+                                       calc_nustar(self.nu_90_jj, core.q.fsa, core.R0_a, self.core.v.D.tot.fsa.val),
+                                       core.R, core.Z)
 
         ##############################################################
         # Pinch Velocity
@@ -358,9 +378,12 @@ class RadialTransport(PlotBase):
         self.vrpinch_poloidal_term = calc_poloidal_term(n.i, m_d, ch_d, nu_c_DC, self.nu_drag_D.val, B_t, B_p, self.vpol_D)
         self.vrpinch_Er_term = calc_radial_E_field_term(n.i, m_d, ch_d, nu_c_DC, self.nu_drag_D.val, Er, B_p)
         self.vrpinch_toroidal_term = calc_toroidal_term(n.i, m_d, ch_d, nu_c_DC, B_p, self.vtor_C_total)
-        self.vrpinch = calc_pinch_velocity(self.vrpinch_ext_term, self.vrpinch_poloidal_term, self.vrpinch_Er_term,
+        vrpinch = calc_pinch_velocity(self.vrpinch_ext_term, self.vrpinch_poloidal_term, self.vrpinch_Er_term,
                                            self.vrpinch_toroidal_term)
+        self.vrpinch = OneDProfile(core.psi, vrpinch, core.R, core.Z)
 
+        gamma_p_d = self.vrpinch * self._n.i
+        self.gamma_p_D = OneDProfile(core.psi, gamma_p_d, core.R, core.Z)
         ##############################################################
         # energy balance
         ##############################################################
@@ -386,44 +409,64 @@ class RadialTransport(PlotBase):
 
         # calculate radial heat flux. Piper changes: Separated heat flux equations into differential and integral cylindrical methods.
         Qi_diff = self._calc_Qi_diff_method(iol_adjusted=iolFlag, E_orb=E_orb_d)  # previously called qheat. Differential Method.
+        Qi_diff_noIOL = self._calc_Qi_diff_method(iol_adjusted=False, E_orb=E_orb_d)
 
         Qi_int = self._calc_Qi_int_method(iol_adjusted=iolFlag, E_orb=E_orb_d)  # Integral method.
+        Qi_int_noIOL = self._calc_Qi_int_method(iol_adjusted=False, E_orb=E_orb_d)
         Qe_diff = self._calc_Qe_diff_method(self.cool_rate, calc_qie(n, T))  # Differential Method.
+
 
         Qe_int = self._calc_Qe_int_method()  # Integral method.
 
         self.Q = Flux(core, label=r"$Q_r",
                       D_int=Qi_int,
+                      D_int_noIOL=Qi_int_noIOL,
                       D_diff=Qi_diff,
+                      D_diff_noIOL=Qi_diff_noIOL,
                       e_int=Qe_int,
                       e_diff=Qe_diff)
 
         conv15 = 3. * .5 * ch_d * self.gamma.D.diff * T.i.ev
         conv25 = 5. * .5 * ch_d * self.gamma.D.diff * T.i.ev
-        hvisc = self._calc_visc_heat()
+        self.set_visc_heat(0.1, 0.1)
         heatin = .5 * self.gamma.D.diff * m_d * (self.vtor_D_total ** 2 + self.vpol_D ** 2) # TODO: Provide logic that uses vtor_D_intrin/fluid depending on IOL Switch, currently too small to matter
+        heatin_noIOL = .5 * self.gamma.D.diff_noIOL * m_d * (self.vtor_D_total ** 2 + self.vpol_D ** 2)
+
+        conv15_noIOL = 3. * .5 * ch_d * self.gamma.D.diff_noIOL * T.i.ev
+        conv25_noIOL = 5. * .5 * ch_d * self.gamma.D.diff_noIOL * T.i.ev
 
         self.conv15 = OneDProfile(self.core.psi, conv15, self.core.R, self.core.Z)
         self.conv25 = OneDProfile(self.core.psi, conv25, self.core.R, self.core.Z)
-        self.heatvisc = OneDProfile(self.core.psi, hvisc, self.core.R, self.core.Z)
+        self.conv15_noIOL = OneDProfile(self.core.psi, conv15_noIOL, self.core.R, self.core.Z)
+        self.conv25_noIOL = OneDProfile(self.core.psi, conv25_noIOL, self.core.R, self.core.Z)
+
         self.heatin = OneDProfile(self.core.psi, heatin, self.core.R, self.core.Z)
+        self.heatin_noIOL = OneDProfile(self.core.psi, heatin_noIOL, self.core.R, self.core.Z)
 
         self._calc_Chi()
 
         D_i = m_d * T.i.J * (self.nu_c_j_k * (1. - ch_d / ch_c) + self.nu_drag_D) / ((ch_d * core.B.pol.fsa)**2)
         self.D_i = OneDProfile(self.core.psi, D_i, self.core.R, self.core.Z)
 
+        if kwargs.get("neutpy_iterate"):
+            if self.reRun:
+                self.reRun = False
+            else:
+                self.reRun = True
+
     def _calc_Chi(self, vtorS=0.1, vpolS=0.1):
         self.chi = namedtuple('chi', 'i e')(
-            namedtuple('i', 'chi1 chi2 chi3 chi4')(
-                (self.Q.D.diff) * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
-                (self.Q.D.diff - self.conv25) * self._T.i.kev.L / (self._n.i * self._T.i.ev * ch_d),
+            namedtuple('i', 'chi0 chi1 chi2 chi3 chi4')(
+                self.Q.D.diff_noIOL * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
+                self.Q.D.diff * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
+                (self.Q.D.diff - self.conv25) * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
                 (self.Q.D.diff - self.conv25 - self.heatin) * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
                 self._calc_chi_i_visc(vtorS=vtorS, vpolS=vpolS)
             ), calc_chi_e(self.Q.e.diff, self.gamma.D.diff, self.gamma.C.diff, self._n, self._T)
         )
 
     def set_chi_asymmetry(self, vtorS, vpolS):
+        self.set_visc_heat(vtorS, vpolS)
         self._calc_Chi(vtorS, vpolS)
         return self
 
@@ -450,7 +493,7 @@ class RadialTransport(PlotBase):
             else:
                 S = snbi(t)
             # Physically, if the IOL peak has occured, everything radially outward should be dFdr = 0.0 since F(r)
-            # should equal 0.5 until r=1.0.66
+            # should equal 0.5 until r=1.0
             dFdrval = dFdr(t)
             if t >= peak:
                 dFdrval = 0.0
@@ -701,7 +744,14 @@ class RadialTransport(PlotBase):
 
         return Qi
 
-    def _calc_visc_heat(self, vtorS=0.1, vpolS=0.1):
+    def set_visc_heat(self, vtorS, vpolS):
+        hvisc = self._calc_visc_heat(vtorS, vpolS, iol=True)
+        hvisc_noIOL = self._calc_visc_heat(vtorS, vpolS, iol=False)
+        self.heatvisc = OneDProfile(self.core.psi, hvisc, self.core.R, self.core.Z)
+        self.heatvisc_noIOL = OneDProfile(self.core.psi, hvisc_noIOL, self.core.R, self.core.Z)
+
+
+    def _calc_visc_heat(self, vtorS=0.1, vpolS=0.1, iol=True):
         """
 
         :type core: Core
@@ -716,13 +766,16 @@ class RadialTransport(PlotBase):
         vpol = self.core.v.D.pol.fsa
         vth = self.core.v.D.tot.fsa
         eps = self.core.a / self.core.R0_a
-        nustar = self.nustar
+        nustar = self.nustar_j
         geom = (eps ** (-3. / 2.) * nustar) / ((1 + eps ** (-3. / 2.) * nustar) * (1 + nustar))
         # eta0 = [a * m_d * b * c * core.R0_a * f1 for a, b, c in zip(n.i, vth, core.q[:, 0])]
         eta0 = ni * m_d * vth * q * R0 * geom
         # eta4 = [a * m_d * c * ch_d / (ch_d * abs(b)) for a, b, c in zip(n.i, core.B_t_fsa, T.i.ev)]
         eta4 = ni * m_d * Ti / (ch_d * abs(self.core.B.tor.fsa.val))
-        vrad = OneDProfile(self.core.psi, self.gamma.D.diff / ni, self.core.r, self.core.Z)
+        if iol:
+            vrad = OneDProfile(self.core.psi, self.gamma.D.diff / ni, self.core.r, self.core.Z)
+        else:
+            vrad = OneDProfile(self.core.psi, self.gamma.D.diff_noIOL / ni, self.core.r, self.core.Z)
 
         # a = vtor    b = fp   c = eta0
         # d = vrad    f = vthet g = eta 4
@@ -734,14 +787,28 @@ class RadialTransport(PlotBase):
         res = res - 0.5 * vpol * vpolS * (eta0 * vrad + eta4 * (vtor + .5 * vpol))
         return res / R0
 
-    def plot_chi_terms(self, edge=True):
+    def plot_collisionality(self, edge=True):
+        self.nustar_j.yLabel = r"$\nu^{*}_{j}$"
+        fig = self.nustar_j.plot(edge=edge)
+        fig.plot(self.rhor, self.epsilon ** 1.5)
+        fig.axhline(1.0, c='blue')
+        return fig
+    def plot_chi_terms(self, edge=True, logPlot=False, markerscale=2.0, size=20):
 
-        fig = self._plot_base(self.conv25, title="", yLabel="q[W/m^2]", edge=edge)
-        fig.scatter(self.rhor, self.heatin, color="blue", s=self._markerSize)
-        fig.scatter(self.rhor, self.heatvisc, color="purple", s=self._markerSize)
-        fig.scatter(self.rhor, self.Q.D.diff, color="black", s=self._markerSize)
+        fig = self._plot_base(self.conv25, title="", yLabel=r"$Q\left[\frac{W}{m^2}\right]$", edge=edge,
+                              color=PLOTCOLORS[2], logPlot=logPlot)
+        fig.scatter(self.rhor, self.heatin, color=PLOTCOLORS[4], s=self._markerSize)
+        fig.scatter(self.rhor, self.heatvisc, color=PLOTCOLORS[3], s=self._markerSize)
+        fig.scatter(self.rhor, self.Q.D.diff, color=PLOTCOLORS[1], s=self._markerSize)
+        fig.scatter(self.rhor, self.Q.D.diff_noIOL, color=PLOTCOLORS[0], s=self._markerSize)
         #fig.legend([r"$q^{conv}$", r"$q^{heatin}$", r"$q^{tot}$"])
-        fig.legend([r"$q^{conv}$", r"$q^{heatin}$", r"$q^{visc}$", r"$q^{tot}$"])
+        kwargs = {
+            'markerscale': markerscale,
+            'prop': {
+                'size': size
+            }
+        }
+        fig.legend([r"$Q^{conv}$", r"$Q^{heatin}$", r"$Q^{visc}$", r"$Q^{tot}$", r"$Q^{tot}$ w/out IOL"], **kwargs)
         return fig
 
     def plot_gamma_diff_calc(self):
@@ -788,20 +855,30 @@ class RadialTransport(PlotBase):
         fig.legend([r"$Q_{nbi}$", r"$Q_{cxcool}$", r"$|Q_{ie}|$"], prop={'size': 30}, markerscale=1.5)
         return fig
 
-    def plot_Chi_i_comp(self, edge=True, marker=False):
-        fig = self._plot_base(self.chi.i.chi1, yLabel=r'$\chi_{r,i}$', title="", edge=edge)
+    def plot_Chi_i_comp(self, edge=True, marker=False, markerscale=2.0, size=20):
+        fig = self._plot_base(self.chi.i.chi0, yLabel=r'$\chi_{r,i} \left[\frac{m^2}{s}\right]$', title="", edge=edge)
         if marker:
+            fig.scatter(self.rhor, self.chi.i.chi1, color="black", s=self._markerSize, marker="x")
             fig.scatter(self.rhor, self.chi.i.chi2, color="blue", s=self._markerSize, marker="x")
             fig.scatter(self.rhor, self.chi.i.chi3, color="green", s=self._markerSize, marker="o", facecolors="None")
             fig.scatter(self.rhor, self.chi.i.chi4, color="purple", s=self._markerSize, marker="^")
         else:
+            fig.scatter(self.rhor, self.chi.i.chi1, color="black", s=self._markerSize)
             fig.scatter(self.rhor, self.chi.i.chi2, color="blue", s=self._markerSize)
             fig.scatter(self.rhor, self.chi.i.chi3, color="green", s=self._markerSize)
             fig.scatter(self.rhor, self.chi.i.chi4, color="purple", s=self._markerSize)
-        fig.legend([r"$q^{cond} = q^{tot}$",
+
+        kwargs = {
+            'markerscale': markerscale,
+            'prop': {
+                'size': size
+            }
+        }
+        fig.legend([r"$q^{cond} = q^{tot}$ w/out IOL",
+                    r"$q^{cond} = q^{tot}$",
                     r"$q^{cond} = q^{tot}-q^{conv}$",
                     r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}$",
-                    r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}-q^{visc}$"],  prop={'size': 20}, markerscale=1.5)
+                    r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}-q^{visc}$"],  **kwargs)
         return fig
 
     def plot_D(self, edge=True):
