@@ -7,7 +7,6 @@ Created on Sat Aug  5 16:10:25 2017
 """
 import os
 import sys
-import re
 import matplotlib.pyplot as plt
 import numpy as np
 from GT3.utilities.PlotBase import PlotBase
@@ -56,7 +55,7 @@ class ReadInfile:
         wallfile         (str)
     """
 
-    def __init__(self, infile):
+    def __init__(self, infile, **kwargs):
         """
         Initializes the read_infile class with the filename for the to_gt3 file.
         :param infile:
@@ -64,9 +63,33 @@ class ReadInfile:
         """
         super().__init__()
         sys.dont_write_bytecode = True
-        self.read_vars(infile)
+        self.read_vars(infile, **kwargs)
 
-    def _profile_loader(self, parser, section, name):
+    def _float_loader(self, parser, section, name, **kwargs):
+
+        try:
+            result = parser.getfloat(section, name)
+            try:
+                if kwargs.get("inp_override").get(name).get("multi"):
+                    result = result * kwargs.get("inp_override").get(name).get("multi")
+                    print(name + " is being scaled")
+                if kwargs.get("inp_override").get(name).get("add"):
+                    result = result + kwargs.get("inp_override").get(name).get("add")
+                    print(name + " is being translated")
+                if kwargs.get("inp_override").get(name).get("replace"):
+                    result = kwargs.get("inp_override").get(name).get("replace")
+                    print(name + " is being replaced")
+                return result
+            except AttributeError:
+                return result
+        except configparser.NoOptionError as e:
+            print("%s not found" % name)
+            return e
+        except IOError as e:
+            print("%s not found" % name)
+            return e
+
+    def _profile_loader(self, parser, section, name, **kwargs):
         """ A helper function for loading profiles.
 
         :param parser: The ConfigParser
@@ -81,15 +104,33 @@ class ReadInfile:
         try:
             filename = parser.get(section, name)
             filepath = os.path.join(os.getcwd(), filename)
-            return np.genfromtxt(filepath, comments='#')
-        except configparser.NoOptionError:
+            result = np.genfromtxt(filepath, comments='#')
+            try:
+                if kwargs.get("inp_override").get(name):
+                    temp = np.array((result[:, 0], result[:, 1]))
+                    if kwargs.get("inp_override").get(name).get("multi") is not None:
+                        multi = kwargs.get("inp_override").get(name).get("multi")
+                        print(name+" is being scaled")
+                        temp = np.array((result[:, 0], result[:, 1] * multi)).T
+                    if kwargs.get("inp_override").get(name).get("add") is not None:
+                        add = kwargs.get("inp_override").get(name).get("add")
+                        if float(add) == 0.0:
+                            return result
+                        print(name + " is being translated")
+                        temp = np.array((result[:, 0], result[:, 1] + add)).T
+                    return temp
+                else:
+                    return result
+            except AttributeError:
+                return result
+        except configparser.NoOptionError as e:
             print("%s not found" % name)
-            return
-        except IOError:
+            return e
+        except IOError as e:
             print("%s not found" % name)
-            return
+            return e
 
-    def read_vars(self, infile):
+    def read_vars(self, infile, *args, **kwargs):
         """
         Reads variables given infile filename
         :param infile:
@@ -122,7 +163,7 @@ class ReadInfile:
 
 
         # Plasma
-        self.BT0 = config.getfloat('Plasma', 'Bt0')
+        self.BT0 = self._float_loader(config, 'Plasma', 'Bt0', **kwargs)
         self.pfr_ni_val = config.getfloat('Plasma', 'pfr_ni_val')
         self.pfr_ne_val = config.getfloat('Plasma', 'pfr_ne_val')
         self.pfr_Ti_val = config.getfloat('Plasma', 'pfr_Ti_val')
@@ -141,23 +182,33 @@ class ReadInfile:
         self.beams_json = config.get('1DProfiles', 'beams_json')
         self.beams_out_json = config.get('1DProfiles', 'beams_out_json')
 
-        self.er_data = self._profile_loader(config, '1DProfiles', 'er_file')
-        self.jr_data = self._profile_loader(config, '1DProfiles', 'jr_file')
-        self.ne_data = self._profile_loader(config, '1DProfiles', 'ne_file')
-        self.nD_data = self._profile_loader(config, '1DProfiles', 'nD_file')
-        self.nT_data = self._profile_loader(config, '1DProfiles', 'nT_file')
-        self.nW_data = self._profile_loader(config, '1DProfiles', 'nW_file')
-        self.nBe_data = self._profile_loader(config, '1DProfiles', 'nBe_file')
-        self.na_data = self._profile_loader(config, '1DProfiles', 'na_file')
-        self.nC_data = self._profile_loader(config, '1DProfiles', 'nC_file')
-        self.Te_data = self._profile_loader(config, '1DProfiles', 'Te_file')
-        self.Ti_data = self._profile_loader(config, '1DProfiles', 'Ti_file')
-        self.TC_data = self._profile_loader(config, '1DProfiles', 'TC_file')
-        self.frac_C_data = self._profile_loader(config, '1DProfiles', 'frac_C_file')
-        self.vpolC_data = self._profile_loader(config, '1DProfiles', 'vpolC_file')
-        self.vtorC_data = self._profile_loader(config, '1DProfiles', 'vtorC_file')
-        self.vpolD_data = self._profile_loader(config, '1DProfiles', 'vpolD_file')
-        self.vtorD_data = self._profile_loader(config, '1DProfiles', 'vtorD_file')
+        self.er_data = self._profile_loader(config, '1DProfiles', 'er_file', **kwargs)
+        self.jr_data = self._profile_loader(config, '1DProfiles', 'jr_file', **kwargs)
+        self.ne_data = self._profile_loader(config, '1DProfiles', 'ne_file', **kwargs)
+        self.nD_data = self._profile_loader(config, '1DProfiles', 'nD_file', **kwargs)
+        self.nT_data = self._profile_loader(config, '1DProfiles', 'nT_file', **kwargs)
+        self.nW_data = self._profile_loader(config, '1DProfiles', 'nW_file', **kwargs)
+        self.nBe_data = self._profile_loader(config, '1DProfiles', 'nBe_file', **kwargs)
+        self.na_data = self._profile_loader(config, '1DProfiles', 'na_file', **kwargs)
+        self.nC_data = self._profile_loader(config, '1DProfiles', 'nC_file', **kwargs)
+        self.Te_data = self._profile_loader(config, '1DProfiles', 'Te_file', **kwargs)
+        self.Ti_data = self._profile_loader(config, '1DProfiles', 'Ti_file', **kwargs)
+        self.TC_data = self._profile_loader(config, '1DProfiles', 'TC_file', **kwargs)
+        self.frac_C_data = self._profile_loader(config, '1DProfiles', 'frac_C_file', **kwargs)
+
+        self.vpolC_data = self._profile_loader(config, '1DProfiles', 'vpolC_file', **kwargs)
+        self.vtorC_data = self._profile_loader(config, '1DProfiles', 'vtorC_file', **kwargs)
+        self.vpolD_data = self._profile_loader(config, '1DProfiles', 'vpolD_file', **kwargs)
+        self.vtorD_data = self._profile_loader(config, '1DProfiles', 'vtorD_file', **kwargs)
+
+        if isinstance(self.vpolD_data, (IOError, configparser.NoOptionError)):
+            self.omegDpol_data = self._profile_loader(config, '1DProfiles', 'omegDpol_file')
+        if isinstance(self.vtorD_data, (IOError, configparser.NoOptionError)):
+            self.omegDtor_data = self._profile_loader(config, '1DProfiles', 'omegDtor_file')
+        if isinstance(self.vpolC_data, (IOError, configparser.NoOptionError)):
+            self.omegCpol_data = self._profile_loader(config, '1DProfiles', 'omegCpol_file')
+        if isinstance(self.vtorC_data, (IOError, configparser.NoOptionError)):
+            self.omegCtor_data = self._profile_loader(config, '1DProfiles', 'omegCtor_file')
 
         self.psirz_exp = self._profile_loader(config, '2DProfiles', 'psirz_file')
         self.wall_exp = self._profile_loader(config, 'Wall', 'wall_file')

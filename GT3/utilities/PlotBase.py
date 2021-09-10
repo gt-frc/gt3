@@ -2,20 +2,40 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.interpolate import interp2d, Rbf
 from shapely.geometry import LineString, Point, MultiPoint
 from matplotlib import Path
+from warnings import warn
 
-MARKERSIZE = 10
+MARKERSIZE_SMALL = 20
+MARKERSIZE_MEDIUM = 40
+MARKERSIZE_LARGE = 60
+PLOTCOLORS = ['tab:red',
+              'tab:blue',
+              'tab:green',
+              'tab:orange',
+              'tab:purple',
+              'tab:brown',
+              'tab:pink',
+              'tab:gray',
+              'tab:olive',
+              'tab:cyan']
+
+PLOTMARKERS = ['o', 'x', '+', 'D', 'v', '^', 's']
 
 class PlotBase:
 
     def __init__(self):
         super(PlotBase, self).__init__()
-        self._markerSize = MARKERSIZE
+        self._markerSize = MARKERSIZE_SMALL
         self._markers = False
+        self._defColor = PLOTCOLORS[0]
 
     def set_marker_size(self, s):
         self._markerSize = s
+
+    def set_default_color(self, c):
+        self._defColor = c
 
     def set_plot_rho1d(self, rho1d):
         self._plot_rho1d = rho1d
@@ -28,15 +48,28 @@ class PlotBase:
     def set_plot_wall(self, wall):
         self._wall_line = wall
 
-    def _plot_base(self, val, xLabel=r'$\rho$', yLabel="Value", title="Title", color='red', edge=False, show=True,
+    def _plot_base(self, val, xLabel=r'$\rho$', yLabel="Value", title="Title", color=None, edge=False, show=True,
                    line=False, **kwargs):
+        if not color:
+            color = self._defColor
         plot = plt.figure()
         fig = plot.add_subplot(111)
-        fig.set_xlabel(xLabel, fontsize=30)
-        fig.set_ylabel(yLabel, fontsize=30)
+        if kwargs.get("xlabel"):
+            fig.set_xlabel(kwargs.get("xlabel"), fontsize=30)
+        else:
+            fig.set_xlabel(xLabel, fontsize=30)
+        if kwargs.get("ylabel"):
+            fig.set_ylabel(kwargs.get("ylabel"), fontsize=30)
+        else:
+            fig.set_ylabel(yLabel, fontsize=30)
         plt.xticks(fontsize=20)
         plt.yticks(fontsize=20)
         fig.set_title(title)
+        if kwargs.get("multiplier"):
+            if isinstance(kwargs.get("multiplier"), (float, int)):
+                val = val * kwargs.get("multiplier")
+            else:
+                warn("Multiplier kwarg is not a float or int", UserWarning)
         if kwargs.get("logPlot"):
             fig.set_yscale("log")
             val = np.abs(val)
@@ -50,6 +83,27 @@ class PlotBase:
             plt.show()
         return fig
 
+    def _plot_without_wall(self):
+
+        """
+        Generates a Matplotlib plot without the wall pre-plotted.
+
+        :return: An Axis object with the wall line plotted
+        """
+
+        fig_width = 6.0
+        # Check to see if self.Z/R have been defind yet to generate a figure height, as they aren't immediately
+        # calculated
+        try:
+            fig_height = (np.amax(self._Z) - np.amin(self._Z)) / (np.amax(self._R) - np.amin(self._R)) * fig_width
+        except:
+            fig_height = 9.0
+
+        fig = plt.figure(figsize=(0.975 * fig_width, fig_height))
+        ax1 = fig.add_subplot(1, 1, 1)
+        ax1.axis('equal')
+        return ax1
+
     def _plot_with_wall(self):
         """
         Generates a Matplotlib plot with the wall pre-plotted.
@@ -59,7 +113,7 @@ class PlotBase:
 
         if not hasattr(self, "_wall_line") and not hasattr(self, "wall_line"):
             print("Wall Linestring has not been instantiated yet.")
-            return
+            return self._plot_without_wall()
 
         if not hasattr(self, "_Z") and not hasattr(self, "Z"):
             print("Z coordinates have not been instantiated yet.")
@@ -92,31 +146,33 @@ class PlotBase:
         ax1.plot(np.asarray(self._wall_line.xy)[0], np.asarray(self._wall_line.xy)[1], color='black', lw=1.5)
         return ax1
 
-    def _shapely_obj_plot_hanlder(self, obj, ax):
+    def _shapely_obj_plot_handler(self, obj, ax, color=None):
+        if not color:
+            color = self._defColor
         if isinstance(obj, Point):
-            ax.scatter(obj.x, obj.y, color='red', marker='o', s=self._markerSize)
+            ax.scatter(obj.x, obj.y, color=color, marker='o', s=self._markerSize)
             return ax
         if isinstance(obj, MultiPoint):
             for p in obj:
-                ax.scatter(p.x, p.y, color='red', marker='o', s=self._markerSize)
+                ax.scatter(p.x, p.y, color=color, marker='o', s=self._markerSize)
             return ax
         if isinstance(obj, Path):
             ls = LineString(obj.vertices)
-            ax.plot(*ls.xy, color='red', marker='o', s=self._markerSize)
+            ax.plot(*ls.xy, color=color, marker='o', s=self._markerSize)
             return ax
         if isinstance(obj, LineString):
-            ax.plot(*obj.xy, color='red', marker='o', s=self._markerSize)
+            ax.plot(*obj.xy, color=color, marker='o', markersize=self._markerSize)
             return ax
 
     def _unknown_data_plot_helper(self, obj, ax):
         # Is it a shapely or similar object?
         if isinstance(obj, (Point, MultiPoint, Path, LineString)):
-            return self._shapely_obj_plot_hanlder(obj, ax)
+            return self._shapely_obj_plot_handler(obj, ax)
 
         # Does it have the vertices property to convert to a LineString?
         try:
             ls = LineString(obj.vertices)
-            return self._shapely_obj_plot_hanlder(ls, ax)
+            return self._shapely_obj_plot_handler(ls, ax)
         except:
             pass
 
@@ -131,14 +187,14 @@ class PlotBase:
         # Can I turn it into a point?
         try:
             p = Point(obj)
-            return self._shapely_obj_plot_hanlder(p, ax)
+            return self._shapely_obj_plot_handler(p, ax)
         except:
             pass
 
         # Can I turn it into a LineString directly?
         try:
             ls = LineString(obj)
-            return self._shapely_obj_plot_hanlder(ls, ax)
+            return self._shapely_obj_plot_handler(ls, ax)
         except:
             pass
 
@@ -147,7 +203,8 @@ class PlotBase:
 
     def plot_with_wall(self, obj=None):
         if not hasattr(self, "_wall_line"):
-            print("Wall Linestring has not been instantiated yet.")
+            print("Wall Linestring has not been instantiated yet. Plotting without Wall")
+            self.plot_with_wall(obj)
             return
         ax = self._plot_with_wall()
 
@@ -167,9 +224,24 @@ class PlotBase:
             return ax
         except:
             pass
+    def plot_without_wall(self, obj=None):
+        ax = self._plot_without_wall()
+        try:
+            return self._unknown_data_plot_helper(obj, ax)
+        except:
+            pass
 
-        print("Could not plot given data")
-
+        # Is it an iterable?
+        try:
+            obj.__iter__
+            for p in obj:
+                try:
+                    ax = self._unknown_data_plot_helper(p, ax)
+                except:
+                    raise
+            return ax
+        except:
+            pass
     def plot_contours_with_wall(self, obj, res=50):
         if not hasattr(self, "_wall_line"):
             print("Wall Linestring has not been instantiated yet.")
@@ -182,6 +254,44 @@ class PlotBase:
             print("Could not plot contours")
             return
 
-    def plot_add_scatter(self, fig, val, color="blue"):
+    def plot_add_scatter(self, fig, val, color=None):
+        if not color:
+            color = self._defColor
         fig.scatter(self._plot_rho1d, val, color=color, s=self._markerSize)
         return fig
+
+class PlotBaseWithHeatMap(PlotBase):
+    def __init__(self):
+        super(PlotBaseWithHeatMap, self).__init__()
+
+    def _plot_HM(self, x, y, z, aspect=1, cmap=plt.cm.rainbow, *args, **kwargs):
+        # x, y, z = self._remove_duplicates_HM(x,y,z)
+        xi, yi = np.linspace(x.min(), x.max(), 100), np.linspace(y.min(), y.max(), 100)
+        xi, yi = np.meshgrid(xi, yi)
+        # interp = interp2d(x, y, z)
+        if kwargs.get("no_RBF"):
+            interp = interp2d(x, y, z)
+        else:
+            try:
+                interp = Rbf(x, y, z)
+            except np.linalg.LinAlgError:
+                interp = interp2d(x, y, z)
+
+        zi = interp(xi[0], yi[:, 0])
+        if kwargs.get("logScale"):
+            zi[zi == 0] = 0.00001
+            zi = np.log10(z)
+        fig, ax = plt.subplots(figsize=(6, 6))
+        hm = ax.imshow(zi, interpolation='nearest', cmap=cmap, extent=[x.min(), x.max(), y.max(), y.min()])
+        ax.set_aspect(aspect)
+        return fig, hm
+
+    def plot_HM(self, **kwargs):
+        self._plot_HM_with_wall(self.R, self.Z, self.val, **kwargs)
+
+    def _plot_HM_with_wall(self, R, Z, val, *args, **kwargs):
+
+        fig, ax = self._plot_HM(R, Z, val, **kwargs)
+        fig.colorbar(ax)
+        ax.axes.plot(np.asarray(self._wall_line.xy).T[:, 0], np.asarray(self._wall_line.xy).T[:, 1], color='black', lw=1.5)
+        return ax

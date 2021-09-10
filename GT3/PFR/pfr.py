@@ -26,7 +26,7 @@ class Pfr:
 
     def pfr_lines(self, inp, core):
 
-        c = QuadContourGenerator.from_rectilinear(core.psi_data.R[0], core.psi_data.Z[:, 0], core.psi_data.psi_norm)
+        c = QuadContourGenerator.from_rectilinear(core.psi.R[0], core.psi.Z[:, 0], core.psi.psi_norm)
         contours = c.contour(0.999)
 
         if len(contours) == 1:

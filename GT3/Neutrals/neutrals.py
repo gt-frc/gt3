@@ -15,11 +15,13 @@ from GT3.Core.Processors import NumpyEncoder
 
 class Neutrals:
 
-    def __init__(self, inp, core, cpus=False):
+    def __init__(self, inp, core, cpus=False, *args, **kwargs):
+
         try:
             from neutpy import neutrals
         except ModuleNotFoundError:
-            raise ModuleNotFoundError("Neutpy is not installed or could not be loaded. Neutrals data will be unavailable.")
+            raise ModuleNotFoundError(
+                "Neutpy is not installed or could not be loaded. Neutrals data will be unavailable.")
 
         if abs(1.0 - core.sep_val) > .0001:
             print("The separatrix value has been overwritten. Cannot run Neutrals calculation")
@@ -51,16 +53,17 @@ class Neutrals:
                 if cpus:
                     self.npi.set_cpu_cores(cpus)
 
-                self.npi.from_gt3(core, inp)
+                self.npi.from_gt3(core, inp, **kwargs)
                 self.data = self.NeutralDataNT(self.npi.midpts[:, 0],
                                                self.npi.midpts[:, 1],
                                                self.npi.nn_s_raw,
                                                self.npi.nn_t_raw,
                                                self.npi.iznrate_s_raw,
                                                self.npi.iznrate_t_raw)
-                self._update_core()
                 # Save data
                 self._save_data()
+                self._update_core()
+
             except EnvironmentError as e:
                 print(str(e))
                 pass
@@ -79,7 +82,7 @@ class Neutrals:
         if which("triangle") == None:
             raise EnvironmentError("Triangle is not installed. Neutpy cannot be run")
 
-    def reRun(self, cpus=False):
+    def reRun(self, cpus=False, *args, **kwargs):
         print ("Manually re-running NeutPy")
         try:
             from neutpy import neutrals
@@ -90,7 +93,7 @@ class Neutrals:
         self.npi = neutrals()
         if cpus:
             self.npi.set_cpu_cores(cpus)
-        self.npi.from_gt3(self.core, self.inp)
+        self.npi.from_gt3(self.core, self.inp, **kwargs)
         self.data = self.NeutralDataNT(self.npi.midpts[:, 0],
                                 self.npi.midpts[:, 1],
                                 self.npi.nn_s_raw,

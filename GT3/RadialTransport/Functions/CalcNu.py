@@ -8,8 +8,8 @@ from GT3.RadialTransport.Functions.CalcCoulLog import calc_coul_log_j_k
 
 
 def calc_nu_drag(n_j, m_j, v_tor_j, v_tor_k, mbal_rhs, nu_c):
-    nu_drag = (mbal_rhs + (n_j * m_j * nu_c * v_tor_k)) / (v_tor_j * n_j * m_j) - nu_c  # Piper Changes: Multiplied V_tor_k in the numerator by n_j*m_j. The algebra was wrong.
-    return nu_drag
+    nu_drag = (mbal_rhs + (n_j * m_j * nu_c * v_tor_k.val)) / (v_tor_j.val * n_j * m_j) - nu_c  # Piper Changes: Multiplied V_tor_k in the numerator by n_j*m_j. The algebra was wrong.
+    return np.abs(nu_drag)
 
 def calc_nu_j_k(m_j, m_k, z_j, z_k, T_j, n_k):
     m_r = calc_reduced_mass(m_j, m_k)
@@ -21,6 +21,6 @@ def calc_nu_j_k(m_j, m_k, z_j, z_k, T_j, n_k):
     #        (np.sqrt(m_r * 1E3) * (T_j**1.5))
     return nu_j_k
 
-def calc_nustar(nu90, q, R0_a, vpol):
-    nustar = nu90 * abs(q.val) * R0_a / np.abs(vpol)
+def calc_nustar(nu90, q, R0_a, vth):
+    nustar = nu90 * abs(q.val) * R0_a / np.abs(vth)
     return nustar
