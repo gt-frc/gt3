@@ -111,7 +111,7 @@ class RadialTransport(PlotBase):
         """
         super().__init__()
         sys.dont_write_bytecode = True
-        self.reRun=False
+        self.reRun = False
 
         ##############################################################
         # prep quantities for 1D transport analysis
@@ -374,12 +374,23 @@ class RadialTransport(PlotBase):
         # Piper Changes: Added pinch velocity section and calculations.
 
 
-        self.vrpinch_ext_term = calc_external_term(self.mom_src_tor_D_tot, n.i, ch_d, B_p)
-        self.vrpinch_poloidal_term = calc_poloidal_term(n.i, m_d, ch_d, nu_c_DC, self.nu_drag_D.val, B_t, B_p, self.vpol_D)
-        self.vrpinch_Er_term = calc_radial_E_field_term(n.i, m_d, ch_d, nu_c_DC, self.nu_drag_D.val, Er, B_p)
-        self.vrpinch_toroidal_term = calc_toroidal_term(n.i, m_d, ch_d, nu_c_DC, B_p, self.vtor_C_total)
-        vrpinch = calc_pinch_velocity(self.vrpinch_ext_term, self.vrpinch_poloidal_term, self.vrpinch_Er_term,
-                                           self.vrpinch_toroidal_term)
+        vrpinch_ext_term = calc_external_term(self.mom_src_tor_D_tot, n.i, ch_d, B_p)
+        vrpinch_ext_term = calc_external_term(self.mom_src_tor_D_kept, n.i, ch_d, B_p)
+        self._vrpinch_ext_term = OneDProfile(core.psi, vrpinch_ext_term, core.R, core.Z)
+
+        vrpinch_poloidal_term = calc_poloidal_term(n.i, m_d, ch_d, nu_c_DC, self.nu_drag_D.val, B_t, B_p, self.vpol_D)
+        self._vrpinch_poloidal_term = OneDProfile(core.psi, vrpinch_poloidal_term, core.R, core.Z)
+
+        vrpinch_Er_term = calc_radial_E_field_term(n.i, m_d, ch_d, nu_c_DC, self.nu_drag_D.val, Er, B_p)
+        self._vrpinch_Er_term = OneDProfile(core.psi, vrpinch_Er_term, core.R, core.Z)
+
+
+        vrpinch_toroidal_term = calc_toroidal_term(n.i, m_d, ch_d, nu_c_DC, B_p, self.vtor_C_total)
+        self._vrpinch_toroidal_term = OneDProfile(core.psi, vrpinch_toroidal_term, core.R, core.Z)
+
+        vrpinch = calc_pinch_velocity(vrpinch_ext_term, vrpinch_poloidal_term, vrpinch_Er_term,
+                                      vrpinch_toroidal_term)
+
         self.vrpinch = OneDProfile(core.psi, vrpinch, core.R, core.Z)
 
         gamma_p_d = self.vrpinch * self._n.i
@@ -795,20 +806,25 @@ class RadialTransport(PlotBase):
         return fig
     def plot_chi_terms(self, edge=True, logPlot=False, markerscale=2.0, size=20):
 
-        fig = self._plot_base(self.conv25, title="", yLabel=r"$Q\left[\frac{W}{m^2}\right]$", edge=edge,
-                              color=PLOTCOLORS[2], logPlot=logPlot)
-        fig.scatter(self.rhor, self.heatin, color=PLOTCOLORS[4], s=self._markerSize)
-        fig.scatter(self.rhor, self.heatvisc, color=PLOTCOLORS[3], s=self._markerSize)
-        fig.scatter(self.rhor, self.Q.D.diff, color=PLOTCOLORS[1], s=self._markerSize)
-        fig.scatter(self.rhor, self.Q.D.diff_noIOL, color=PLOTCOLORS[0], s=self._markerSize)
-        #fig.legend([r"$q^{conv}$", r"$q^{heatin}$", r"$q^{tot}$"])
-        kwargs = {
-            'markerscale': markerscale,
-            'prop': {
-                'size': size
-            }
-        }
-        fig.legend([r"$Q^{conv}$", r"$Q^{heatin}$", r"$Q^{visc}$", r"$Q^{tot}$", r"$Q^{tot}$ w/out IOL"], **kwargs)
+        fig = self._plot_base(self.Q.D.diff_noIOL, title="", yLabel=r"$Q\left[\frac{W}{m^2}\right]$", edge=edge,
+                              logPlot=logPlot, legend=r"$Q^{tot}$ w/out IOL")
+        fig.add_scatter(self.rhor, self.Q.D.diff, legend=r"$Q^{tot}$")
+        fig.add_scatter(self.rhor, self.heatvisc, legend=r"$Q^{visc}$")
+        fig.add_scatter(self.rhor, self.heatin, legend=r"$Q^{heatin}$")
+        fig.add_scatter(self.rhor, self.conv25, legend=r"$Q^{conv}$")
+        #fig.toggle_legend()
+        fig.set_legend_scale(markerscale)
+        fig.set_legend_fontsize(size)
+        fig.set_marker_size(30)
+        #
+        # #fig.legend([r"$q^{conv}$", r"$q^{heatin}$", r"$q^{tot}$"])
+        # kwargs = {
+        #     'markerscale': markerscale,
+        #     'prop': {
+        #         'size': size
+        #     }
+        # }
+        # fig.legend([r"$Q^{conv}$", r"$Q^{heatin}$", r"$Q^{visc}$", r"$Q^{tot}$", r"$Q^{tot}$ w/out IOL"], **kwargs)
         return fig
 
     def plot_gamma_diff_calc(self):
@@ -856,29 +872,19 @@ class RadialTransport(PlotBase):
         return fig
 
     def plot_Chi_i_comp(self, edge=True, marker=False, markerscale=2.0, size=20):
-        fig = self._plot_base(self.chi.i.chi0, yLabel=r'$\chi_{r,i} \left[\frac{m^2}{s}\right]$', title="", edge=edge)
-        if marker:
-            fig.scatter(self.rhor, self.chi.i.chi1, color="black", s=self._markerSize, marker="x")
-            fig.scatter(self.rhor, self.chi.i.chi2, color="blue", s=self._markerSize, marker="x")
-            fig.scatter(self.rhor, self.chi.i.chi3, color="green", s=self._markerSize, marker="o", facecolors="None")
-            fig.scatter(self.rhor, self.chi.i.chi4, color="purple", s=self._markerSize, marker="^")
-        else:
-            fig.scatter(self.rhor, self.chi.i.chi1, color="black", s=self._markerSize)
-            fig.scatter(self.rhor, self.chi.i.chi2, color="blue", s=self._markerSize)
-            fig.scatter(self.rhor, self.chi.i.chi3, color="green", s=self._markerSize)
-            fig.scatter(self.rhor, self.chi.i.chi4, color="purple", s=self._markerSize)
 
-        kwargs = {
-            'markerscale': markerscale,
-            'prop': {
-                'size': size
-            }
-        }
-        fig.legend([r"$q^{cond} = q^{tot}$ w/out IOL",
-                    r"$q^{cond} = q^{tot}$",
-                    r"$q^{cond} = q^{tot}-q^{conv}$",
-                    r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}$",
-                    r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}-q^{visc}$"],  **kwargs)
+        fig = self._plot_base(self.chi.i.chi0, title="", yLabel=r"$\chi_{r,j} \left[\frac{m^2}{s}\right]$", edge=edge,
+                              legend=r"$q^{cond} = q^{tot}$ w/out IOL")
+        fig.add_scatter(self.rhor, self.chi.i.chi1, legend=r"$q^{cond} = q^{tot}$")
+        fig.add_scatter(self.rhor, self.chi.i.chi2, legend=r"$q^{cond} = q^{tot}-q^{conv}$")
+        fig.add_scatter(self.rhor, self.chi.i.chi3, legend=r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}$")
+        fig.add_scatter(self.rhor, self.chi.i.chi4, legend=r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}-q^{visc}$")
+
+        if marker:
+            fig.toggle_markers()
+        fig.set_legend_scale(markerscale)
+        fig.set_legend_fontsize(size)
+        fig.set_marker_size(30)
         return fig
 
     def plot_D(self, edge=True):

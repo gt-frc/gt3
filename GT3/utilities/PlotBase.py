@@ -6,22 +6,9 @@ from scipy.interpolate import interp2d, Rbf
 from shapely.geometry import LineString, Point, MultiPoint
 from matplotlib import Path
 from warnings import warn
+from GT3.utilities.GT3Figure import GT3FigureSinglePlot
 
-MARKERSIZE_SMALL = 20
-MARKERSIZE_MEDIUM = 40
-MARKERSIZE_LARGE = 60
-PLOTCOLORS = ['tab:red',
-              'tab:blue',
-              'tab:green',
-              'tab:orange',
-              'tab:purple',
-              'tab:brown',
-              'tab:pink',
-              'tab:gray',
-              'tab:olive',
-              'tab:cyan']
-
-PLOTMARKERS = ['o', 'x', '+', 'D', 'v', '^', 's']
+from GT3.utilities import MARKERSIZE_SMALL, MARKERSIZE_MEDIUM, MARKERSIZE_LARGE, PLOTCOLORS, PLOTMARKERS
 
 class PlotBase:
 
@@ -50,35 +37,49 @@ class PlotBase:
 
     def _plot_base(self, val, title="Title", color=None, edge=False, show=True,
                    line=False, **kwargs):
+
         if not color:
             color = self._defColor
-        plot = plt.figure()
-        fig = plot.add_subplot(111)
-        if kwargs.get("xLabel"):
-            fig.set_xlabel(kwargs.get("xLabel"), fontsize=30)
-        else:
-            fig.set_xlabel(r'$\rho$', fontsize=30)
-        if kwargs.get("yLabel"):
-            fig.set_ylabel(kwargs.get("yLabel"), fontsize=30)
-        else:
-            fig.set_ylabel("", fontsize=30)
-        plt.xticks(fontsize=20)
-        plt.yticks(fontsize=20)
-        fig.set_title(title)
+
+        fig = GT3FigureSinglePlot()
+        #plot = plt.figure()
+        #fig = plot.add_subplot(111)
+
+
         if kwargs.get("multiplier"):
             if isinstance(kwargs.get("multiplier"), (float, int)):
                 val = val * kwargs.get("multiplier")
             else:
                 warn("Multiplier kwarg is not a float or int", UserWarning)
         if kwargs.get("logPlot"):
-            fig.set_yscale("log")
-            val = np.abs(val)
+            fig.toggle_semilog()
+        if line:
+            fig.add_line(self._plot_rho1d, val)
+        else:
+            if kwargs.get("legend"):
+                legend = kwargs.get("legend")
+            else:
+                legend = ""
+            fig.add_scatter(self._plot_rho1d, val, legend=legend)
+        fig.set_marker_size(self._markerSize)
+        if kwargs.get("xLabel"):
+            fig.set_xLabel(kwargs.get("xLabel"))
+            fig.set_xLabel_fontsize(30)
+        else:
+            fig.set_xLabel(r'$\rho$')
+            fig.set_xLabel_fontsize(30)
+
+        if kwargs.get("yLabel"):
+            fig.set_yLabel(kwargs.get("yLabel"))
+            fig.set_yLabel_fontsize(30)
+        else:
+            fig.set_yLabel_fontsize(30)
+
+        fig.set_xticks_fontsize(20)
+        fig.set_yticks_fontsize(20)
+        fig.set_title(title)
         if edge:
             fig.set_xlim(0.85, 1.0)
-        if line:
-            fig.plot(self._plot_rho1d, val, color=color)
-        else:
-            fig.scatter(self._plot_rho1d, val, color=color, s=self._markerSize)
         if show:
             plt.show()
         return fig

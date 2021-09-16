@@ -2,14 +2,13 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from GT3.utilities.PlotBase import MARKERSIZE_LARGE, MARKERSIZE_SMALL, MARKERSIZE_MEDIUM, PLOTMARKERS, PLOTCOLORS
+from GT3.utilities import MARKERSIZE_SMALL, MARKERSIZE_MEDIUM, MARKERSIZE_LARGE, PLOTCOLORS, PLOTMARKERS
 
 class GT3FigureSinglePlot:
 
     def __init__(self, *args, **kwargs):
         self._markerSize = MARKERSIZE_SMALL
         self._markers = False
-        self._defColor = PLOTCOLORS[0]
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111)
         self.legend = []
@@ -22,6 +21,8 @@ class GT3FigureSinglePlot:
         self._yMax = 1.
         self._legendFontSize = 10
         self._legendScale = 1.0
+        self._plotSemilog = False
+        self._showTitle = False
 
         if kwargs.get("title"):
             self.title = kwargs.get("title")
@@ -31,13 +32,13 @@ class GT3FigureSinglePlot:
 
         if kwargs.get("yLabel"):
             self.yLabel = kwargs.get("yLabel")
-            self.ax.set_ylabel(self.title)
+            self.ax.set_ylabel(self.yLabel)
         else:
             self.yLabel = ""
 
         if kwargs.get("xLabel"):
             self.xLabel = kwargs.get("xLabel")
-            self.ax.set_xlabel(self.title)
+            self.ax.set_xlabel(self.xLabel)
         else:
             self.xLabel = ""
 
@@ -52,37 +53,38 @@ class GT3FigureSinglePlot:
         plt.yticks(fontsize=20)
 
         self.scatter_data = []
+        self.line_data = []
 
 
     def set_title(self, title):
-        self.ax.set_title(title)
+        self.title = title
+        self._replot()
+        return self
 
     def set_xLabel(self, xLabel):
+        self.xLabel = xLabel
         self.ax.set_xlabel(xLabel, fontsize=self._xLabelFontSize)
         return self
+
+    def get_xLabel(self):
+        return self.ax.get_xlabel(), self._xLabelFontSize
 
     def set_xLabel_fontsize(self, s):
         self._xLabelFontSize = s
         self.ax.set_xlabel(self.get_xLabel()[0], fontsize=self._xLabelFontSize)
         return self
 
-    def get_xLabel(self):
-        return self.ax.get_xlabel(), self._xLabelFontSize
-
     def set_yLabel(self, yLabel):
+        self.yLabel = yLabel
         self.ax.set_ylabel(yLabel, fontsize=self._yLabelFontSize)
-        return self
-
-    def set_yLabel_fontsize(self, s):
-        self._yLabelFontSize = s
-        self.ax.set_ylabel(self.get_yLabel()[0], fontsize=self._yLabelFontSize)
         return self
 
     def get_yLabel(self):
         return self.ax.get_ylabel(), self._yLabelFontSize
 
-    def plot_as_semiLog(self):
-        self.ax.set_yscale("log")
+    def set_yLabel_fontsize(self, s):
+        self._yLabelFontSize = s
+        self.ax.set_ylabel(self.get_yLabel()[0], fontsize=self._yLabelFontSize)
         return self
 
     def set_xlim(self, xmin, xmax, replot=True):
@@ -99,8 +101,17 @@ class GT3FigureSinglePlot:
             self._replot()
         return self
 
-    def add_line(self, x, y, color="black"):
-        self.ax.plot(x, y, color=color)
+    def add_line(self, x, y, *args, **kwargs):
+        if kwargs.get("legend"):
+            self.legend.append(kwargs.get("legend"))
+            self.ax.legend(self.legend)
+            self.showLegend = True
+        else:
+            self.legend.append(None)
+        self.line_data.append([x, y])
+        self._replot(axisStick=True)
+        self._xMin, self._xMax = self.ax.get_xlim()
+        self._yMin, self._yMax = self.ax.get_ylim()
         return self
 
     def add_scatter(self, x, y, *args, **kwargs):
@@ -113,10 +124,10 @@ class GT3FigureSinglePlot:
             self.legend.append(None)
 
         #self.ax.scatter(x, y, color=color, s=self._markerSize)
-        self.scatter_data.append([x,y])
+        self.scatter_data.append([x, y])
 
         self._replot(axisStick=True)
-        self._xMin, self._xMax = self.ax.get_xlim()
+        #self._xMin, self._xMax = self.ax.get_xlim()
         self._yMin, self._yMax = self.ax.get_ylim()
         return self
 
@@ -165,24 +176,290 @@ class GT3FigureSinglePlot:
         self._replot()
         return self
 
+    def toggle_semilog(self):
+        self._plotSemilog = not self._plotSemilog
+        self._replot()
+        return self
+
+    def toggle_title(self):
+        self._showTitle = not self._showTitle
+        self._replot()
+        return self
+
     def _replot(self, *args, **kwargs):
         self.ax.cla()
+        if self._plotSemilog:
+            self.ax.set_yscale("log")
         for n, data in enumerate(self.scatter_data):
+            x = data[0]
+            y = data[1]
+            if self._plotSemilog:
+                pass
+                #y = np.log10(y)
             if self._markers:
-                self.ax.scatter(data[0], data[1], color=PLOTCOLORS[n], s=self._markerSize, marker=PLOTMARKERS[n])
+                self.ax.scatter(x, y, color=PLOTCOLORS[n], s=self._markerSize, marker=PLOTMARKERS[n])
             else:
-                self.ax.scatter(data[0], data[1], color=PLOTCOLORS[n], s=self._markerSize)
+                self.ax.scatter(x, y, color=PLOTCOLORS[n], s=self._markerSize)
+
+        for n, data in enumerate(self.line_data):
+            x = data[0]
+            y = data[1]
+            if self._plotSemilog:
+                #y = np.log10(y)
+                pass
+            if self._markers:
+                self.ax.plot(x, y, color=PLOTCOLORS[n])
+            else:
+                self.ax.plot(x, y, color=PLOTCOLORS[n])
+
         if self.showLegend:
             self.ax.legend(self.legend, prop={'size': self._legendFontSize}, markerscale=self._legendScale)
         if not kwargs.get("axisStick"):
             self.ax.set_xlim(self._xMin, self._xMax)
             self.ax.set_ylim(self._yMin, self._yMax)
-        self.ax.set_title( self.title)
+        if self._showTitle:
+            self.ax.set_title(self.title)
+        else:
+            self.ax.set_title("")
+        self.ax.set_xlabel(self.xLabel)
+        self.ax.set_ylabel(self.yLabel)
         if self._sciNotation:
             self.ax = format_exponent(self.ax)
-
         return self
 
+class GT3FigureSBSPlot:
+    @staticmethod
+    def _dict_gen(keys, val):
+        result = {}
+        for key in keys:
+            result[key] = val
+        return result
+
+    def __init__(self, *args, **kwargs):
+        self.fig = plt.figure()
+        self.fig.tight_layout(pad=3.0)
+        self._keys = ['L', 'R']
+        self.ax = {
+            'L': self.fig.add_subplot(121),
+            'R': self.fig.add_subplot(122),
+        }
+        self._markerSize = self._dict_gen(self._keys, MARKERSIZE_SMALL)
+        self._markers = self._dict_gen(self._keys, False)
+        self.legend = self._dict_gen(self._keys, [])
+        self._sciNotation = self._dict_gen(self._keys, False)
+        self._xLabelFontSize = self._dict_gen(self._keys, 30)
+        self._yLabelFontSize = self._dict_gen(self._keys, 30)
+        self._xtickNum = self._dict_gen(self._keys, 4)
+        self._ytickNum = self._dict_gen(self._keys, 4)
+        self._xMin = self._dict_gen(self._keys, 0.)
+        self._xMax = self._dict_gen(self._keys, 1.)
+        self._yMin = self._dict_gen(self._keys, 0.)
+        self._yMax = self._dict_gen(self._keys, 1.)
+        self._legendFontSize = self._dict_gen(self._keys, 10)
+        self._legendScale = self._dict_gen(self._keys, 1.0)
+        self._plotSemilog = self._dict_gen(self._keys, False)
+        self._showTitle = self._dict_gen(self._keys, False)
+        self.title = self._dict_gen(self._keys, "")
+        self.xLabel = self._dict_gen(self._keys, "")
+        self.yLabel = self._dict_gen(self._keys, "")
+        self.fig_title = ""
+
+        self.showLegend = self._dict_gen(self._keys, False)
+        for key in self._keys:
+            self.ax[key].tick_params(axis="x", labelsize=16)
+            self.ax[key].tick_params(axis="y", labelsize=16)
+
+
+        self.scatter_data = self._dict_gen(self._keys, [])
+        self.line_data = self._dict_gen(self._keys, [])
+
+    def set_fig_title(self, title):
+        self.fig_title = title
+        self._replot()
+        return self
+
+    def set_title(self, title, key="L"):
+        self.title[key] = title
+        self._replot()
+        return self
+
+    def set_xLabel(self, xLabel, key="L"):
+        self.xLabel[key] = xLabel
+        self.ax[key].set_xlabel(xLabel, fontsize=self._xLabelFontSize[key])
+        return self
+
+    def get_xLabel(self, key="L"):
+        return self.ax[key].get_xlabel(), self._xLabelFontSize[key]
+
+    def set_xLabel_fontsize(self, s, key="L"):
+        self._xLabelFontSize[key] = s
+        self.ax[key].set_xlabel(self.get_xLabel(key=key)[0], fontsize=self._xLabelFontSize[key])
+        return self
+
+    def set_yLabel(self, yLabel, key="L"):
+        self.yLabel[key] = yLabel
+        self.ax[key].set_ylabel(yLabel, fontsize=self._yLabelFontSize[key])
+        return self
+
+    def get_yLabel(self, key="L"):
+        return self.ax[key].get_ylabel(), self._yLabelFontSize[key]
+
+    def set_yLabel_fontsize(self, s, key="L"):
+        self._yLabelFontSize[key] = s
+        self.ax[key].set_ylabel(self.get_yLabel(key=key)[0], fontsize=self._yLabelFontSize[key])
+        return self
+
+    def set_xlim(self, xmin, xmax, key="L", replot=True):
+        self._xMin[key] = xmin
+        self._xMax[key] = xmax
+        if replot:
+            self._replot()
+        return self
+
+    def set_ylim(self, ymin, ymax, key="L", replot=True):
+        self._yMin[key] = ymin
+        self._yMax[key] = ymax
+        if replot:
+            self._replot()
+        return self
+
+    def add_line(self, x, y, key="L", *args, **kwargs):
+        if kwargs.get("legend"):
+            self.legend[key].append(kwargs.get("legend"))
+            self.ax[key].legend(self.legend[key])
+            self.showLegend[key] = True
+        else:
+            self.legend[key].append(None)
+        self.line_data[key].append([x, y])
+        self._replot(axisStick=True)
+        self._xMin[key], self._xMax[key] = self.ax[key].get_xlim()
+        self._yMin[key], self._yMax[key] = self.ax[key].get_ylim()
+        return self
+
+    def add_scatter(self, x, y, key="L", *args, **kwargs):
+
+        if kwargs.get("legend"):
+            if len(self.legend[key]) == 0:
+                self.legend[key] = [kwargs.get("legend")]
+            else:
+                self.legend[key].append(kwargs.get("legend"))
+            self.ax[key].legend(self.legend[key])
+            self.showLegend[key] = True
+        else:
+            self.legend[key].append(None)
+
+        #self.ax.scatter(x, y, color=color, s=self._markerSize)
+        if len(self.scatter_data[key]) == 0:
+            self.scatter_data[key] = [[x,y]]
+        else:
+            self.scatter_data[key].append([x,y])
+
+        self._replot(axisStick=True)
+        #self._xMin, self._xMax = self.ax.get_xlim()
+        self._yMin[key], self._yMax[key] = self.ax[key].get_ylim()
+        return self
+
+    def set_marker_size(self, s, key="L"):
+        self._markerSize[key] = s
+        self._replot()
+        return self
+
+    def set_number_xticks(self, num, key="L"):
+        self._xtickNum[key] = num
+        self._replot()
+        return self
+
+    def set_number_yticks(self, num, key="L"):
+        self._ytickNum[key] = num
+        self._replot()
+        return self
+    def set_xticks_fontsize(self, size, key="L"):
+        self.ax[key].tick_params(axis='x', labelsize=size)
+        return self
+
+    def set_yticks_fontsize(self, size, key="L"):
+        self.ax[key].tick_params(axis='y', labelsize=size)
+        return self
+
+    def set_legend_fontsize(self, size, key="L"):
+        self._legendFontSize[key] = size
+        self._replot()
+        return self
+
+    def set_legend_scale(self, scale, key="L"):
+        self._legendScale[key] = scale
+        self._replot()
+        return self
+
+    def toggle_legend(self, key="L"):
+        self.showLegend[key] = not self.showLegend[key]
+        self._replot()
+
+    def toggle_markers(self, key="L"):
+        self._markers[key] = not self._markers[key]
+        self._replot()
+
+    def toggle_sci_notation(self, key="L"):
+        self._sciNotation[key] = not self._sciNotation[key]
+        self._replot()
+        return self
+
+    def toggle_semilog(self, key="L"):
+        self._plotSemilog[key] = not self._plotSemilog[key]
+        self._replot()
+        return self
+
+    def toggle_title(self, key="L"):
+        self._showTitle[key] = not self._showTitle[key]
+        self._replot()
+        return self
+
+    def _replot(self, *args, **kwargs):
+        for key in self._keys:
+            self.ax[key].cla()
+            if self._plotSemilog[key]:
+                self.ax[key].set_yscale("log")
+            for n, data in enumerate(self.scatter_data[key]):
+                x = data[0]
+                y = data[1]
+                if self._plotSemilog[key]:
+                    pass
+                    #y = np.log10(y)
+                if self._markers[key]:
+                    self.ax[key].scatter(x, y, color=PLOTCOLORS[n], s=self._markerSize[key], marker=PLOTMARKERS[n])
+                else:
+                    self.ax[key].scatter(x, y, color=PLOTCOLORS[n], s=self._markerSize[key])
+
+            for n, data in enumerate(self.line_data[key]):
+                x = data[0]
+                y = data[1]
+                if self._plotSemilog[key]:
+                    #y = np.log10(y)
+                    pass
+                if self._markers[key]:
+                    self.ax[key].plot(x, y, color=PLOTCOLORS[n])
+                else:
+                    self.ax[key].plot(x, y, color=PLOTCOLORS[n])
+
+            if self.showLegend[key]:
+                self.ax[key].legend(self.legend[key],
+                                    prop={'size': self._legendFontSize[key]},
+                                    markerscale=self._legendScale[key])
+            if not kwargs.get("axisStick"):
+                self.ax[key].set_xlim(self._xMin[key], self._xMax[key])
+                self.ax[key].set_ylim(self._yMin[key], self._yMax[key])
+            if self._showTitle[key]:
+                self.ax[key].set_title(self.title[key])
+            else:
+                self.ax[key].set_title("")
+            self.ax[key].set_xlabel(self.xLabel[key])
+            self.ax[key].set_ylabel(self.yLabel[key])
+            self.ax[key].locator_params(axis="x", nbins=self._xtickNum[key])
+            if not self._plotSemilog[key]:
+                self.ax[key].locator_params(axis="y", nbins=self._ytickNum[key])
+            if self._sciNotation[key]:
+                self.ax[key] = format_exponent(self.ax[key])
+        return self
 
 def format_exponent(ax, axis='y'):
 
@@ -231,7 +508,6 @@ def format_exponent(ax, axis='y'):
     return ax
 
 if __name__ == "__main__":
-    import numpy as np
     gtf = GT3FigureSinglePlot()
     x = np.linspace(0., 1., 100)
     linPlot = np.linspace(0., 3., 100)
@@ -240,3 +516,11 @@ if __name__ == "__main__":
     gtf.add_scatter(x, linPlot, legend="Linpl")
     gtf.add_scatter(x, sinPlot, legend="SinPlot")
     gtf.add_scatter(x, cosPlot)
+
+    gtf2 = GT3FigureSinglePlot()
+    linPlot = np.linspace(1., 3., 100)
+    linPlotHuge = np.linspace(.01, 1E5, 100)
+    gtf2.add_scatter(x, linPlot, legend="Linplot")
+    gtf2.add_scatter(x, linPlotHuge, legend="Wooot")
+
+
