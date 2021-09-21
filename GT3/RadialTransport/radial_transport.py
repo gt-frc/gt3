@@ -468,11 +468,27 @@ class RadialTransport(PlotBase):
     def _calc_Chi(self, vtorS=0.1, vpolS=0.1):
         self.chi = namedtuple('chi', 'i e')(
             namedtuple('i', 'chi0 chi1 chi2 chi3 chi4')(
-                self.Q.D.diff_noIOL * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
-                self.Q.D.diff * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
-                (self.Q.D.diff - self.conv25) * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
-                (self.Q.D.diff - self.conv25 - self.heatin) * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
-                self._calc_chi_i_visc(vtorS=vtorS, vpolS=vpolS)
+                OneDProfile(self.core.psi,
+                            self.Q.D.diff_noIOL * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
+                            self.core.R,
+                            self.core.Z),
+                OneDProfile(self.core.psi,
+                            self.Q.D.diff * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
+                            self.core.R,
+                            self.core.Z),
+                OneDProfile(self.core.psi,
+                            (self.Q.D.diff - self.conv25) * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
+                            self.core.R,
+                            self.core.Z),
+                OneDProfile(self.core.psi,
+                            (self.Q.D.diff - self.conv25 - self.heatin) * self._T.i.J.L / (
+                                        self._n.i * self._T.i.ev * ch_d),
+                            self.core.R,
+                            self.core.Z),
+                OneDProfile(self.core.psi,
+                            self._calc_chi_i_visc(vtorS=vtorS, vpolS=vpolS),
+                            self.core.R,
+                            self.core.Z)
             ), calc_chi_e(self.Q.e.diff, self.gamma.D.diff, self.gamma.C.diff, self._n, self._T)
         )
 
