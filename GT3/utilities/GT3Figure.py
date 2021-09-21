@@ -13,6 +13,7 @@ class GT3FigureSinglePlot:
         self.ax = self.fig.add_subplot(111)
         self.legend = []
         self._sciNotation = False
+        self._legendLoc = 0
         self._xLabelFontSize = 30
         self._yLabelFontSize = 30
         self._xMin = 0.
@@ -213,7 +214,9 @@ class GT3FigureSinglePlot:
                 self.ax.plot(x, y, color=PLOTCOLORS[n])
 
         if self.showLegend:
-            self.ax.legend(self.legend, prop={'size': self._legendFontSize}, markerscale=self._legendScale)
+            self.ax.legend(self.legend, prop={'size': self._legendFontSize},
+                           markerscale=self._legendScale,
+                           loc=self._legendLoc)
         if not kwargs.get("axisStick"):
             self.ax.set_xlim(self._xMin, self._xMax)
             self.ax.set_ylim(self._yMin, self._yMax)
@@ -226,6 +229,10 @@ class GT3FigureSinglePlot:
         if self._sciNotation:
             self.ax = format_exponent(self.ax)
         return self
+
+    def set_legend_location(self, loc):
+        self._legendLoc = loc
+        self._replot()
 
 class GT3FigureSBSPlot:
     @staticmethod
@@ -246,6 +253,7 @@ class GT3FigureSBSPlot:
         self._markerSize = self._dict_gen(self._keys, MARKERSIZE_SMALL)
         self._markers = self._dict_gen(self._keys, False)
         self.legend = self._dict_gen(self._keys, [])
+        self._legendLoc = self._dict_gen(self._keys, 0)
         self._sciNotation = self._dict_gen(self._keys, False)
         self._xLabelFontSize = self._dict_gen(self._keys, 30)
         self._yLabelFontSize = self._dict_gen(self._keys, 30)
@@ -321,6 +329,11 @@ class GT3FigureSBSPlot:
         self._yMax[key] = ymax
         if replot:
             self._replot()
+        return self
+
+    def set_legend_location(self, loc, key="L"):
+        self._legendLoc[key] = loc
+        self._replot()
         return self
 
     def add_line(self, x, y, key="L", *args, **kwargs):
@@ -444,7 +457,8 @@ class GT3FigureSBSPlot:
             if self.showLegend[key]:
                 self.ax[key].legend(self.legend[key],
                                     prop={'size': self._legendFontSize[key]},
-                                    markerscale=self._legendScale[key])
+                                    markerscale=self._legendScale[key],
+                                    loc=self._legendLoc[key])
             if not kwargs.get("axisStick"):
                 self.ax[key].set_xlim(self._xMin[key], self._xMax[key])
                 self.ax[key].set_ylim(self._yMin[key], self._yMax[key])
