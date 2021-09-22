@@ -217,11 +217,19 @@ class RadialTransport(PlotBase):
         gamma_int_D = self._calc_gamma_int_method(r, iol_adjusted=iolFlag, F_orb=F_orb_d,
                                                   neutFlag=neutFlag)  # Integral Cylindrical Method
 
+        gamma_diff_D_noIOL = self._calc_gamma_diff_method(iol_adjusted=False, F_orb=F_orb_d,
+                                                    neutFlag=neutFlag)
+
+        gamma_int_D_noIOL = self._calc_gamma_int_method(r, iol_adjusted=False, F_orb=F_orb_d,
+                                                  neutFlag=neutFlag)
+
         self.gamma = Flux(core,
                           D_diff=gamma_diff_D,
                           D_int=gamma_int_D,
                           C_diff=np.zeros(gamma_int_D.shape),
-                          C_int=np.zeros(gamma_int_D.shape))
+                          C_int=np.zeros(gamma_int_D.shape),
+                          D_int_noIOL=gamma_int_D_noIOL,
+                          D_diff_noIOL=gamma_diff_D_noIOL)
 
         # Piper changes: Calculate radial return current (Uses integral cylindrical gamma)
         self.jr_iol = calc_return_cur(r, self.part_src_nbi_lost, self.gamma.D.int, ch_d, iol_adjusted=iolFlag,

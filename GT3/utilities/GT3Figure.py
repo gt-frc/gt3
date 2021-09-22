@@ -271,6 +271,7 @@ class GT3FigureSBSPlot:
         self.xLabel = self._dict_gen(self._keys, "")
         self.yLabel = self._dict_gen(self._keys, "")
         self.fig_title = ""
+        self._maskZeros = self._dict_gen(self._keys, False)
 
         self.showLegend = self._dict_gen(self._keys, False)
         for key in self._keys:
@@ -427,6 +428,11 @@ class GT3FigureSBSPlot:
         self._replot()
         return self
 
+    def toggle_mask_zeros(self, key="L"):
+        self._maskZeros[key] = not self._maskZeros[key]
+        self._replot()
+        return self
+
     def _replot(self, *args, **kwargs):
         for key in self._keys:
             self.ax[key].cla()
@@ -438,6 +444,16 @@ class GT3FigureSBSPlot:
                 if self._plotSemilog[key]:
                     pass
                     #y = np.log10(y)
+                if self._maskZeros[key]:
+                    try:
+                        y[np.abs(y) < 1E-10] = np.nan
+                    except TypeError:
+                        try:
+                            temp_y = y.val
+                            temp_y[np.abs(temp_y) < 1E-10] = np.nan
+                            y = temp_y
+                        except:
+                            raise
                 if self._markers[key]:
                     self.ax[key].scatter(x, y, color=PLOTCOLORS[n], s=self._markerSize[key], marker=PLOTMARKERS[n])
                 else:
