@@ -698,13 +698,15 @@ class Psi(PlotBase):
             print("Psi not defined")
             pass
 
-    def plot_exp_psi(self, res=50):
+    def plot_exp_psi(self, res=50, withSep=False):
         try:
             ax = self._plot_with_wall()
         except:
             return
         try:
-            ax.contour(self.R, self.Z, self.psi_norm_exp, res)
+            cs = ax.contour(self.R, self.Z, self.psi_norm_exp, res)
+            if withSep:
+                ax.clabel(cs, [1.0], colors='red')
             return ax
         except NameError:
             print("Psi not defined")

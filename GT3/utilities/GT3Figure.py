@@ -242,15 +242,26 @@ class GT3FigureSBSPlot:
             result[key] = val
         return result
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, keys=None, *args, **kwargs):
+        if keys is None:
+            self._keys = ['L', 'R']
+        else:
+            if type(keys) == list:
+                self._numPlots = len(keys)
+                self._keys = keys
+            elif type(keys) == int:
+                self._numPlots = keys
+                self._keys = range(0, len(keys))
+            else:
+                raise ValueError("keys needs to be an integer or list")
+
         self.fig = plt.figure()
         self.fig.tight_layout(pad=3.0)
-        self._keys = ['L', 'R']
-        self.ax = {
-            'L': self.fig.add_subplot(121),
-            'R': self.fig.add_subplot(122),
-        }
-        self._markerSize = self._dict_gen(self._keys, MARKERSIZE_SMALL)
+        self.ax = {}
+        for n, key in enumerate(self._keys):
+            self.ax[key] = self.fig.add_subplot(1, self._numPlots, n+1)
+
+        self._markerSize = self._dict_gen(self._keys, MARKERSIZE_LARGE)
         self._markers = self._dict_gen(self._keys, False)
         self.legend = self._dict_gen(self._keys, [])
         self._legendLoc = self._dict_gen(self._keys, 0)
@@ -287,57 +298,109 @@ class GT3FigureSBSPlot:
         self._replot()
         return self
 
-    def set_title(self, title, key="L"):
-        self.title[key] = title
+    def set_title(self, title, key=None):
+        if key is None:
+            for key in self._keys:
+                self.title[key] = title
+        else:
+            self.title[key] = title
         self._replot()
         return self
 
-    def set_xLabel(self, xLabel, key="L"):
-        self.xLabel[key] = xLabel
-        self.ax[key].set_xlabel(xLabel, fontsize=self._xLabelFontSize[key])
+    def set_xLabel(self, xLabel, key=None):
+        if key is None:
+            for key in self._keys:
+                self.xLabel[key] = xLabel
+                self.ax[key].set_xlabel(xLabel, fontsize=self._xLabelFontSize[key])
+        else:
+            self.xLabel[key] = xLabel
+            self.ax[key].set_xlabel(xLabel, fontsize=self._xLabelFontSize[key])
         return self
 
-    def get_xLabel(self, key="L"):
-        return self.ax[key].get_xlabel(), self._xLabelFontSize[key]
+    def get_xLabel(self, key=None):
+        if key is None:
+            results = []
+            for key in self._keys:
+                results.append([self.ax[key].get_xlabel(), self._xLabelFontSize[key]])
+            return results
+        else:
+            return [self.ax[key].get_xlabel(), self._xLabelFontSize[key]]
 
-    def set_xLabel_fontsize(self, s, key="L"):
-        self._xLabelFontSize[key] = s
-        self.ax[key].set_xlabel(self.get_xLabel(key=key)[0], fontsize=self._xLabelFontSize[key])
+    def set_xLabel_fontsize(self, s, key=None):
+        if key is None:
+            for key in self._keys:
+                self._xLabelFontSize[key] = s
+                self.ax[key].set_xlabel(self.get_xLabel(key=key)[0], fontsize=self._xLabelFontSize[key])
+        else:
+            self._xLabelFontSize[key] = s
+            self.ax[key].set_xlabel(self.get_xLabel(key=key)[0], fontsize=self._xLabelFontSize[key])
         return self
 
-    def set_yLabel(self, yLabel, key="L"):
-        self.yLabel[key] = yLabel
-        self.ax[key].set_ylabel(yLabel, fontsize=self._yLabelFontSize[key])
+    def set_yLabel(self, yLabel, key=None):
+        if key is None:
+            for key in self._keys:
+                self.yLabel[key] = yLabel
+                self.ax[key].set_ylabel(yLabel, fontsize=self._yLabelFontSize[key])
+        else:
+            self.yLabel[key] = yLabel
+            self.ax[key].set_ylabel(yLabel, fontsize=self._yLabelFontSize[key])
         return self
 
-    def get_yLabel(self, key="L"):
-        return self.ax[key].get_ylabel(), self._yLabelFontSize[key]
+    def get_yLabel(self, key=None):
+        if key is None:
+            results = []
+            for key in self._keys:
+                results.append([self.ax[key].get_ylabel(), self._yLabelFontSize[key]])
+            return results
+        else:
+            return [self.ax[key].get_ylabel(), self._yLabelFontSize[key]]
 
-    def set_yLabel_fontsize(self, s, key="L"):
-        self._yLabelFontSize[key] = s
-        self.ax[key].set_ylabel(self.get_yLabel(key=key)[0], fontsize=self._yLabelFontSize[key])
+    def set_yLabel_fontsize(self, s, key=None):
+        if key is None:
+            for key in self._keys:
+                self._yLabelFontSize[key] = s
+                self.ax[key].set_ylabel(self.get_yLabel(key=key)[0], fontsize=self._yLabelFontSize[key])
+        else:
+            self._yLabelFontSize[key] = s
+            self.ax[key].set_ylabel(self.get_yLabel(key=key)[0], fontsize=self._yLabelFontSize[key])
         return self
 
-    def set_xlim(self, xmin, xmax, key="L", replot=True):
-        self._xMin[key] = xmin
-        self._xMax[key] = xmax
+    def set_xlim(self, xmin, xmax, key=None, replot=True):
+        if key is None:
+            for key in self._keys:
+                self._xMin[key] = xmin
+                self._xMax[key] = xmax
+        else:
+            self._xMin[key] = xmin
+            self._xMax[key] = xmax
         if replot:
             self._replot()
         return self
 
-    def set_ylim(self, ymin, ymax, key="L", replot=True):
-        self._yMin[key] = ymin
-        self._yMax[key] = ymax
+    def set_ylim(self, ymin, ymax, key=None, replot=True):
+        if key is None:
+            for key in self._keys:
+                self._yMin[key] = ymin
+                self._yMax[key] = ymax
+        else:
+            self._yMin[key] = ymin
+            self._yMax[key] = ymax
         if replot:
             self._replot()
         return self
 
-    def set_legend_location(self, loc, key="L"):
-        self._legendLoc[key] = loc
+    def set_legend_location(self, loc, key=None):
+        if key is None:
+            for key in self._keys:
+                self._legendLoc[key] = loc
+        else:
+            self._legendLoc[key] = loc
         self._replot()
         return self
 
-    def add_line(self, x, y, key="L", *args, **kwargs):
+    def add_line(self, x, y, key=None, *args, **kwargs):
+        if key is None:
+            key = self._keys[0]
         if kwargs.get("legend"):
             self.legend[key].append(kwargs.get("legend"))
             self.ax[key].legend(self.legend[key])
@@ -350,8 +413,9 @@ class GT3FigureSBSPlot:
         self._yMin[key], self._yMax[key] = self.ax[key].get_ylim()
         return self
 
-    def add_scatter(self, x, y, key="L", *args, **kwargs):
-
+    def add_scatter(self, x, y, key=None, *args, **kwargs):
+        if key is None:
+            key = self._keys[0]
         if kwargs.get("legend"):
             if len(self.legend[key]) == 0:
                 self.legend[key] = [kwargs.get("legend")]
@@ -373,63 +437,115 @@ class GT3FigureSBSPlot:
         self._yMin[key], self._yMax[key] = self.ax[key].get_ylim()
         return self
 
-    def set_marker_size(self, s, key="L"):
-        self._markerSize[key] = s
+    def set_marker_size(self, s, key=None):
+        if key is None:
+            for key in self._keys:
+                self._markerSize[key] = s
+        else:
+            self._markerSize[key] = s
         self._replot()
         return self
 
-    def set_number_xticks(self, num, key="L"):
-        self._xtickNum[key] = num
+    def set_number_xticks(self, num, key=None):
+        if key is None:
+            for key in self._keys:
+                self._xtickNum[key] = num
+        else:
+            self._xtickNum[key] = num
         self._replot()
         return self
 
-    def set_number_yticks(self, num, key="L"):
-        self._ytickNum[key] = num
+    def set_number_yticks(self, num, key=None):
+        if key is None:
+            for key in self._keys:
+                self._ytickNum[key] = num
+        else:
+            self._ytickNum[key] = num
         self._replot()
         return self
-    def set_xticks_fontsize(self, size, key="L"):
-        self.ax[key].tick_params(axis='x', labelsize=size)
+    def set_xticks_fontsize(self, size, key=None):
+        if key is None:
+            for key in self._keys:
+                self.ax[key].tick_params(axis='x', labelsize=size)
+        else:
+            self.ax[key].tick_params(axis='x', labelsize=size)
         return self
 
-    def set_yticks_fontsize(self, size, key="L"):
-        self.ax[key].tick_params(axis='y', labelsize=size)
+    def set_yticks_fontsize(self, size, key=None):
+        if key is None:
+            for key in self._keys:
+                self.ax[key].tick_params(axis='y', labelsize=size)
+        else:
+            self.ax[key].tick_params(axis='y', labelsize=size)
         return self
 
-    def set_legend_fontsize(self, size, key="L"):
-        self._legendFontSize[key] = size
-        self._replot()
-        return self
-
-    def set_legend_scale(self, scale, key="L"):
-        self._legendScale[key] = scale
-        self._replot()
-        return self
-
-    def toggle_legend(self, key="L"):
-        self.showLegend[key] = not self.showLegend[key]
-        self._replot()
-
-    def toggle_markers(self, key="L"):
-        self._markers[key] = not self._markers[key]
-        self._replot()
-
-    def toggle_sci_notation(self, key="L"):
-        self._sciNotation[key] = not self._sciNotation[key]
-        self._replot()
-        return self
-
-    def toggle_semilog(self, key="L"):
-        self._plotSemilog[key] = not self._plotSemilog[key]
+    def set_legend_fontsize(self, size, key=None):
+        if key is None:
+            for key in self._keys:
+                self._legendFontSize[key] = size
+        else:
+            self._legendFontSize[key] = size
         self._replot()
         return self
 
-    def toggle_title(self, key="L"):
-        self._showTitle[key] = not self._showTitle[key]
+    def set_legend_scale(self, scale, key=None):
+        if key is None:
+            for key in self._keys:
+                self._legendScale[key] = scale
+        else:
+            self._legendScale[key] = scale
         self._replot()
         return self
 
-    def toggle_mask_zeros(self, key="L"):
-        self._maskZeros[key] = not self._maskZeros[key]
+    def toggle_legend(self, key=None):
+        if key is None:
+            for key in self._keys:
+                self.showLegend[key] = not self.showLegend[key]
+        else:
+            self.showLegend[key] = not self.showLegend[key]
+        self._replot()
+
+    def toggle_markers(self, key=None):
+        if key is None:
+            for key in self._keys:
+                self._markers[key] = not self._markers[key]
+        else:
+            self._markers[key] = not self._markers[key]
+        self._replot()
+
+    def toggle_sci_notation(self, key=None):
+        if key is None:
+            for key in self._keys:
+                self._sciNotation[key] = not self._sciNotation[key]
+        else:
+            self._sciNotation[key] = not self._sciNotation[key]
+        self._replot()
+        return self
+
+    def toggle_semilog(self, key=None):
+        if key is None:
+            for key in self._keys:
+                self._plotSemilog[key] = not self._plotSemilog[key]
+        else:
+            self._plotSemilog[key] = not self._plotSemilog[key]
+        self._replot()
+        return self
+
+    def toggle_title(self, key=None):
+        if key is None:
+            for key in self._keys:
+                self._showTitle[key] = not self._showTitle[key]
+        else:
+            self._showTitle[key] = not self._showTitle[key]
+        self._replot()
+        return self
+
+    def toggle_mask_zeros(self, key=None):
+        if key is None:
+            for key in self._keys:
+                self._maskZeros[key] = not self._maskZeros[key]
+        else:
+            self._maskZeros[key] = not self._maskZeros[key]
         self._replot()
         return self
 
