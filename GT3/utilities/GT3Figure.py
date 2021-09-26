@@ -24,6 +24,7 @@ class GT3FigureSinglePlot:
         self._legendScale = 1.0
         self._plotSemilog = False
         self._showTitle = False
+        self._maskZeros = False
 
         if kwargs.get("title"):
             self.title = kwargs.get("title")
@@ -187,6 +188,12 @@ class GT3FigureSinglePlot:
         self._replot()
         return self
 
+    def toggle_mask_zeros(self):
+
+        self._maskZeros = not self._maskZeros
+        self._replot()
+        return self
+
     def _replot(self, *args, **kwargs):
         self.ax.cla()
         if self._plotSemilog:
@@ -197,6 +204,16 @@ class GT3FigureSinglePlot:
             if self._plotSemilog:
                 pass
                 #y = np.log10(y)
+            if self._maskZeros:
+                try:
+                    y[np.abs(y) < 1E-10] = np.nan
+                except TypeError:
+                    try:
+                        temp_y = y.val
+                        temp_y[np.abs(temp_y) < 1E-10] = np.nan
+                        y = temp_y
+                    except:
+                        raise
             if self._markers:
                 self.ax.scatter(x, y, color=PLOTCOLORS[n], s=self._markerSize, marker=PLOTMARKERS[n])
             else:
