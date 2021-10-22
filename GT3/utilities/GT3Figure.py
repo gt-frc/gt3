@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib
 from GT3.utilities import MARKERSIZE_SMALL, MARKERSIZE_MEDIUM, MARKERSIZE_LARGE, PLOTCOLORS, PLOTMARKERS
 
 class GT3FigureSinglePlot:
@@ -13,6 +14,8 @@ class GT3FigureSinglePlot:
         self.ax = self.fig.add_subplot(111)
         self.legend = []
         self._sciNotation = False
+        self._dpi = 450
+        self.filename = "gt3figure.png"
         self._legendLoc = 0
         self._xLabelFontSize = 30
         self._yLabelFontSize = 30
@@ -25,6 +28,7 @@ class GT3FigureSinglePlot:
         self._plotSemilog = False
         self._showTitle = False
         self._maskZeros = False
+        self.imgSaveDir = None
 
         if kwargs.get("title"):
             self.title = kwargs.get("title")
@@ -192,6 +196,37 @@ class GT3FigureSinglePlot:
 
         self._maskZeros = not self._maskZeros
         self._replot()
+        return self
+
+    def thesis_figure(self):
+
+        self.set_xlim(0.85, 1.0)
+        self.toggle_markers()
+        self.set_xLabel(r"Normalized minor radius, $\rho$")
+        self.set_legend_scale(1.5)
+        self.set_legend_fontsize(20)
+        self.set_yticks_fontsize(26)
+        self.set_xticks_fontsize(26)
+        self.set_marker_size(80)
+        self.set_number_xticks(4)
+        self.set_number_yticks(4)
+        return self
+
+    def set_fig_dpi(self, d=450):
+        self._dpi = d
+
+    def set_save_name(self, s):
+        self.filename = s
+
+    def set_save_dir(self, s):
+        self.imgSaveDir = s
+
+    def save_gt3_fig(self):
+        if self.imgSaveDir:
+            import os
+            self.fig.savefig(os.path.join(self.imgSaveDir, self.filename), dpi=self._dpi, pad_inches=0)
+        else:
+            self.fig.savefig(self.filename, dpi=self._dpi, pad_inches=0)
         return self
 
     def _replot(self, *args, **kwargs):

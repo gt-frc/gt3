@@ -450,20 +450,17 @@ class RadialTransport(PlotBase):
                       e_diff=Qe_diff)
 
         conv15 = 3. * .5 * ch_d * self.gamma.D.diff * T.i.ev
-        conv25 = 5. * .5 * ch_d * self.gamma.D.diff * T.i.ev
+        piheat = ch_d * self.gamma.D.diff * T.i.ev
         self.set_visc_heat(0.1, 0.1)
         heatin = .5 * self.gamma.D.diff * m_d * (
                     self.vtor_D_total ** 2 + self.vpol_D ** 2)  # TODO: Provide logic that uses vtor_D_intrin/fluid depending on IOL Switch, currently too small to matter
         heatin_noIOL = .5 * self.gamma.D.diff_noIOL * m_d * (self.vtor_D_total ** 2 + self.vpol_D ** 2)
 
         conv15_noIOL = 3. * .5 * ch_d * self.gamma.D.diff_noIOL * T.i.ev
-        conv25_noIOL = 5. * .5 * ch_d * self.gamma.D.diff_noIOL * T.i.ev
 
         self.conv15 = OneDProfile(self.core.psi, conv15, self.core.R, self.core.Z)
-        self.conv25 = OneDProfile(self.core.psi, conv25, self.core.R, self.core.Z)
+        self.piheat = OneDProfile(self.core.psi, piheat, self.core.R, self.core.Z)
         self.conv15_noIOL = OneDProfile(self.core.psi, conv15_noIOL, self.core.R, self.core.Z)
-        self.conv25_noIOL = OneDProfile(self.core.psi, conv25_noIOL, self.core.R, self.core.Z)
-
         self.heatin = OneDProfile(self.core.psi, heatin, self.core.R, self.core.Z)
         self.heatin_noIOL = OneDProfile(self.core.psi, heatin_noIOL, self.core.R, self.core.Z)
 
@@ -478,13 +475,10 @@ class RadialTransport(PlotBase):
             else:
                 self.reRun = True
 
-    def _calc_Chi(self, vtorS=0.1, vpolS=0.1, conv25=True):
-        if conv25:
-            conv = self.conv25
-        else:
-            conv = self.conv15
+    def _calc_Chi(self, vtorS=0.1, vpolS=0.1):
+
         self.chi = namedtuple('chi', 'i e')(
-            namedtuple('i', 'chi0 chi1 chi2 chi3 chi4')(
+            namedtuple('i', 'chi0 chi1 chi2 chi3 chi4 chi5')(
                 OneDProfile(self.core.psi,
                             self.Q.D.diff_noIOL * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
                             self.core.R,
@@ -494,16 +488,20 @@ class RadialTransport(PlotBase):
                             self.core.R,
                             self.core.Z),
                 OneDProfile(self.core.psi,
-                            (self.Q.D.diff - conv) * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
+                            (self.Q.D.diff - self.conv15) * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
                             self.core.R,
                             self.core.Z),
                 OneDProfile(self.core.psi,
-                            (self.Q.D.diff - conv - self.heatin) * self._T.i.J.L / (
+                            (self.Q.D.diff - self.conv15 - self.piheat) * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d),
+                            self.core.R,
+                            self.core.Z),
+                OneDProfile(self.core.psi,
+                            (self.Q.D.diff - self.conv15 - self.piheat - self.heatin) * self._T.i.J.L / (
                                     self._n.i * self._T.i.ev * ch_d),
                             self.core.R,
                             self.core.Z),
                 OneDProfile(self.core.psi,
-                            self._calc_chi_i_visc(vtorS=vtorS, vpolS=vpolS, conv25=conv25),
+                            self._calc_chi_i_visc(vtorS=vtorS, vpolS=vpolS),
                             self.core.R,
                             self.core.Z)
             ), calc_chi_e(self.Q.e.diff, self.gamma.D.diff, self.gamma.C.diff, self._n, self._T)
@@ -514,13 +512,10 @@ class RadialTransport(PlotBase):
         self._calc_Chi(vtorS, vpolS)
         return self
 
-    def _calc_chi_i_visc(self, vtorS=0.1, vpolS=0.1, conv25=True):
-        if conv25:
-            conv = self.conv25
-        else:
-            conv = self.conv15
+    def _calc_chi_i_visc(self, vtorS=0.1, vpolS=0.1):
+
         heatvis = OneDProfile(self.core.psi, self._calc_visc_heat(vtorS, vpolS), self.core.R, self.core.Z)
-        return (self.Q.D.diff - conv - self.heatin - heatvis) * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d)
+        return (self.Q.D.diff - self.conv15 - self.piheat - self.heatin - heatvis) * self._T.i.J.L / (self._n.i * self._T.i.ev * ch_d)
 
     def _calc_gamma_diff_method(self, iol_adjusted=False, F_orb=None, neutFlag=True, verbose=False, *args, **kwargs):
         a = self.core.a
@@ -847,9 +842,10 @@ class RadialTransport(PlotBase):
         fig = self._plot_base(self.Q.D.diff_noIOL, title="", yLabel=r"$Q\left[\frac{W}{m^2}\right]$", edge=edge,
                               logPlot=logPlot, legend=r"$Q^{tot}$ w/out IOL")
         fig.add_scatter(self.rhor, self.Q.D.diff, legend=r"$Q^{tot}$")
+        fig.add_scatter(self.rhor, self.piheat, legend=r"$Q^{\pi}$")
         fig.add_scatter(self.rhor, self.heatvisc, legend=r"$Q^{visc}$")
         fig.add_scatter(self.rhor, self.heatin, legend=r"$Q^{heatin}$")
-        fig.add_scatter(self.rhor, self.conv25, legend=r"$Q^{conv}$")
+        fig.add_scatter(self.rhor, self.conv15, legend=r"$Q^{conv}$")
         # fig.toggle_legend()
         fig.set_legend_scale(markerscale)
         fig.set_legend_fontsize(size)
@@ -920,8 +916,9 @@ class RadialTransport(PlotBase):
                               legend=r"$q^{cond} = q^{tot}$ w/out IOL")
         fig.add_scatter(self.rhor, self.chi.i.chi1, legend=r"$q^{cond} = q^{tot}$")
         fig.add_scatter(self.rhor, self.chi.i.chi2, legend=r"$q^{cond} = q^{tot}-q^{conv}$")
-        fig.add_scatter(self.rhor, self.chi.i.chi3, legend=r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}$")
-        fig.add_scatter(self.rhor, self.chi.i.chi4, legend=r"$q^{cond} = q^{tot}-q^{conv}-q^{heatin}-q^{visc}$")
+        fig.add_scatter(self.rhor, self.chi.i.chi3, legend=r"$q^{cond} = q^{tot}-q^{conv}-q^{\pi}$")
+        fig.add_scatter(self.rhor, self.chi.i.chi4, legend=r"$q^{cond} = q^{tot}-q^{conv}-q^{\pi}-q^{heatin}$")
+        fig.add_scatter(self.rhor, self.chi.i.chi5, legend=r"$q^{cond} = q^{tot}-q^{conv}-q^{\pi}-q^{heatin}-q^{visc}$")
 
         if marker:
             fig.toggle_markers()
