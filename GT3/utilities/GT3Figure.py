@@ -210,6 +210,7 @@ class GT3FigureSinglePlot:
         self.set_marker_size(80)
         self.set_number_xticks(4)
         self.set_number_yticks(4)
+        self.fig.tight_layout()
         return self
 
     def set_fig_dpi(self, d=450):

@@ -299,6 +299,15 @@ class OneDProfile(PlotBase, BaseMath):
         self._data_overwritten = True
         return self
 
+    def scale(self, s):
+        self.val = self.val * s
+        if hasattr(self, "_derivative"):
+            del self._derivative
+        if hasattr(self, "_L"):
+            del self._L
+        self._data_overwritten = True
+        return self
+
 
 
 class TwoDProfile(PlotBase, BaseMath):

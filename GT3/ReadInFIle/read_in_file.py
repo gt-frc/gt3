@@ -202,13 +202,13 @@ class ReadInfile:
         self.vtorD_data = self._profile_loader(config, '1DProfiles', 'vtorD_file', **kwargs)
 
         if isinstance(self.vpolD_data, (IOError, configparser.NoOptionError)):
-            self.omegDpol_data = self._profile_loader(config, '1DProfiles', 'omegDpol_file')
+            self.omegDpol_data = self._profile_loader(config, '1DProfiles', 'omegDpol_file', **kwargs)
         if isinstance(self.vtorD_data, (IOError, configparser.NoOptionError)):
-            self.omegDtor_data = self._profile_loader(config, '1DProfiles', 'omegDtor_file')
+            self.omegDtor_data = self._profile_loader(config, '1DProfiles', 'omegDtor_file', **kwargs)
         if isinstance(self.vpolC_data, (IOError, configparser.NoOptionError)):
-            self.omegCpol_data = self._profile_loader(config, '1DProfiles', 'omegCpol_file')
+            self.omegCpol_data = self._profile_loader(config, '1DProfiles', 'omegCpol_file', **kwargs)
         if isinstance(self.vtorC_data, (IOError, configparser.NoOptionError)):
-            self.omegCtor_data = self._profile_loader(config, '1DProfiles', 'omegCtor_file')
+            self.omegCtor_data = self._profile_loader(config, '1DProfiles', 'omegCtor_file', **kwargs)
 
         self.psirz_exp = self._profile_loader(config, '2DProfiles', 'psirz_file')
         self.wall_exp = self._profile_loader(config, 'Wall', 'wall_file')

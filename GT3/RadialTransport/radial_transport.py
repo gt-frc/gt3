@@ -91,7 +91,7 @@ def calc_external_term(M_phi, n_j, ch_j, B_p):
 
 
 def calc_poloidal_term(n_j, m_j, ch_j, nu_jk, nu_dj, B_t, B_p, v_pol_j):
-    pol_term = (n_j * m_j * (nu_jk + nu_dj) * B_t * v_pol_j) / (n_j * ch_j * (B_p ** 2.0))
+    pol_term = (n_j * m_j * (nu_jk + nu_dj) * B_t * np.abs(v_pol_j)) / (n_j * ch_j * (B_p ** 2.0))
     return pol_term
 
 
@@ -101,7 +101,7 @@ def calc_radial_E_field_term(n_j, m_j, ch_j, nu_jk, nu_dj, Er, B_p):
 
 
 def calc_toroidal_term(n_j, m_j, ch_j, nu_jk, B_p, v_tor_k):
-    tor_term = (-n_j * m_j * nu_jk * v_tor_k) / (n_j * ch_j * B_p)
+    tor_term = (-n_j * m_j * nu_jk * np.abs(v_tor_k)) / (n_j * ch_j * B_p)
     return tor_term
 
 
