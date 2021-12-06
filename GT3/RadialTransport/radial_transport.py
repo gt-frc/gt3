@@ -30,6 +30,7 @@ from GT3.Core.Functions.ProfileClasses import OneDProfile, TemperatureProfiles, 
 from GT3.utilities.PlotBase import PlotBase
 from GT3 import Core, BeamDeposition
 from GT3.utilities.PlotBase import PLOTCOLORS, PLOTMARKERS
+from GT3.utilities.GT3Figure import GT3FigureSinglePlot
 
 eps_0 = constants.epsilon_0
 e = constants.elementary_charge
@@ -403,10 +404,11 @@ class RadialTransport(PlotBase):
         vrpinch = calc_pinch_velocity(vrpinch_ext_term, vrpinch_poloidal_term, vrpinch_Er_term,
                                       vrpinch_toroidal_term)
 
-        self.vrpinch = OneDProfile(core.psi, vrpinch, core.R, core.Z)
+        self.vrpinch = OneDProfile(core.psi, -1.0 * vrpinch, core.R, core.Z)
 
-        gamma_p_d = self.vrpinch * self._n.i
-        self.gamma_p_D = OneDProfile(core.psi, gamma_p_d, core.R, core.Z)
+        gamma_pinch = -1.0 * self.vrpinch * self._n.i
+        self.gamma_p_D = OneDProfile(core.psi, gamma_pinch, core.R, core.Z)
+
         ##############################################################
         # energy balance
         ##############################################################
@@ -468,6 +470,10 @@ class RadialTransport(PlotBase):
 
         D_i = m_d * T.i.J * (self.nu_c_j_k * (1. - ch_d / ch_c) + self.nu_drag_D) / ((ch_d * core.B.pol.fsa) ** 2)
         self.D_i = OneDProfile(self.core.psi, D_i, self.core.R, self.core.Z)
+        diff_gamma = n.i.val * D_i * (n.i.L.val ** -1 + T.i.kev.L.val ** -1)
+        self.diff_gamma = OneDProfile(self.core.psi, diff_gamma, self.core.R, self.core.Z)
+
+        self.D_gb = OneDProfile(self.core.psi, (1. / 16) * self._T.e.J / (ch_d * abs(B_t.val)), self.core.R, self.core.Z)
 
         if kwargs.get("neutpy_iterate"):
             if self.reRun:
@@ -825,7 +831,8 @@ class RadialTransport(PlotBase):
 
         # return [a * (b * c * d - .5 * g * (4.0 * a + f)) - .5 * f * (c * d + g * (a + .5 * f)) for a, b, c, d, f, g in
         #        zip(data.vtor_D_total, fp, eta0, vrad, data.vpol_D, eta4)]
-
+        print(vpolS)
+        print(vtorS)
         res = vtor * vtorS * (eta0 * fp * vrad - eta4 * (2. * vtor + .5 * vpol))
         res = res - 0.5 * vpol * vpolS * (eta0 * vrad + eta4 * (vtor + .5 * vpol))
         return res / R0
@@ -863,6 +870,18 @@ class RadialTransport(PlotBase):
 
     def plot_gamma_diff_calc(self):
         self._calc_gamma_diff_method(iol_adjusted=self.iolFlag, F_orb=self.iol.forb_d_therm_1D, verbose=True)
+
+    def plot_gamma_diffusion_comp(self):
+        f = GT3FigureSinglePlot()
+        rhor = self.rhor
+
+        f.set_yLabel(r"$\Gamma \; \left[\frac{x10^{19}}{m^2 s}\right]$")
+
+        f.add_scatter(rhor, self.gamma.D.diff.val/1E19, legend=r"$\Gamma^{tot}_{r,j}$")
+        f.add_scatter(rhor, self.gamma_p_D/1E19, legend=r"$\Gamma^{pinch}_{r,j}$")
+        f.add_scatter(rhor, self.diff_gamma/1E19, legend=r"$\Gamma^{D}_{r,j}$")
+        f.thesis_figure()
+        return f
 
     def plot_nu_jk(self, edge=True):
         return self._plot_base(self.nu_c_j_k, yLabel=r'$\nu_{j,k}$', title="Ion-Impurity Collision frequency",

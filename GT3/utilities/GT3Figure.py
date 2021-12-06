@@ -213,6 +213,21 @@ class GT3FigureSinglePlot:
         self.fig.tight_layout()
         return self
 
+    def pop_figure(self):
+
+        self.set_xlim(0.85, 1.0)
+        self.toggle_markers()
+        self.set_xLabel(r"Normalized minor radius, $\rho$")
+        self.set_legend_scale(1)
+        self.set_legend_fontsize(30)
+        self.set_yticks_fontsize(26)
+        self.set_xticks_fontsize(26)
+        self.set_marker_size(80)
+        self.set_number_xticks(4)
+        self.set_number_yticks(4)
+        self.fig.tight_layout()
+        return self
+
     def set_fig_dpi(self, d=450):
         self._dpi = d
 
@@ -222,12 +237,12 @@ class GT3FigureSinglePlot:
     def set_save_dir(self, s):
         self.imgSaveDir = s
 
-    def save_gt3_fig(self):
+    def save_gt3_fig(self, format="png"):
         if self.imgSaveDir:
             import os
-            self.fig.savefig(os.path.join(self.imgSaveDir, self.filename), dpi=self._dpi, pad_inches=0)
+            self.fig.savefig(os.path.join(self.imgSaveDir, self.filename), dpi=self._dpi, pad_inches=0, format=format)
         else:
-            self.fig.savefig(self.filename, dpi=self._dpi, pad_inches=0)
+            self.fig.savefig(self.filename, dpi=self._dpi, pad_inches=0, format=format)
         return self
 
     def _replot(self, *args, **kwargs):
