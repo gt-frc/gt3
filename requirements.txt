@@ -30,7 +30,7 @@ kiwisolver==1.0.1
 lxml==4.5.0
 MarkupSafe==1.0
 matplotlib==2.2.3
-mechanize==0.3.7
+mechanize==0.4.6
 multiprocess==0.70.9
 mysql-connector-python==8.0.15
 mysql-utilities==1.6.4
