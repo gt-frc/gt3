@@ -35,9 +35,9 @@ def calc_grad(quant, psi, R, Z):
     dval_dpsi = d_dpsi_fit(psi.psi)
 
     # calculate dpsi_norm_dr everywhere on the main computational grid
-    dpsi_dr = griddata(np.column_stack((psi.psi_data.R.flatten(),
-                                        psi.psi_data.Z.flatten())),
-                       psi.psi_data.dpsidr.flatten(),
+    dpsi_dr = griddata(np.column_stack((psi.psi.R.flatten(),
+                                        psi.psi.Z.flatten())),
+                       psi.psi.dpsidr.flatten(),
                        (R,Z),
                        method='linear')
 

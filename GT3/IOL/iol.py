@@ -16,6 +16,8 @@ from GT3.utilities.PlotBase import PlotBase
 import sys
 import GT3.constants as constants
 from GT3 import Core
+from GT3.Core.Functions.ProfileClasses import OneDProfile
+from warnings import warn
 
 m_d = constants.deuteron_mass
 m_t = constants.triton_mass
@@ -27,7 +29,7 @@ class IOL(PlotBase):
     """
     """
 
-    def __init__(self, inp, core: Core):
+    def __init__(self, inp, core: Core, *args, **kwargs):
         super().__init__()
         sys.dont_write_bytecode = True
         np.warnings.filterwarnings('ignore')
@@ -139,64 +141,79 @@ class IOL(PlotBase):
         )
 
         # Calculate IOL for thermal deuterium
-        forb_d_therm, morb_d_therm, eorb_d_therm = calc_iol_maxwellian(1,
+        forb_d_therm, morb_d_therm, eorb_d_therm, min_vsep_d, eps_d, _d_maxwell_a, _d_maxwell_b, _d_maxwell_c = calc_iol_maxwellian(1,
                                                                        m_d,
                                                                        self.iol_p,
                                                                        core.thetapts,
                                                                        Tprofile.i,
                                                                        self.coslist,
-                                                                       numcos)
+                                                                       numcos, **kwargs)
+        self._d_maxwell_negb_term = OneDProfile(core.psi, -1.0 * _d_maxwell_b / (2.0 * _d_maxwell_a),
+                                                core.R, core.Z)
+        _d_maxwell_pos_sqrt_term = np.sqrt(_d_maxwell_b**2 - 4.0 * _d_maxwell_a * _d_maxwell_c) / (2.0 * _d_maxwell_a)
+
+        self._d_maxwell_pos_sqrt_term = OneDProfile(core.psi, _d_maxwell_pos_sqrt_term,
+                                                core.R, core.Z)
+
         self.forb_d_therm = inp.R_loss * forb_d_therm
         self.morb_d_therm = inp.R_loss * morb_d_therm
         self.eorb_d_therm = inp.R_loss * eorb_d_therm
         self.forb_d_therm_1D = self.forb_d_therm[:, 0]
         self.morb_d_therm_1D = self.morb_d_therm[:, 0]
         self.eorb_d_therm_1D = self.eorb_d_therm[:, 0]
+        self.vsep_min_d = OneDProfile(core.psi, min_vsep_d, core.R, core.Z)
+        self.eps_d = OneDProfile(core.psi, eps_d, core.R, core.Z)
 
         # Calculate IOL for thermal tritium
-        forb_t_therm, morb_t_therm, eorb_t_therm = calc_iol_maxwellian(1,
+        forb_t_therm, morb_t_therm, eorb_t_therm, min_vsep_t, eps_t, _, _, _ = calc_iol_maxwellian(1,
                                                                        m_t,
                                                                        self.iol_p,
                                                                        core.thetapts,
                                                                        Tprofile.i,
                                                                        self.coslist,
-                                                                       numcos)
+                                                                       numcos, **kwargs)
         self.forb_t_therm = inp.R_loss * forb_t_therm
         self.morb_t_therm = inp.R_loss * morb_t_therm
         self.eorb_t_therm = inp.R_loss * eorb_t_therm
         self.forb_t_therm_1D = self.forb_t_therm[:, 0]
         self.morb_t_therm_1D = self.morb_t_therm[:, 0]
         self.eorb_t_therm_1D = self.eorb_t_therm[:, 0]
+        self.vsep_min_t = OneDProfile(core.psi, min_vsep_t, core.R, core.Z)
+        self.eps_t = OneDProfile(core.psi, eps_t, core.R, core.Z)
 
         # Calculate IOL for thermal carbon
-        forb_c_therm, morb_c_therm, eorb_c_therm = calc_iol_maxwellian(6,
+        forb_c_therm, morb_c_therm, eorb_c_therm, min_vsep_c, eps_c, _, _, _ = calc_iol_maxwellian(6,
                                                                        m_c,
                                                                        self.iol_p,
                                                                        core.thetapts,
                                                                        Tprofile.C,
                                                                        self.coslist,
-                                                                       numcos)
+                                                                       numcos, **kwargs)
         self.forb_c_therm = inp.R_loss * forb_c_therm
         self.morb_c_therm = inp.R_loss * morb_c_therm
         self.eorb_c_therm = inp.R_loss * eorb_c_therm
         self.forb_c_therm_1D = self.forb_c_therm[:, 0]
         self.morb_c_therm_1D = self.morb_c_therm[:, 0]
         self.eorb_c_therm_1D = self.eorb_c_therm[:, 0]
+        self.vsep_min_c = OneDProfile(core.psi, min_vsep_c, core.R, core.Z)
+        self.eps_c = OneDProfile(core.psi, eps_c, core.R, core.Z)
 
         # Calculate IOL for thermal alphas
-        forb_a_therm, morb_a_therm, eorb_a_therm = calc_iol_maxwellian(2,
+        forb_a_therm, morb_a_therm, eorb_a_therm, min_vsep_a, eps_a, _, _, _ = calc_iol_maxwellian(2,
                                                                        m_a,
                                                                        self.iol_p,
                                                                        core.thetapts,
                                                                        Tprofile.i,
                                                                        self.coslist,
-                                                                       numcos)
+                                                                       numcos, **kwargs)
         self.forb_a_therm = inp.R_loss * forb_a_therm
         self.morb_a_therm = inp.R_loss * morb_a_therm
         self.eorb_a_therm = inp.R_loss * eorb_a_therm
         self.forb_a_therm_1D = self.forb_a_therm[:, 0]
         self.morb_a_therm_1D = self.morb_a_therm[:, 0]
         self.eorb_a_therm_1D = self.eorb_a_therm[:, 0]
+        self.vsep_min_a = OneDProfile(core.psi, min_vsep_a, core.R, core.Z)
+        self.eps_a = OneDProfile(core.psi, eps_a, core.R, core.Z)
 
         # Calculate IOL for fast, monoenergetic alphas
         v_alpha = sqrt(2 * 3.5E6 * 1.6021E-19 / m_a)
@@ -206,7 +223,7 @@ class IOL(PlotBase):
                                                                  core.thetapts,
                                                                  v_alpha,
                                                                  self.coslist,
-                                                                 numcos)
+                                                                 numcos, **kwargs)
 
         # currently applying R_loss to fast alphas as well as thermal, although I'm skeptical of this. -MH
         self.forb_a_fast = inp.R_loss * forb_a_fast
@@ -225,7 +242,7 @@ class IOL(PlotBase):
                                                                  core.thetapts,
                                                                  v_beam,
                                                                  zeta_beam,
-                                                                 self.coslist)
+                                                                 self.coslist, **kwargs)
         # currently applying R_loss to fast alphas as well as thermal, although I'm skeptical of this. -MH
         self.forb_d_nbi = inp.R_loss * forb_d_nbi
         self.morb_d_nbi = inp.R_loss * morb_d_nbi
@@ -258,26 +275,52 @@ class IOL(PlotBase):
                               title="GT3.IOL differential ion energy loss fraction", edge=edge, color='red')
         return fig
 
-    def plot_all_i(self):
+    def plot_all_i(self, edge=True, noTitle=False, *args, **kwargs):
+        fontdict = {'fontsize': 26}
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
+        fig1 = plot.add_subplot(131)
         fig1.set_xlabel(r'$\rho$', fontsize=20)
-        fig1.set_ylabel(r'$\frac{\partial F}{\partial r}$', fontsize=25)
-        fig1.set_title('Ion number loss fraction')
-        fig1.scatter(self.rho, self.forb_d_therm_1D, marker='o', color='blue')
+        fig1.set_ylabel(r'$\frac{\partial F}{\partial r}$', fontsize=26, labelpad=-20)
+        if not noTitle:
+            fig1.set_title('Ion number loss fraction', fontdict=fontdict)
+        fig1.tick_params(axis='x', labelsize=16)
+        fig1.tick_params(axis='y', labelsize=16)
+        if kwargs.get("noColor"):
+            fig1.scatter(self.rho[:, 0], self.forb_d_therm_1D, marker='o', color='black')
+        else:
+            fig1.scatter(self.rho[:,0], self.forb_d_therm_1D, marker='o', color='blue')
 
-        fig2 = plot.add_subplot(121)
+        fig2 = plot.add_subplot(132)
         fig2.set_xlabel(r'$\rho$', fontsize=20)
-        fig2.set_ylabel(r'$\frac{\partial E}{\partial r}$', fontsize=25)
-        fig2.set_title('Ion energy loss fraction')
-        fig2.scatter(self.rho, self.eorb_d_therm_1D, marker='o', color='red')
+        fig2.set_ylabel(r'$\frac{\partial E}{\partial r}$', fontsize=26, labelpad=-20)
+        if not noTitle:
+            fig2.set_title('Ion energy loss fraction', fontdict=fontdict)
+        fig2.tick_params(axis='x', labelsize=16)
+        fig2.tick_params(axis='y', labelsize=16)
+        if kwargs.get("noColor"):
+            fig2.scatter(self.rho[:, 0], self.eorb_d_therm_1D, marker='o', color='black')
+        else:
+            fig2.scatter(self.rho[:,0], self.eorb_d_therm_1D, marker='o', color='red')
 
-        fig3 = plot.add_subplot(131)
+        fig3 = plot.add_subplot(133)
         fig3.set_xlabel(r'$\rho$', fontsize=20)
-        fig3.set_ylabel(r'$\frac{\partial M}{\partial r}$', fontsize=25)
-        fig3.set_title('Ion momentum loss fraction')
-        fig3.scatter(self.rho, self.morb_d_therm_1D, marker='o', color='green')
+        fig3.set_ylabel(r'$\frac{\partial M}{\partial r}$', fontsize=26, labelpad=-20)
+        if not noTitle:
+            fig3.set_title('Ion momentum loss fraction', fontdict=fontdict)
+        fig3.tick_params(axis='x', labelsize=16)
+        fig3.tick_params(axis='y', labelsize=16)
+        if kwargs.get("noColor"):
+            fig3.scatter(self.rho[:, 0], self.morb_d_therm_1D, marker='o', color='black')
+        else:
+            fig3.scatter(self.rho[:, 0], self.morb_d_therm_1D, marker='o', color='green')
 
+        if edge:
+            fig1.set_xlim(0.85, 1.0)
+            fig2.set_xlim(0.85, 1.0)
+            fig3.set_xlim(0.85, 1.0)
+
+
+        plot.subplots_adjust(right=0.95, left=0.05)
         return plot
 
     def plot_F_C(self, edge=True):
@@ -305,26 +348,30 @@ class IOL(PlotBase):
         return fig
 
 
-    def plot_all_C(self):
+    def plot_all_C(self, edge=True):
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
+        fig1 = plot.add_subplot(131)
         fig1.set_xlabel(r'$\rho$', fontsize=20)
         fig1.set_ylabel(r'$\frac{\partial F}{\partial r}$', fontsize=25)
         fig1.set_title('Carbon number loss fraction')
-        fig1.scatter(self.rho, self.forb_c_therm_1D, marker='o', color='blue')
+        fig1.scatter(self.rho[:,0], self.forb_c_therm_1D, marker='o', color='blue')
 
-        fig2 = plot.add_subplot(121)
+        fig2 = plot.add_subplot(132)
         fig2.set_xlabel(r'$\rho$', fontsize=20)
         fig2.set_ylabel(r'$\frac{\partial E}{\partial r}$', fontsize=25)
         fig2.set_title('Carbon energy loss fraction')
-        fig2.scatter(self.rho, self.eorb_c_therm_1D, marker='o', color='red')
+        fig2.scatter(self.rho[:,0], self.eorb_c_therm_1D, marker='o', color='red')
 
-        fig3 = plot.add_subplot(131)
+        fig3 = plot.add_subplot(133)
         fig3.set_xlabel(r'$\rho$', fontsize=20)
         fig3.set_ylabel(r'$\frac{\partial M}{\partial r}$', fontsize=25)
         fig3.set_title('Carbon momentum loss fraction')
-        fig3.scatter(self.rho, self.morb_c_therm_1D, marker='o', color='green')
+        fig3.scatter(self.rho[:,0], self.morb_c_therm_1D, marker='o', color='green')
 
+        if edge:
+            fig1.set_xlim(0.85, 1.0)
+            fig2.set_xlim(0.85, 1.0)
+            fig3.set_xlim(0.85, 1.0)
         return plot
 
     def plot_F_i_fast(self, edge=True):
@@ -352,24 +399,28 @@ class IOL(PlotBase):
         return fig
 
 
-    def plot_all_i_fast(self):
+    def plot_all_i_fast(self, edge=True):
         plot = plt.figure()
-        fig1 = plot.add_subplot(111)
+        fig1 = plot.add_subplot(131)
         fig1.set_xlabel(r'$\rho$', fontsize=20)
         fig1.set_ylabel(r'$\frac{\partial F}{\partial r}$', fontsize=25)
         fig1.set_title('Fast ion number loss fraction')
-        fig1.scatter(self.rho, self.forb_d_nbi_1D, marker='o', color='blue')
+        fig1.scatter(self.rho[:,0], self.forb_d_nbi_1D, marker='o', color='blue')
 
-        fig2 = plot.add_subplot(121)
+        fig2 = plot.add_subplot(132)
         fig2.set_xlabel(r'$\rho$', fontsize=20)
         fig2.set_ylabel(r'$\frac{\partial E}{\partial r}$', fontsize=25)
         fig2.set_title('Fast ion energy loss fraction')
-        fig2.scatter(self.rho, self.eorb_d_nbi_1D, marker='o', color='red')
+        fig2.scatter(self.rho[:,0], self.eorb_d_nbi_1D, marker='o', color='red')
 
-        fig3 = plot.add_subplot(131)
+        fig3 = plot.add_subplot(133)
         fig3.set_xlabel(r'$\rho$', fontsize=20)
         fig3.set_ylabel(r'$\frac{\partial M}{\partial r}$', fontsize=25)
         fig3.set_title('Fast ion momentum loss fraction')
-        fig3.scatter(self.rho, self.morb_d_nbi_1D, marker='o', color='green')
+        fig3.scatter(self.rho[:,0], self.morb_d_nbi_1D, marker='o', color='green')
+        if edge:
+            fig1.set_xlim(0.85, 1.0)
+            fig2.set_xlim(0.85, 1.0)
+            fig3.set_xlim(0.85, 1.0)
 
         return plot

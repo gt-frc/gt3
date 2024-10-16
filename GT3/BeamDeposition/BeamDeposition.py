@@ -213,6 +213,7 @@ class BeamDeposition(PlotBase):
 
                 try:
                     try:
+                        #Beam(beam_config_list[0])
                         self.beam_result = pool.map(Beam, beam_config_list)
                     except:
                         raise Exception("Pathos failed to run beam")
